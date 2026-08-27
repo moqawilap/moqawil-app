@@ -1,0 +1,70 @@
+import { Feather } from '@expo/vector-icons';
+import React from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
+import { useApp } from '@/context/AppContext';
+import { useColors } from '@/hooks/useColors';
+
+export default function ProfileScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { locale, setLocale, location, refreshLocation, isArabic, savedIds } = useApp();
+  const menu = [
+    { icon: 'map-pin' as const, title: isArabic ? 'موقعك' : 'Your location', value: `${location.area}, ${location.city}`, onPress: refreshLocation },
+    { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => Alert.alert('Notifications', 'Notification preferences will be available soon.') },
+    { icon: 'help-circle' as const, title: isArabic ? 'مركز المساعدة' : 'Help center', value: '', onPress: () => Alert.alert('Moqawil Help', 'Call +968 7722 4535 or email moqawil.om@gmail.com.') },
+  ];
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <ScreenHeader title={isArabic ? 'الحساب' : 'Profile'} subtitle={isArabic ? 'إعداداتك وتفضيلاتك' : 'Your settings and preferences'} />
+          <View style={[styles.profileCard, { backgroundColor: colors.navy }]}>
+            <View style={styles.avatar}><Text style={styles.avatarText}>M</Text></View>
+            <View style={styles.profileText}><Text style={styles.profileName}>{isArabic ? 'مستخدم مقاول' : 'Moqawil user'}</Text><Text style={styles.profileSub}>{isArabic ? 'استكشف خدمات عمان بثقة' : 'Explore Oman with confidence'}</Text></View>
+            <Feather name="edit-2" size={17} color="rgba(255,255,255,0.7)" />
+          </View>
+          <View style={styles.languageHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'اللغة' : 'Language'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر لغة التطبيق' : 'Choose your app language'}</Text></View>
+          <View style={[styles.languageRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {(['en', 'ar'] as const).map((item) => <Pressable key={item} onPress={() => setLocale(item)} style={[styles.languageOption, locale === item && { backgroundColor: colors.primarySoft }]}><Text style={[styles.languageCode, { color: locale === item ? colors.primary : colors.mutedForeground }]}>{item === 'en' ? 'EN' : 'عربي'}</Text><Text style={[styles.languageLabel, { color: locale === item ? colors.foreground : colors.mutedForeground }]}>{item === 'en' ? 'English' : 'العربية'}</Text>{locale === item ? <Feather name="check-circle" size={16} color={colors.primary} /> : null}</Pressable>)}
+          </View>
+          <View style={styles.preferencesHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'التفضيلات' : 'Preferences'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{savedIds.length} {isArabic ? 'محفوظ' : 'saved'}</Text></View>
+          <View style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {menu.map((item, index) => <Pressable key={item.title} onPress={item.onPress} style={[styles.menuItem, index < menu.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}><View style={[styles.menuIcon, { backgroundColor: colors.primarySoft }]}><Feather name={item.icon} size={17} color={colors.primary} /></View><View style={styles.menuText}><Text style={[styles.menuTitle, { color: colors.foreground }]}>{item.title}</Text>{item.value ? <Text style={[styles.menuValue, { color: colors.mutedForeground }]}>{item.value}</Text> : null}</View><Feather name="chevron-right" size={17} color={colors.mutedForeground} /></Pressable>)}
+          </View>
+          <ActionButton label={isArabic ? 'تسجيل الخروج' : 'Sign out'} onPress={() => Alert.alert('Sign out', 'You are currently browsing as a guest.')} secondary style={{ marginTop: 22 }} />
+          <View style={styles.footer}><BrandMark compact /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Everything property. One platform.</Text></View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20 },
+  profileCard: { borderRadius: 22, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 13 },
+  avatar: { width: 50, height: 50, borderRadius: 17, backgroundColor: '#21D8B7', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#06213B', fontSize: 21, fontWeight: '800' },
+  profileText: { flex: 1, gap: 4 },
+  profileName: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  profileSub: { fontSize: 11, color: 'rgba(255,255,255,0.68)' },
+  languageHeading: { marginTop: 27, marginBottom: 11 },
+  preferencesHeading: { marginTop: 27, marginBottom: 11, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  sectionTitle: { fontSize: 17, fontWeight: '800' },
+  sectionHint: { fontSize: 12, marginTop: 3 },
+  languageRow: { borderWidth: 1, borderRadius: 17, padding: 5, gap: 4 },
+  languageOption: { borderRadius: 12, padding: 11, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  languageCode: { width: 39, fontSize: 12, fontWeight: '800' },
+  languageLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  menuCard: { borderWidth: 1, borderRadius: 18, overflow: 'hidden' },
+  menuItem: { padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuIcon: { width: 35, height: 35, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  menuText: { flex: 1, gap: 3 },
+  menuTitle: { fontSize: 13, fontWeight: '700' },
+  menuValue: { fontSize: 11 },
+  footer: { alignItems: 'center', gap: 9, marginTop: 35 },
+  footerText: { fontSize: 11 },
+});
