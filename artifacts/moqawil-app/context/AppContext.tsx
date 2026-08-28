@@ -17,7 +17,7 @@ type AppContextValue = {
   setLocale: (locale: Locale) => void;
   isArabic: boolean;
   location: LocationState;
-  refreshLocation: () => Promise<void>;
+  refreshLocation: (options?: { silent?: boolean }) => Promise<void>;
   savedIds: string[];
   toggleSaved: (id: string) => void;
   isSaved: (id: string) => boolean;
@@ -74,20 +74,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
   };
 
-  const refreshLocation = async () => {
+  const refreshLocation = async ({ silent = false }: { silent?: boolean } = {}) => {
     try {
       if (Platform.OS === 'web') {
         if (!navigator.geolocation) throw new Error('Geolocation unavailable');
-        await new Promise<void>((resolve, reject) => {
+        const coordinates = await new Promise<GeolocationCoordinates>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
-            () => {
-              setLocation({ city: 'Muscat', area: 'Near you', source: 'device' });
-              resolve();
-            },
+            (position) => resolve(position.coords),
             reject,
-            { enableHighAccuracy: false, timeout: 8000 },
+            { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 },
           );
         });
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&lat=${coordinates.latitude}&lon=${coordinates.longitude}`, { headers: { Accept: 'application/json' } });
+          if (!response.ok) throw new Error('Reverse geocoding failed');
+          const result = await response.json() as { address?: Record<string, string> };
+          const address = result.address ?? {};
+          setLocation({
+            city: address.city || address.town || address.municipality || address.state || 'Oman',
+            area: address.suburb || address.neighbourhood || address.village || address.city || 'Near you',
+            source: 'device',
+          });
+        } catch {
+          setLocation({ city: 'Oman', area: 'Near your location', source: 'device' });
+        }
         return;
       }
 
@@ -108,9 +118,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         source: 'device',
       });
     } catch {
-      Alert.alert('Could not update location', 'Showing providers around Muscat for now.');
+      if (!silent) Alert.alert('Could not update location', 'Allow location access to show services near you.');
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => { refreshLocation({ silent: true }).catch(() => undefined); }, 450);
+    return () => clearTimeout(timer);
+  }, []);
 
   const addContractor = (input: { name: string; specialty: string; city: string; contractAmount: string; phone: string }) => {
     const id = `${input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
