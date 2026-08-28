@@ -8,6 +8,7 @@
 
 export type ListContractorsParams = {
 city?: string;
+wilayat?: string;
 category?: string;
 verified?: boolean;
 search?: string;

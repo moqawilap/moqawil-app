@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
 import { images, listings, serviceItems } from '@/data/mockData';
+import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useListContractors } from '@workspace/api-client-react';
@@ -16,7 +17,9 @@ export default function ExploreScreen() {
   const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('Providers');
-  const [city, setCity] = useState('');
+  const [selectedGovernorate, setSelectedGovernorate] = useState('');
+  const [selectedWilayat, setSelectedWilayat] = useState('');
+  const [locationMenu, setLocationMenu] = useState<'governorate' | 'wilayat' | null>(null);
   const [minimumRating, setMinimumRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const selectedService = activeService ?? 'contractors';
@@ -25,7 +28,8 @@ export default function ExploreScreen() {
   const directory = useListContractors({
     search: query.trim() || undefined,
     category: selectedService === 'contractors' ? undefined : selectedService,
-    city: city || undefined,
+    city: selectedGovernorate || undefined,
+    wilayat: selectedWilayat || undefined,
     verified: verifiedOnly || undefined,
     limit: 50,
   });
@@ -34,6 +38,8 @@ export default function ExploreScreen() {
     setActiveService(serviceId);
     setMode(serviceId === 'real-estate' ? 'Properties' : 'Providers');
   };
+  const selectedGovernorateInfo = omanGovernorates.find((item) => item.name === selectedGovernorate);
+  const locationOptions = locationMenu === 'governorate' ? omanGovernorates : selectedGovernorateInfo?.wilayats ?? [];
 
   const filteredProviders = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -48,6 +54,8 @@ export default function ExploreScreen() {
       selectedService === 'contractors' ? provider.role === 'contractor' :
       selectedService === 'consultants' ? provider.role === 'consultant' :
       selectedService === 'maintenance' ? provider.role === 'maintenance' : true,
+    ).filter((provider) => !selectedGovernorate || provider.city === selectedGovernorate)
+      .filter((provider) => !selectedWilayat || provider.wilayat === selectedWilayat);
     );
     const source = apiProviders?.length ? apiProviders : fallbackProviders;
     return source
@@ -75,11 +83,37 @@ export default function ExploreScreen() {
               </Pressable>;
             })}
           </ScrollView>
-          <View style={styles.filters}>
-            <TextInput testID="city-filter" value={city} onChangeText={setCity} placeholder={isArabic ? 'الولاية / المدينة' : 'Wilayat / city'} placeholderTextColor={colors.mutedForeground} textAlign={isArabic ? 'right' : 'left'} style={[styles.filterInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+           <View style={styles.filters}>
+             <Pressable testID="governorate-filter" onPress={() => setLocationMenu(locationMenu === 'governorate' ? null : 'governorate')} style={[styles.locationFilter, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+               <Text numberOfLines={1} style={[styles.locationFilterText, { color: selectedGovernorate ? colors.foreground : colors.mutedForeground }]}>{selectedGovernorateInfo ? (isArabic ? selectedGovernorateInfo.nameAr : selectedGovernorateInfo.name) : (isArabic ? 'اختر المحافظة' : 'Governorate')}</Text>
+               <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+             </Pressable>
+             <Pressable testID="wilayat-filter" disabled={!selectedGovernorate} onPress={() => setLocationMenu(locationMenu === 'wilayat' ? null : 'wilayat')} style={[styles.locationFilter, { backgroundColor: colors.surface, borderColor: colors.border, opacity: selectedGovernorate ? 1 : 0.55 }]}>
+               <Text numberOfLines={1} style={[styles.locationFilterText, { color: selectedWilayat ? colors.foreground : colors.mutedForeground }]}>{selectedWilayat || (isArabic ? 'اختر الولاية' : 'Wilayat')}</Text>
+               <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+             </Pressable>
             {[0, 3, 4].map((rating) => <Pressable testID={`rating-filter-${rating}`} key={rating} onPress={() => setMinimumRating(rating)} style={[styles.filterChip, { borderColor: minimumRating === rating ? colors.primary : colors.border, backgroundColor: minimumRating === rating ? colors.primarySoft : colors.surface }]}><Text style={{ color: colors.foreground }}>{rating ? `★ ${rating}+` : (isArabic ? 'كل التقييمات' : 'Any rating')}</Text></Pressable>)}
             <Pressable testID="verified-filter" onPress={() => setVerifiedOnly((value) => !value)} style={[styles.filterChip, { borderColor: verifiedOnly ? colors.primary : colors.border, backgroundColor: verifiedOnly ? colors.primarySoft : colors.surface }]}><Text style={{ color: colors.foreground }}>{isArabic ? 'موثّق' : 'Verified'}</Text></Pressable>
           </View>
+           {locationMenu ? <View style={[styles.locationMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+             <ScrollView nestedScrollEnabled style={styles.locationMenuScroll}>
+               <Pressable testID="location-all" onPress={() => { setSelectedGovernorate(''); setSelectedWilayat(''); setLocationMenu(null); }} style={styles.locationOption}><Text style={{ color: colors.foreground }}>{isArabic ? 'كل عُمان' : 'All Oman'}</Text></Pressable>
+               {locationOptions.map((item) => {
+                 const value = 'wilayats' in item ? item.name : item.name;
+                 const label = isArabic ? ('wilayats' in item ? item.nameAr : item.nameAr) : value;
+                 return <Pressable key={value} testID={`location-option-${value}`} onPress={() => {
+                   if ('wilayats' in item) {
+                     setSelectedGovernorate(item.name);
+                     setSelectedWilayat('');
+                     setLocationMenu('wilayat');
+                   } else {
+                     setSelectedWilayat(item.name);
+                     setLocationMenu(null);
+                   }
+                 }} style={styles.locationOption}><Text style={{ color: colors.foreground }}>{label}</Text></Pressable>;
+               })}
+             </ScrollView>
+           </View> : null}
            <SegmentedControl value={visibleMode} onChange={(nextMode) => {
              setMode(nextMode);
              setActiveService(nextMode === 'Properties' ? 'real-estate' : 'contractors');
@@ -117,7 +151,11 @@ const styles = StyleSheet.create({
   sortText: { fontSize: 11, fontWeight: '700' },
   propertyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  filterInput: { width: 145, height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, fontSize: 12 },
+   locationFilter: { minWidth: 145, maxWidth: 175, height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
+   locationFilterText: { flex: 1, fontSize: 12 },
+   locationMenu: { borderWidth: 1, borderRadius: 14, marginTop: -8, marginBottom: 10, overflow: 'hidden' },
+   locationMenuScroll: { maxHeight: 220 },
+   locationOption: { minHeight: 42, paddingHorizontal: 14, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   filterChip: { height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
   apiHint: { fontSize: 12, marginBottom: 10, lineHeight: 18 },
 });

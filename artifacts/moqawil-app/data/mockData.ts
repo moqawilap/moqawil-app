@@ -13,6 +13,7 @@ export type Provider = {
   reviews: number;
   distance: string;
   city: string;
+  wilayat?: string;
   verified: boolean;
   image: ImageSourcePropType;
   accent: string;
@@ -100,6 +101,7 @@ export const providers: Provider[] = [
     reviews: 86,
     distance: '2.4 km',
     city: 'Muscat',
+    wilayat: 'Bawshar',
     verified: true,
     image: images.contractor,
     accent: '#0F6FB7',
@@ -121,6 +123,7 @@ export const providers: Provider[] = [
     reviews: 54,
     distance: '4.1 km',
     city: 'Muscat',
+    wilayat: 'Muscat',
     verified: true,
     image: images.interior,
     accent: '#0B9B8C',
@@ -142,6 +145,7 @@ export const providers: Provider[] = [
     reviews: 112,
     distance: '5.7 km',
     city: 'Muscat',
+    wilayat: 'Al Seeb',
     verified: true,
     image: images.villa,
     accent: '#7D62BE',

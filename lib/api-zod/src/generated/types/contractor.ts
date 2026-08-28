@@ -11,6 +11,8 @@ export interface Contractor {
   businessName: string;
   city: string;
   /** @nullable */
+  wilayat?: string | null;
+  /** @nullable */
   bio?: string | null;
   /** @nullable */
   avatarUrl?: string | null;

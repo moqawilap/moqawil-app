@@ -14,6 +14,8 @@ export interface Contractor {
   businessName: string;
   city: string;
   /** @nullable */
+  wilayat?: string | null;
+  /** @nullable */
   bio?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
@@ -428,6 +430,7 @@ export type NotFoundResponse = void;
 
 export type ListContractorsParams = {
 city?: string;
+wilayat?: string;
 category?: string;
 verified?: boolean;
 search?: string;

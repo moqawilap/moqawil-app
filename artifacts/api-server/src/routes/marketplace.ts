@@ -79,6 +79,7 @@ router.get("/contractors", async (req, res, next) => {
       and(eq(subscriptions.status, "active"), gt(subscriptions.currentPeriodEndsAt, now)),
     )];
     if (typeof req.query.city === "string") filters.push(eq(contractorProfiles.city, req.query.city));
+    if (typeof req.query.wilayat === "string") filters.push(eq(contractorProfiles.wilayat, req.query.wilayat));
     if (req.query.verified === "true") filters.push(eq(contractorProfiles.isVerified, true));
     if (typeof req.query.search === "string" && req.query.search.length <= 100) filters.push(ilike(contractorProfiles.businessName, `%${req.query.search}%`));
     if (typeof req.query.category === "string") filters.push(sql`exists (select 1 from ${services} where ${services.contractorId} = ${contractorProfiles.id} and ${services.category} = ${req.query.category} and ${services.isActive})`);
@@ -109,7 +110,7 @@ router.get("/contractors", async (req, res, next) => {
       db.select({ count: sql<number>`count(distinct ${contractorProfiles.id})` }).from(contractorProfiles)
         .innerJoin(subscriptions, eq(subscriptions.contractorId, contractorProfiles.id)).where(and(...filters)),
     ]);
-    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore) })), page, total: Number(totalRows[0]!.count) });
+    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore) })), page, total: Number(totalRows[0]!.count) });
   } catch (error) { next(error); }
 });
 

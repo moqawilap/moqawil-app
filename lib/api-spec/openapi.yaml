@@ -23,6 +23,7 @@ paths:
       tags: [contractors]
       parameters:
         - { name: city, in: query, schema: { type: string } }
+        - { name: wilayat, in: query, schema: { type: string } }
         - { name: category, in: query, schema: { type: string } }
         - { name: verified, in: query, schema: { type: boolean } }
         - { name: search, in: query, schema: { type: string } }
@@ -192,6 +193,7 @@ components:
         id: { type: string }
         businessName: { type: string }
         city: { type: string }
+        wilayat: { type: [string, "null"] }
         bio: { type: [string, "null"] }
         avatarUrl: { type: [string, "null"] }
         isVerified: { type: boolean }
