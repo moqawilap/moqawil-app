@@ -25,7 +25,7 @@ export default function SignInScreen() {
       if (result.error) throw result.error;
       if (signIn.status === 'complete') {
         await signIn.finalize();
-        router.replace('/');
+        router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
       } else {
         Alert.alert('Additional verification required', 'Your account needs an additional verification step. Please finish it in Clerk and try again.');
       }
