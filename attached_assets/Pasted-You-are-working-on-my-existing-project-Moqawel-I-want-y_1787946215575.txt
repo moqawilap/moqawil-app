@@ -1,0 +1,327 @@
+You are working on my existing project “Moqawel” (موقع مقاول).
+
+I want you to inspect the existing codebase first and understand the current architecture, UI, authentication system, database, users, contractors, and existing pages before making any changes.
+
+Then implement the following features inside the existing project without breaking any current functionality.
+
+1. Contractor Subscription System
+
+Add a complete subscription system specifically for contractors.
+
+Subscription offer:
+
+* First 4 months FREE for every new contractor.
+* After the 4-month free period, the subscription costs 100 OMR.
+* The system must automatically track the free period and subscription status.
+* Clearly show the contractor:
+    * Free trial start date
+    * Free trial end date
+    * Next payment date
+    * Subscription price
+    * Current subscription status
+
+Subscription statuses should include:
+
+* Free Trial
+* Active
+* Payment Due
+* Expired
+* Cancelled
+* Suspended
+
+Create a professional subscription page where contractors can:
+
+* View their current plan
+* See remaining free-trial time
+* See the next payment date
+* View payment history
+* Manage their subscription
+* Cancel their subscription
+
+Make the subscription system flexible so we can add monthly/yearly plans and different prices later.
+
+2. Contractor Profile & Directory
+
+Improve the contractor directory on Moqawel.
+
+Create a professional contractors listing page showing:
+
+* Contractor/company name
+* Logo/profile image
+* Specialization
+* Services
+* Location / Wilayat
+* Rating
+* Number of reviews
+* Previous projects
+* Verification status
+* Subscription status where appropriate
+* Contact button
+* View Profile button
+
+Add search and filters for:
+
+* Specialization
+* Service
+* Wilayat / Location
+* Rating
+* Verified contractors
+
+The page must be fully responsive and optimized for mobile.
+
+3. Contractor Ranking System
+
+Create a fair ranking system for contractors.
+
+Rank contractors using factors such as:
+
+* Average rating
+* Number of reviews
+* Completed projects
+* Profile completeness
+* Verification status
+* Contractor activity
+* Customer engagement
+
+Do not make payment/subscription status the only factor determining ranking.
+
+Create a clear and maintainable ranking algorithm so it can be adjusted later from the admin dashboard.
+
+4. Admin Dashboard
+
+Create a professional Admin Dashboard for managing Moqawel.
+
+The admin dashboard should include:
+
+Overview
+
+Display:
+
+* Total contractors
+* Active contractors
+* Contractors in free trial
+* Expired subscriptions
+* Cancelled subscriptions
+* Total revenue
+* New contractors
+* New subscriptions
+* Upcoming payments
+
+Use clean dashboard cards and charts where appropriate.
+
+Contractor Management
+
+Admins should be able to:
+
+* View all contractors
+* Search contractors
+* Filter contractors
+* Edit contractor information
+* Activate/deactivate contractors
+* Verify/unverify contractors
+* View contractor profiles
+* View contractor subscription information
+* View contractor payment history
+
+Subscription Management
+
+Admins should be able to:
+
+* View all subscriptions
+* Filter by subscription status
+* View free-trial contractors
+* View active subscribers
+* View expired subscriptions
+* View upcoming payments
+* Manually extend a free trial
+* Suspend a subscription
+* Activate a subscription
+* Cancel a subscription
+* Change subscription plans
+
+Payment Management
+
+Create a payments page showing:
+
+* Contractor
+* Amount
+* Payment date
+* Payment status
+* Payment method
+* Transaction/reference ID
+* Subscription associated with the payment
+
+Include statuses such as:
+
+* Paid
+* Pending
+* Failed
+* Refunded
+
+5. Notifications
+
+Add notifications for contractors:
+
+* Welcome notification when they register
+* Notification when the 4-month free period is approaching its end
+* Reminder before the payment date
+* Successful payment notification
+* Failed payment notification
+* Subscription expiration notification
+
+The notification system should be designed so email/SMS/push notifications can be integrated later.
+
+6. Database
+
+Inspect the existing database and add the necessary tables/models without duplicating existing functionality.
+
+The system should support data for:
+
+* Contractors
+* Subscription plans
+* Contractor subscriptions
+* Free trials
+* Payments
+* Reviews
+* Contractor rankings
+* Notifications
+* Admin actions/audit logs
+
+Use proper relationships, indexes, validation, and timestamps.
+
+7. Authentication & Permissions
+
+Maintain the existing authentication system if one already exists.
+
+Create/maintain these roles:
+
+Customer
+
+Can browse contractors and interact with the platform.
+
+Contractor
+
+Can manage:
+
+* Their profile
+* Services
+* Projects
+* Subscription
+* Payment history
+* Notifications
+
+Admin
+
+Can access the complete admin dashboard and manage the platform.
+
+Make sure contractors cannot access admin functionality.
+
+8. Arabic / RTL
+
+The platform is primarily Arabic.
+
+Make sure all new pages:
+
+* Support Arabic
+* Support RTL
+* Work correctly on mobile
+* Have professional Arabic UI labels
+* Maintain the existing Moqawel branding and design
+
+If the existing project already supports English/Arabic localization, integrate the new text into the existing localization system instead of hardcoding it.
+
+9. Payment Architecture
+
+If a payment gateway already exists in the project, integrate with it.
+
+If there is no payment gateway yet, do not invent fake payment processing.
+
+Instead:
+
+* Build the subscription/payment architecture properly.
+* Create the required payment interfaces/services.
+* Use a mock/test payment flow only for development if necessary.
+* Structure the code so a real Oman payment gateway can be connected later.
+
+Never store raw card numbers or sensitive payment information.
+
+10. Admin Controls
+
+Add settings in the Admin Dashboard for:
+
+* Subscription price
+* Free-trial duration
+* Subscription duration
+* Enable/disable new subscriptions
+* Payment reminders
+* Ranking weights
+* Contractor verification
+
+The default configuration should be:
+
+Free trial: 4 months
+Subscription price: 100 OMR
+
+Do not hardcode these values throughout the application. Store them in configuration/database settings so the admin can change them later.
+
+11. UI/UX
+
+Make the new pages look like a polished professional marketplace for contractors in Oman.
+
+Use the existing design system/components if available.
+
+Create:
+
+* Subscription page
+* Contractor directory
+* Contractor profile improvements
+* Admin dashboard
+* Subscription management page
+* Payment management page
+* Contractor management page
+* Notification interface
+
+Make everything responsive for:
+
+* Mobile
+* Tablet
+* Desktop
+
+12. Important Development Rules
+
+Before coding:
+
+1. Inspect the entire existing project structure.
+2. Identify the framework and technologies being used.
+3. Identify the existing database and ORM.
+4. Identify authentication and authorization.
+5. Identify existing contractor/user models.
+6. Identify existing UI components and design system.
+7. Reuse existing components wherever possible.
+8. Do not replace working functionality unnecessarily.
+9. Do not create duplicate tables/models if equivalent functionality already exists.
+10. Keep the implementation modular and production-ready.
+
+After implementation:
+
+* Run the application.
+* Check for TypeScript/build errors.
+* Check database migrations.
+* Test authentication and permissions.
+* Test contractor registration.
+* Test the 4-month free trial logic.
+* Test subscription status changes.
+* Test admin controls.
+* Test contractor ranking.
+* Test responsive layouts.
+* Fix any errors you find.
+
+Finally, give me a concise summary of:
+
+* What you changed
+* New pages created
+* Database changes
+* APIs/services added
+* How the 4-month free trial works
+* Any payment gateway integration still required
+* Any issues that remain
