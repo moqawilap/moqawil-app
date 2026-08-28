@@ -24,7 +24,8 @@ export default function SignInScreen() {
       const result = await signIn.password({ identifier: email.trim(), password });
       if (result.error) throw result.error;
       if (signIn.status === 'complete') {
-        await signIn.finalize();
+        const finalized = await signIn.finalize();
+        if (finalized.error) throw finalized.error;
         router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
       } else {
         Alert.alert('Additional verification required', 'Your account needs an additional verification step. Please finish it in Clerk and try again.');
@@ -48,7 +49,7 @@ export default function SignInScreen() {
         <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
         <TextInput secureTextEntry value={password} onChangeText={setPassword} placeholder="Enter your password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         <Pressable onPress={submit} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
-          {busy || fetchStatus === 'fetching' ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>Sign in</Text>}
+          {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>Sign in</Text>}
         </Pressable>
         <View style={styles.footerRow}><Text style={[styles.footerText, { color: colors.mutedForeground }]}>New to Moqawil?</Text><Link href="/sign-up" asChild><Pressable><Text style={[styles.link, { color: colors.primary }]}>Create an account</Text></Pressable></Link></View>
       </ScrollView>

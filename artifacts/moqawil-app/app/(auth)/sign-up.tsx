@@ -17,25 +17,36 @@ export default function SignUpScreen() {
 
   const submit = async () => {
     if (busy) return;
+    if (!email.trim() || !password) {
+      Alert.alert('Account details required', 'Enter your email address and create a password to continue.');
+      return;
+    }
     setBusy(true);
     try {
       if (!verificationStarted) {
         const result = await signUp.password({ emailAddress: email.trim(), password });
         if (result.error) throw result.error;
         if (signUp.status === 'complete') {
-          await signUp.finalize();
-          router.replace('/');
+          const finalized = await signUp.finalize();
+          if (finalized.error) throw finalized.error;
+          router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
           return;
         }
-        await signUp.verifications.sendEmailCode();
+        const verification = await signUp.verifications.sendEmailCode();
+        if (verification.error) throw verification.error;
         setVerificationStarted(true);
         Alert.alert('Check your email', 'We sent a verification code to your email address.');
       } else {
+        if (!code.trim()) {
+          Alert.alert('Verification code required', 'Enter the code sent to your email.');
+          return;
+        }
         const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
         if (result.error) throw result.error;
         if (signUp.status === 'complete') {
-          await signUp.finalize();
-          router.replace('/');
+          const finalized = await signUp.finalize();
+          if (finalized.error) throw finalized.error;
+          router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
         }
       }
     } catch (error) {
@@ -58,7 +69,7 @@ export default function SignUpScreen() {
         <TextInput editable={!verificationStarted} secureTextEntry value={password} onChangeText={setPassword} placeholder="Create a password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         {verificationStarted ? <><Text style={[styles.label, { color: colors.foreground }]}>Verification code</Text><TextInput keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Enter the code from your email" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} /></> : null}
         <Pressable onPress={submit} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
-          {busy || fetchStatus === 'fetching' ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>{verificationStarted ? 'Verify email' : 'Create account'}</Text>}
+          {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>{verificationStarted ? 'Verify email' : 'Create account'}</Text>}
         </Pressable>
         <View style={styles.footerRow}><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Already registered?</Text><Link href="/sign-in" asChild><Pressable><Text style={[styles.link, { color: colors.primary }]}>Sign in</Text></Pressable></Link></View>
       </ScrollView>
