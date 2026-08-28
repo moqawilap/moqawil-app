@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "XYKr2e33D6ij3D-LZDcDl"
+uri = "file://screenshots/admin-page-preview.jpg"
+type = "image"
+title = "Moqawil Admin Page Preview"
+description = "صورة من تصميم صفحة الإدارة الحالية في المعاينة."
+logical_id = "18e7df3f-4a57-446b-ab6b-f8750ef8177c"
+content_hash = "sha256:9b063f65b7f5d45f4e93d72b8b4dedd324595ba3782c9ab66d4b26a00a91dc1e"
+size = 8645
+mtime_ms = 1787954285295
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/18e7df3f-4a57-446b-ab6b-f8750ef8177c/f5d06ad0-4242-4da3-a6bb-b504b160ad18"
+storage_version_token = "1787954293018538"
+content_type = "image/jpeg"
