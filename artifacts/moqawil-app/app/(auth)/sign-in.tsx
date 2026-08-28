@@ -12,11 +12,13 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const submit = async () => {
     if (busy) return;
+    setErrorMessage(null);
     if (!email.trim() || !password) {
-      Alert.alert('Sign in required', 'Enter your email and password to continue.');
+      setErrorMessage('Enter your email and password to continue.');
       return;
     }
     setBusy(true);
@@ -28,10 +30,12 @@ export default function SignInScreen() {
         if (finalized.error) throw finalized.error;
         router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
       } else {
-        Alert.alert('Additional verification required', 'Your account needs an additional verification step. Please finish it in Clerk and try again.');
+        setErrorMessage('Additional verification is required. Complete the verification step and try again.');
       }
     } catch (error) {
-      Alert.alert('Unable to sign in', error instanceof Error ? error.message : 'Check your details and try again.');
+      const message = error instanceof Error ? error.message : 'Check your email and password and try again.';
+      setErrorMessage(message);
+      if (Platform.OS !== 'web') Alert.alert('Unable to sign in', message);
     } finally {
       setBusy(false);
     }
@@ -48,6 +52,7 @@ export default function SignInScreen() {
         <TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
         <TextInput secureTextEntry value={password} onChangeText={setPassword} placeholder="Enter your password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         <Pressable onPress={submit} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
           {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>Sign in</Text>}
         </Pressable>
@@ -72,4 +77,5 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 25 },
   footerText: { fontSize: 13 },
   link: { fontSize: 13, fontWeight: '800' },
+  errorText: { color: '#B42318', fontSize: 12, lineHeight: 18, marginTop: 12 },
 });

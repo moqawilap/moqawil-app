@@ -14,11 +14,13 @@ export default function SignUpScreen() {
   const [code, setCode] = useState('');
   const [verificationStarted, setVerificationStarted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const submit = async () => {
     if (busy) return;
+    setErrorMessage(null);
     if (!email.trim() || !password) {
-      Alert.alert('Account details required', 'Enter your email address and create a password to continue.');
+      setErrorMessage('Enter your email address and create a password to continue.');
       return;
     }
     setBusy(true);
@@ -38,7 +40,7 @@ export default function SignUpScreen() {
         Alert.alert('Check your email', 'We sent a verification code to your email address.');
       } else {
         if (!code.trim()) {
-          Alert.alert('Verification code required', 'Enter the code sent to your email.');
+          setErrorMessage('Enter the code sent to your email.');
           return;
         }
         const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
@@ -50,7 +52,9 @@ export default function SignUpScreen() {
         }
       }
     } catch (error) {
-      Alert.alert('Unable to create account', error instanceof Error ? error.message : 'Check your details and try again.');
+      const message = error instanceof Error ? error.message : 'Check your details and try again.';
+      setErrorMessage(message);
+      if (Platform.OS !== 'web') Alert.alert('Unable to create account', message);
     } finally {
       setBusy(false);
     }
@@ -68,6 +72,7 @@ export default function SignUpScreen() {
         <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
         <TextInput editable={!verificationStarted} secureTextEntry value={password} onChangeText={setPassword} placeholder="Create a password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         {verificationStarted ? <><Text style={[styles.label, { color: colors.foreground }]}>Verification code</Text><TextInput keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Enter the code from your email" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} /></> : null}
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         <Pressable onPress={submit} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
           {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>{verificationStarted ? 'Verify email' : 'Create account'}</Text>}
         </Pressable>
@@ -92,4 +97,5 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 25 },
   footerText: { fontSize: 13 },
   link: { fontSize: 13, fontWeight: '800' },
+  errorText: { color: '#B42318', fontSize: 12, lineHeight: 18, marginTop: 12 },
 });
