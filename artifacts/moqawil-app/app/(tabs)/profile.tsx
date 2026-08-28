@@ -23,7 +23,7 @@ export default function ProfileScreen() {
     { icon: 'map-pin' as const, title: isArabic ? 'موقعك' : 'Your location', value: `${location.area}, ${location.city}`, onPress: refreshLocation },
     { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => router.push('/notifications' as never) },
     { icon: 'help-circle' as const, title: isArabic ? 'مركز المساعدة' : 'Help center', value: '', onPress: () => Alert.alert('Moqawil Help', 'Call +968 7722 4535 or email moqawil.om@gmail.com.') },
-    ...(isAdmin ? [{ icon: 'shield' as const, title: 'Admin console', value: 'Contractors & evaluations', onPress: () => router.push('/admin') }] : []),
+     ...(isSignedIn ? [{ icon: 'shield' as const, title: isArabic ? 'لوحة الإدارة' : 'Admin console', value: isAdmin ? (isArabic ? 'المقاولون والتقييمات' : 'Contractors & evaluations') : (isArabic ? 'تتطلب صلاحية المدير' : 'Admin role required'), onPress: () => router.push('/admin') }] : []),
     ...(isContractor ? [{ icon: 'credit-card' as const, title: isArabic ? 'اشتراكي' : 'My subscription', value: subscription.data ? `${subscription.data.planName} · ${subscription.data.priceOmaniRial} OMR / ${subscription.data.billingMonths === 12 ? (isArabic ? 'سنة' : 'year') : `${subscription.data.billingMonths} ${isArabic ? 'أشهر' : 'months'}`}` : (isArabic ? 'جاري تحميل الخطة…' : 'Plan details loading…'), onPress: () => router.push('/subscription' as never) }] : []),
     ...(isSignedIn && !isAdmin ? [{ icon: 'briefcase' as const, title: isContractor ? (isArabic ? 'إدارة ملف المقاول' : 'Manage contractor profile') : (isArabic ? 'انضم كمقاول' : 'Join as contractor'), value: '', onPress: () => router.push('/contractor-profile' as never) }] : []),
   ];
