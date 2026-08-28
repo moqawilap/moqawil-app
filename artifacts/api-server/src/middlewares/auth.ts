@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { clerkClient, getAuth } from "@clerk/express";
 import { eq } from "drizzle-orm";
 import { db, users, type User } from "@workspace/db";
+import { hasAdminAccess, hasContractorAccess, resolveMarketplaceRole } from "./authPolicy";
 
 export type AuthenticatedRequest = Request & { marketplaceUser: User };
 
@@ -13,7 +14,7 @@ export async function requireUser(req: Request, res: Response, next: NextFunctio
   }
   const clerkUser = await clerkClient.users.getUser(userId);
   const metadata = clerkUser.publicMetadata as { role?: unknown; isAdmin?: unknown };
-  const metadataRole = metadata.isAdmin === true ? "admin" : metadata.role === "admin" || metadata.role === "contractor" ? metadata.role : undefined;
+  const metadataRole = resolveMarketplaceRole(metadata);
   const email = clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress;
   const displayName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || clerkUser.username || null;
   let user = await db.query.users.findFirst({ where: eq(users.clerkUserId, userId) });
@@ -22,10 +23,10 @@ export async function requireUser(req: Request, res: Response, next: NextFunctio
       clerkUserId: userId,
       email: email ?? `${userId}@clerk.local`,
       displayName,
-      role: metadataRole ?? "customer",
+      role: metadataRole,
     }).returning();
   } else {
-    const role = metadataRole ?? user.role; // metadata is authoritative when present; retain a manually assigned DB admin otherwise.
+    const role = resolveMarketplaceRole(metadata, user.role);
     [user] = await db.update(users).set({ email: email ?? user.email, displayName: displayName ?? user.displayName, role, updatedAt: new Date() }).where(eq(users.id, user.id)).returning();
   }
   (req as AuthenticatedRequest).marketplaceUser = user;
@@ -34,8 +35,17 @@ export async function requireUser(req: Request, res: Response, next: NextFunctio
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const user = (req as AuthenticatedRequest).marketplaceUser;
-  if (!user || user.role !== "admin") {
+  if (!user || !hasAdminAccess(user.role)) {
     res.status(403).json({ error: "Administrator role required" });
+    return;
+  }
+  return next();
+}
+
+export function requireContractor(req: Request, res: Response, next: NextFunction) {
+  const user = (req as AuthenticatedRequest).marketplaceUser;
+  if (!user || !hasContractorAccess(user.role)) {
+    res.status(403).json({ error: "Contractor role required" });
     return;
   }
   return next();

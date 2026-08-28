@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/expo';
 import { router } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
@@ -20,6 +20,15 @@ export default function SubscriptionScreen() {
   const cancel = useCancelMySubscription({ mutation: { onSuccess: () => { client.invalidateQueries({ queryKey: getGetMySubscriptionQueryKey() }); client.invalidateQueries({ queryKey: getListMyPaymentsQueryKey() }); } } });
   const item = subscription.data;
   const trialDays = item ? Math.max(0, Math.ceil((new Date(item.trialEndsAt).getTime() - Date.now()) / 86400000)) : 0;
+  const confirmCancellation = () => {
+    const title = isArabic ? 'تأكيد الإلغاء' : 'Confirm cancellation';
+    const message = isArabic ? 'هل تريد إلغاء اشتراكك؟' : 'Do you want to cancel your subscription?';
+    if (Platform.OS === 'web') {
+      if (globalThis.confirm(`${title}\n\n${message}`)) cancel.mutate();
+      return;
+    }
+    Alert.alert(title, message, [{ text: isArabic ? 'رجوع' : 'Keep plan', style: 'cancel' }, { text: isArabic ? 'إلغاء الاشتراك' : 'Cancel subscription', style: 'destructive', onPress: () => cancel.mutate() }]);
+  };
   return <View style={[styles.page, { backgroundColor: colors.background }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }}><View style={styles.content}>
     <Pressable testID="subscription-back" onPress={() => router.back()}><Feather name="arrow-left" size={20} color={colors.foreground} /></Pressable>
     <ScreenHeader title={isArabic ? 'اشتراك المقاول' : 'Contractor subscription'} subtitle={isArabic ? 'إدارة خطتك وفواتيرك' : 'Manage your plan and billing'} />
@@ -29,11 +38,11 @@ export default function SubscriptionScreen() {
     {subscription.isError ? <Text style={[styles.note, { color: colors.mutedForeground }]}>Subscription details are temporarily unavailable. Please try again later.</Text> : null}
     {item ? <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.status, { color: colors.primary }]}>{item.planName} · {item.status.replace('_', ' ').toUpperCase()}</Text><Text style={[styles.price, { color: colors.foreground }]}>{item.priceOmaniRial} OMR <Text style={styles.period}>/ {billingLabel(item.billingMonths, isArabic)}</Text></Text><Text style={[styles.note, { color: colors.mutedForeground }]}>{isArabic ? `تجربة مجانية لمدة ${item.trialMonths} أشهر` : `${item.trialMonths}-month free trial`}</Text><View style={[styles.divider, { backgroundColor: colors.border }]} /><Text style={[styles.line, { color: colors.foreground }]}>{isArabic ? 'بدأت التجربة:' : 'Trial started:'} {dateText(item.trialStartedAt)}</Text><Text style={[styles.line, { color: colors.foreground }]}>{isArabic ? 'تنتهي التجربة:' : 'Trial ends:'} {dateText(item.trialEndsAt)} ({trialDays} {isArabic ? 'يومًا' : 'days'})</Text><Text style={[styles.line, { color: colors.foreground }]}>{isArabic ? 'الفترة الحالية:' : 'Current period:'} {dateText(item.currentPeriodStartsAt)} — {dateText(item.currentPeriodEndsAt)}</Text>{item.cancelledAt ? <Text style={[styles.line, { color: colors.foreground }]}>{isArabic ? 'أُلغي في:' : 'Cancelled:'} {dateText(item.cancelledAt)}</Text> : null}</View> : null}
     <Text style={[styles.status, { color: colors.foreground }]}>{isArabic ? 'سجل المدفوعات' : 'Payment history'}</Text>
-    {payments.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
-    {payments.data?.length ? payments.data.map((record) => <View key={record.id} style={[styles.payment, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>{record.amountOmaniRial} OMR · {record.status}</Text><Text style={[styles.note, { color: colors.mutedForeground }]}>{record.provider}{record.providerReference ? ` · ${record.providerReference}` : ''} · {dateText(record.createdAt)}</Text></View>) : <Text style={[styles.note, { color: colors.mutedForeground }]}>{isArabic ? 'لا توجد مدفوعات مسجلة.' : 'No payments recorded.'}</Text>}
+    {payments.isLoading ? <ActivityIndicator testID="payments-loading" color={colors.primary} /> : null}
+    {payments.data?.length ? payments.data.map((record) => <View testID={`payment-record-${record.id}`} key={record.id} style={[styles.payment, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>{record.amountOmaniRial} OMR · {record.status}</Text><Text style={[styles.note, { color: colors.mutedForeground }]}>{record.provider}{record.providerReference ? ` · ${record.providerReference}` : ''} · {dateText(record.createdAt)}</Text></View>) : <Text testID="payments-empty" style={[styles.note, { color: colors.mutedForeground }]}>{isArabic ? 'لا توجد مدفوعات مسجلة.' : 'No payments recorded.'}</Text>}
     <Text style={[styles.note, { color: colors.mutedForeground }]}>Payments are handled securely outside this app. No real payment is collected here.</Text>
     {__DEV__ ? <View testID="development-payment"><ActionButton label={payment.isPending ? 'Processing…' : 'Development-only: simulate successful payment'} icon="tool" onPress={() => payment.mutate({ data: { outcome: 'succeed' } })} /></View> : null}
-    <View testID="manage-subscription"><ActionButton label={cancel.isPending ? 'Cancelling…' : (isArabic ? 'إلغاء الاشتراك' : 'Cancel subscription')} secondary onPress={() => Alert.alert(isArabic ? 'تأكيد الإلغاء' : 'Confirm cancellation', isArabic ? 'هل تريد إلغاء اشتراكك؟' : 'Do you want to cancel your subscription?', [{ text: isArabic ? 'رجوع' : 'Keep plan', style: 'cancel' }, { text: isArabic ? 'إلغاء الاشتراك' : 'Cancel subscription', style: 'destructive', onPress: () => cancel.mutate() }])} style={{ marginTop: 10 }} /></View>
+    {item && item.status !== 'cancelled' ? <View testID="manage-subscription"><ActionButton label={cancel.isPending ? 'Cancelling…' : (isArabic ? 'إلغاء الاشتراك' : 'Cancel subscription')} secondary onPress={confirmCancellation} style={{ marginTop: 10 }} /></View> : null}
     </React.Fragment> : null}</View></ScrollView></View>;
 }
 const styles = StyleSheet.create({ page:{flex:1},content:{paddingHorizontal:20,gap:16},card:{borderWidth:1,borderRadius:20,padding:18,gap:10},payment:{borderWidth:1,borderRadius:14,padding:12,gap:4},status:{fontWeight:'800',fontSize:12},price:{fontSize:28,fontWeight:'800'},period:{fontSize:13,fontWeight:'500'},note:{fontSize:13,lineHeight:19},divider:{height:1,marginVertical:3},line:{fontSize:13,fontWeight:'600'} });

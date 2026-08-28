@@ -560,6 +560,77 @@ export function useListMyPayments<TData = Awaited<ReturnType<typeof listMyPaymen
 
 
 
+export const getGetMyContractorProfileUrl = () => {
+
+
+
+
+  return `/api/me/contractor-profile`
+}
+
+export const getMyContractorProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<ContractorProfileUpsert> => {
+
+  return customFetch<ContractorProfileUpsert>(getGetMyContractorProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyContractorProfileQueryKey = () => {
+    return [
+    `/api/me/contractor-profile`
+    ] as const;
+    }
+
+
+export const getGetMyContractorProfileQueryOptions = <TData = Awaited<ReturnType<typeof getMyContractorProfile>>, TError = ErrorType<NotFoundResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyContractorProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyContractorProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyContractorProfile>>> = ({ signal }) => getMyContractorProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyContractorProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyContractorProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getMyContractorProfile>>>
+export type GetMyContractorProfileQueryError = ErrorType<NotFoundResponse>
+
+
+
+export function useGetMyContractorProfile<TData = Awaited<ReturnType<typeof getMyContractorProfile>>, TError = ErrorType<NotFoundResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyContractorProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyContractorProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getUpsertMyContractorProfileUrl = () => {
 
 

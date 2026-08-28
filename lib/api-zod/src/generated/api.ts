@@ -159,21 +159,55 @@ export const ListMyPaymentsResponseItem = zod.object({
 export const ListMyPaymentsResponse = zod.array(ListMyPaymentsResponseItem)
 
 
+export const getMyContractorProfileResponseBusinessNameMin = 2;
+export const getMyContractorProfileResponseBusinessNameMax = 200;
+
+export const getMyContractorProfileResponseCityMin = 2;
+export const getMyContractorProfileResponseCityMax = 100;
+
+export const getMyContractorProfileResponseBioMax = 5000;
+
+export const getMyContractorProfileResponseServiceAreaMax = 255;
+
+export const getMyContractorProfileResponsePhoneMax = 32;
+
+export const getMyContractorProfileResponseAvatarUrlMax = 2048;
+
+
+
+export const GetMyContractorProfileResponse = zod.object({
+  "businessName": zod.string().min(getMyContractorProfileResponseBusinessNameMin).max(getMyContractorProfileResponseBusinessNameMax),
+  "city": zod.string().min(getMyContractorProfileResponseCityMin).max(getMyContractorProfileResponseCityMax),
+  "bio": zod.string().max(getMyContractorProfileResponseBioMax).nullish(),
+  "serviceArea": zod.string().max(getMyContractorProfileResponseServiceAreaMax).nullish(),
+  "phone": zod.string().max(getMyContractorProfileResponsePhoneMax).nullish(),
+  "avatarUrl": zod.string().max(getMyContractorProfileResponseAvatarUrlMax).nullish()
+})
+
+
 export const upsertMyContractorProfileBodyBusinessNameMin = 2;
 export const upsertMyContractorProfileBodyBusinessNameMax = 200;
 
 export const upsertMyContractorProfileBodyCityMin = 2;
 export const upsertMyContractorProfileBodyCityMax = 100;
 
+export const upsertMyContractorProfileBodyBioMax = 5000;
+
+export const upsertMyContractorProfileBodyServiceAreaMax = 255;
+
+export const upsertMyContractorProfileBodyPhoneMax = 32;
+
+export const upsertMyContractorProfileBodyAvatarUrlMax = 2048;
+
 
 
 export const UpsertMyContractorProfileBody = zod.object({
   "businessName": zod.string().min(upsertMyContractorProfileBodyBusinessNameMin).max(upsertMyContractorProfileBodyBusinessNameMax),
   "city": zod.string().min(upsertMyContractorProfileBodyCityMin).max(upsertMyContractorProfileBodyCityMax),
-  "bio": zod.string().optional(),
-  "serviceArea": zod.string().optional(),
-  "phone": zod.string().optional(),
-  "avatarUrl": zod.string().optional()
+  "bio": zod.string().max(upsertMyContractorProfileBodyBioMax).nullish(),
+  "serviceArea": zod.string().max(upsertMyContractorProfileBodyServiceAreaMax).nullish(),
+  "phone": zod.string().max(upsertMyContractorProfileBodyPhoneMax).nullish(),
+  "avatarUrl": zod.string().max(upsertMyContractorProfileBodyAvatarUrlMax).nullish()
 })
 
 export const UpsertMyContractorProfileResponse = zod.object({

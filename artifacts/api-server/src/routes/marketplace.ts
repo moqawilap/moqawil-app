@@ -1,12 +1,30 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type RequestHandler } from "express";
+import { clerkClient } from "@clerk/express";
 import { and, asc, desc, eq, gt, ilike, isNull, or, sql } from "drizzle-orm";
 import {
-  auditEvents, contractorProfiles, db, marketplaceSettings, notifications, payments, projects, reviews,
+  auditEvents, contractorProfiles, db, marketplaceSettings, notifications, payments, projects, rankingWeightsSchema, reviews,
   services, subscriptionPlans, subscriptions, users,
 } from "@workspace/db";
-import { requireAdmin, requireUser, type AuthenticatedRequest } from "../middlewares/auth";
+import { canStartContractorOnboarding } from "../middlewares/authPolicy";
+import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getSettings, isDirectoryEligible, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
 
+type MarketplaceAuthHandlers = {
+  requireUser: RequestHandler;
+  requireAdmin: RequestHandler;
+  requireContractor: RequestHandler;
+  promoteCustomerToContractor?: (clerkUserId: string) => Promise<void>;
+};
+
+export function createMarketplaceRouter(auth: MarketplaceAuthHandlers = {
+  requireUser: productionRequireUser,
+  requireAdmin: productionRequireAdmin,
+  requireContractor: productionRequireContractor,
+}): IRouter {
+const { requireUser, requireAdmin, requireContractor } = auth;
+const promoteCustomerToContractor = auth.promoteCustomerToContractor ?? (async (clerkUserId: string) => {
+  await clerkClient.users.updateUserMetadata(clerkUserId, { publicMetadata: { role: "contractor", isAdmin: false } });
+});
 const router: IRouter = Router();
 const decimal = (value: string | null) => value === null ? null : Number(value);
 async function logAudit(actorUserId: string, action: string, entityType: string, entityId: string, metadata: Record<string, unknown> = {}) {
@@ -110,11 +128,33 @@ router.get("/contractors/:id", async (req, res, next) => {
       db.select().from(projects).where(and(eq(projects.contractorId, profile.id), eq(projects.isPublished, true))).orderBy(desc(projects.completedAt)),
       db.select().from(reviews).where(and(eq(reviews.contractorId, profile.id), eq(reviews.isPublished, true))).orderBy(desc(reviews.createdAt)),
     ]);
-    res.json({ ...summary, phone: profile.phone, services: profileServices.map((item) => ({ ...item, priceFromOmaniRial: decimal(item.priceFromOmaniRial) })), projects: profileProjects, reviews: profileReviews });
+    res.json({
+      ...summary,
+      phone: profile.phone,
+      services: profileServices.map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        description: item.description,
+        priceFromOmaniRial: decimal(item.priceFromOmaniRial),
+      })),
+      projects: profileProjects.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        imageUrls: item.imageUrls,
+      })),
+      reviews: profileReviews.map((item) => ({
+        id: item.id,
+        rating: item.rating,
+        comment: item.comment,
+        createdAt: item.createdAt,
+      })),
+    });
   } catch (error) { next(error); }
 });
 
-router.get("/me/subscription", requireUser, async (req, res, next) => {
+router.get("/me/subscription", requireUser, requireContractor, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
@@ -133,7 +173,26 @@ router.get("/me/subscription", requireUser, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post("/me/subscription", requireUser, async (req, res, next) => {
+router.get("/me/contractor-profile", requireUser, requireContractor, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
+    if (!profile) {
+      res.status(404).json({ error: "A contractor profile is required" });
+      return;
+    }
+    res.json({
+      businessName: profile.businessName,
+      city: profile.city,
+      bio: profile.bio,
+      serviceArea: profile.serviceArea,
+      phone: profile.phone,
+      avatarUrl: profile.avatarUrl,
+    });
+  } catch (error) { next(error); }
+});
+
+router.post("/me/subscription", requireUser, requireContractor, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const outcome = req.body?.outcome;
@@ -158,7 +217,7 @@ router.post("/me/subscription", requireUser, async (req, res, next) => {
     res.json(await subscriptionResponse(current!));
   } catch (error) { next(error); }
 });
-router.delete("/me/subscription", requireUser, async (req, res, next) => {
+router.delete("/me/subscription", requireUser, requireContractor, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
@@ -169,7 +228,7 @@ router.delete("/me/subscription", requireUser, async (req, res, next) => {
     res.json(await subscriptionResponse(cancelled));
   } catch (error) { next(error); }
 });
-router.get("/me/payments", requireUser, async (req, res, next) => {
+router.get("/me/payments", requireUser, requireContractor, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
@@ -181,8 +240,16 @@ router.get("/me/payments", requireUser, async (req, res, next) => {
 router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
+    const existingProfile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
+    if (!canStartContractorOnboarding(user.role, Boolean(existingProfile))) {
+      res.status(403).json({ error: "Contractor role required" });
+      return;
+    }
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100) { res.status(400).json({ error: "businessName and city are required" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048)) { res.status(400).json({ error: "Invalid contractor profile fields" }); return; }
+    if (user.role === "customer") {
+      await promoteCustomerToContractor(user.clerkUserId);
+    }
     const settings = await getSettings();
     const result = await db.transaction(async (tx) => {
       const [profile] = await tx.insert(contractorProfiles).values({
@@ -232,7 +299,7 @@ router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, ne
 router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0))) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean")) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
     const settings = await getSettings();
     const profile = await db.transaction(async (tx) => {
       const [managedUser] = await tx.insert(users).values({ clerkUserId: `managed:${crypto.randomUUID()}`, email: `managed-${crypto.randomUUID()}@listing.invalid`, displayName: input.businessName.trim(), role: "contractor", identitySource: "managed_listing" }).returning();
@@ -328,7 +395,7 @@ router.get("/admin/settings", requireUser, requireAdmin, async (_req, res, next)
 router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const settings = req.body;
-    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || !settings.rankingWeights) {
+    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success) {
       res.status(400).json({ error: "Invalid marketplace settings" });
       return;
     }
@@ -337,4 +404,7 @@ router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) 
     res.json(await getSettings());
   } catch (error) { next(error); }
 });
-export default router;
+return router;
+}
+
+export default createMarketplaceRouter();

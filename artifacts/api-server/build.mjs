@@ -14,8 +14,13 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
+  const entryPoints = [path.resolve(artifactDir, "src/index.ts")];
+  if (process.env.BUILD_PERMISSION_TEST_SERVER === "1") {
+    entryPoints.push(path.resolve(artifactDir, "src/permissions-test-server.ts"));
+  }
+
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints,
     platform: "node",
     bundle: true,
     format: "esm",

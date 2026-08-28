@@ -7,6 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "test:permissions": "BUILD_PERMISSION_TEST_SERVER=1 pnpm run build && node --experimental-strip-types --test ./src/middlewares/auth.test.ts ./src/middlewares/permissions.integration.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

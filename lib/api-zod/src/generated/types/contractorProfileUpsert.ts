@@ -17,8 +17,24 @@ export interface ContractorProfileUpsert {
      * @maxLength 100
      */
   city: string;
-  bio?: string;
-  serviceArea?: string;
-  phone?: string;
-  avatarUrl?: string;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  bio?: string | null;
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  serviceArea?: string | null;
+  /**
+     * @maxLength 32
+     * @nullable
+     */
+  phone?: string | null;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  avatarUrl?: string | null;
 }

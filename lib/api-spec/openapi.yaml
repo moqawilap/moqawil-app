@@ -66,6 +66,13 @@ paths:
       responses:
         "200": { description: Contractor payment history, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Payment" } } } } }
   /me/contractor-profile:
+    get:
+      operationId: getMyContractorProfile
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Contractor profile, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorProfileUpsert" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
     put:
       operationId: upsertMyContractorProfile
       tags: [account]
@@ -229,7 +236,7 @@ components:
     AdminContractorUpdate: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, minProperties: 1 }
     AdminSubscriptionUpdate: { type: object, properties: { status: { type: string, enum: [free_trial, active, payment_due, expired, cancelled, suspended] }, extendTrialMonths: { type: number, minimum: 1, maximum: 24 } }, minProperties: 1 }
     AdminPaymentCreate: { type: object, properties: { subscriptionId: { type: string }, amountOmaniRial: { type: number, minimum: 0 }, status: { type: string, enum: [pending, paid, failed, refunded, void] }, provider: { type: string }, providerReference: { type: string } }, required: [subscriptionId, amountOmaniRial, status, provider] }
-    ContractorProfileUpsert: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, bio: { type: string }, serviceArea: { type: string }, phone: { type: string }, avatarUrl: { type: string } }, required: [businessName, city] }
+    ContractorProfileUpsert: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"], maxLength: 2048 } }, required: [businessName, city] }
     ContractorProvisioning: { type: object, properties: { contractor: { $ref: "#/components/schemas/Contractor" }, subscription: { $ref: "#/components/schemas/Subscription" } }, required: [contractor, subscription] }
     RankingWeights: { type: object, properties: { rating: { type: number }, reviews: { type: number }, projects: { type: number }, profile: { type: number }, verification: { type: number }, activity: { type: number }, engagement: { type: number } }, required: [rating, reviews, projects, profile, verification, activity, engagement] }
     MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights] }
