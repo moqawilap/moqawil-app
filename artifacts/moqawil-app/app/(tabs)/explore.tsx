@@ -56,7 +56,6 @@ export default function ExploreScreen() {
       selectedService === 'maintenance' ? provider.role === 'maintenance' : true,
     ).filter((provider) => !selectedGovernorate || provider.city === selectedGovernorate)
       .filter((provider) => !selectedWilayat || provider.wilayat === selectedWilayat);
-    );
     const source = apiProviders?.length ? apiProviders : fallbackProviders;
     return source
       .filter((provider) => (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized)) && provider.rating >= minimumRating)
