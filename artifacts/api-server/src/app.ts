@@ -8,7 +8,7 @@ import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxy
 
 const app: Express = express();
 const trustedOrigins = new Set(
-  [process.env.REPLIT_DEV_DOMAIN, ...(process.env.REPLIT_DOMAINS ?? "").split(",")]
+  [process.env.REPLIT_DEV_DOMAIN, process.env.REPLIT_EXPO_DEV_DOMAIN, ...(process.env.REPLIT_DOMAINS ?? "").split(",")]
     .filter((domain): domain is string => Boolean(domain?.trim()))
     .map((domain) => domain.startsWith("http") ? domain.trim() : `https://${domain.trim()}`),
 );
