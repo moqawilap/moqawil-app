@@ -83,6 +83,7 @@ router.get("/contractors", async (req, res, next) => {
     if (req.query.verified === "true") filters.push(eq(contractorProfiles.isVerified, true));
     if (typeof req.query.search === "string" && req.query.search.length <= 100) filters.push(ilike(contractorProfiles.businessName, `%${req.query.search}%`));
     if (typeof req.query.category === "string") filters.push(sql`exists (select 1 from ${services} where ${services.contractorId} = ${contractorProfiles.id} and ${services.category} = ${req.query.category} and ${services.isActive})`);
+    if (typeof req.query.service === "string" && req.query.service.length <= 160) filters.push(sql`exists (select 1 from ${services} where ${services.contractorId} = ${contractorProfiles.id} and ${services.name} = ${req.query.service} and ${services.isActive})`);
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
     const settings = await getSettings();

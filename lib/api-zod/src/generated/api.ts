@@ -24,6 +24,7 @@ export const ListContractorsQueryParams = zod.object({
   "city": zod.coerce.string().optional(),
   "wilayat": zod.coerce.string().optional(),
   "category": zod.coerce.string().optional(),
+  "service": zod.coerce.string().optional(),
   "verified": zod.coerce.boolean().optional(),
   "search": zod.coerce.string().optional(),
   "page": zod.coerce.number().min(1).default(listContractorsQueryPageDefault),

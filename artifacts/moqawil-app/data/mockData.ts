@@ -1,6 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type ServiceId = 'contractors' | 'consultants' | 'real-estate' | 'maintenance';
+export type ServiceId = 'contractors' | 'consultants' | 'building' | 'real-estate' | 'maintenance';
 
 export type Provider = {
   id: string;
@@ -14,6 +14,7 @@ export type Provider = {
   distance: string;
   city: string;
   wilayat?: string;
+  buildingServices?: string[];
   verified: boolean;
   image: ImageSourcePropType;
   accent: string;
@@ -75,6 +76,15 @@ export const serviceItems: Array<{
     color: '#0B9B8C',
   },
   {
+    id: 'building',
+    label: 'Building workshops',
+    labelAr: 'البناء والورش',
+    subtitle: 'Find the right craft',
+    subtitleAr: 'اختر ورشتك المناسبة',
+    icon: 'hard-hat',
+    color: '#D97745',
+  },
+  {
     id: 'real-estate',
     label: 'Real estate',
     labelAr: 'العقارات',
@@ -107,6 +117,7 @@ export const providers: Provider[] = [
     distance: '2.4 km',
     city: 'Muscat',
     wilayat: 'Bawshar',
+    buildingServices: ['General contracting', 'Home and villa construction'],
     verified: true,
     image: images.contractor,
     accent: '#0F6FB7',

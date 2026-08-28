@@ -432,6 +432,7 @@ export type ListContractorsParams = {
 city?: string;
 wilayat?: string;
 category?: string;
+service?: string;
 verified?: boolean;
 search?: string;
 /**

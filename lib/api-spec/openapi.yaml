@@ -25,6 +25,7 @@ paths:
         - { name: city, in: query, schema: { type: string } }
         - { name: wilayat, in: query, schema: { type: string } }
         - { name: category, in: query, schema: { type: string } }
+        - { name: service, in: query, schema: { type: string } }
         - { name: verified, in: query, schema: { type: boolean } }
         - { name: search, in: query, schema: { type: string } }
         - { name: page, in: query, schema: { type: number, minimum: 1, default: 1 } }

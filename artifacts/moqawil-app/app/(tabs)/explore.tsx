@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
 import { images, listings, serviceItems } from '@/data/mockData';
+import { buildingServices } from '@/data/buildingServices';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -20,6 +21,7 @@ export default function ExploreScreen() {
   const [selectedGovernorate, setSelectedGovernorate] = useState('');
   const [selectedWilayat, setSelectedWilayat] = useState('');
   const [locationMenu, setLocationMenu] = useState<'governorate' | 'wilayat' | null>(null);
+  const [selectedBuildingService, setSelectedBuildingService] = useState('');
   const [minimumRating, setMinimumRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const selectedService = activeService ?? 'contractors';
@@ -28,6 +30,7 @@ export default function ExploreScreen() {
   const directory = useListContractors({
     search: query.trim() || undefined,
     category: selectedService === 'contractors' ? undefined : selectedService,
+    service: selectedService === 'building' ? selectedBuildingService || undefined : undefined,
     city: selectedGovernorate || undefined,
     wilayat: selectedWilayat || undefined,
     verified: verifiedOnly || undefined,
@@ -37,6 +40,7 @@ export default function ExploreScreen() {
   const selectService = (serviceId: typeof selectedService) => {
     setActiveService(serviceId);
     setMode(serviceId === 'real-estate' ? 'Properties' : 'Providers');
+    setSelectedBuildingService('');
   };
   const selectedGovernorateInfo = omanGovernorates.find((item) => item.name === selectedGovernorate);
   const selectedWilayatInfo = selectedGovernorateInfo?.wilayats.find((item) => item.name === selectedWilayat);
@@ -54,14 +58,16 @@ export default function ExploreScreen() {
     const fallbackProviders = managedProviders.filter((provider) =>
       selectedService === 'contractors' ? provider.role === 'contractor' :
       selectedService === 'consultants' ? provider.role === 'consultant' :
+      selectedService === 'building' ? provider.role === 'contractor' :
       selectedService === 'maintenance' ? provider.role === 'maintenance' : true,
     ).filter((provider) => !selectedGovernorate || provider.city === selectedGovernorate)
-      .filter((provider) => !selectedWilayat || provider.wilayat === selectedWilayat);
+      .filter((provider) => !selectedWilayat || provider.wilayat === selectedWilayat)
+      .filter((provider) => selectedService !== 'building' || !selectedBuildingService || provider.buildingServices?.includes(selectedBuildingService));
     const source = apiProviders?.length ? apiProviders : fallbackProviders;
     return source
       .filter((provider) => (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized)) && provider.rating >= minimumRating)
       .sort((a, b) => ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0));
-  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat]);
+  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -114,6 +120,23 @@ export default function ExploreScreen() {
                })}
              </ScrollView>
            </View> : null}
+           {selectedService === 'building' ? <View style={styles.buildingSection}>
+             <View style={styles.buildingHeading}>
+               <View>
+                 <Text style={[styles.buildingTitle, { color: colors.foreground }]}>{isArabic ? 'نوع ورشة البناء' : 'Building workshop type'}</Text>
+                 <Text style={[styles.buildingSubtitle, { color: colors.mutedForeground }]}>{isArabic ? 'اختر الخدمة التي تحتاجها' : 'Choose the service you need'}</Text>
+               </View>
+               {selectedBuildingService ? <Pressable testID="clear-building-service" onPress={() => setSelectedBuildingService('')}><Text style={[styles.clearText, { color: colors.primary }]}>{isArabic ? 'مسح' : 'Clear'}</Text></Pressable> : null}
+             </View>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.buildingChips}>
+               {buildingServices.map((service) => {
+                 const selected = selectedBuildingService === service.name;
+                 return <Pressable key={service.name} testID={`building-service-${service.name}`} onPress={() => setSelectedBuildingService(selected ? '' : service.name)} style={({ pressed }) => [styles.buildingChip, { backgroundColor: selected ? colors.primary : colors.surface, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}>
+                   <Text style={{ color: selected ? colors.primaryForeground : colors.foreground }}>{isArabic ? service.nameAr : service.name}</Text>
+                 </Pressable>;
+               })}
+             </ScrollView>
+           </View> : null}
             <SegmentedControl value={visibleMode} onChange={(nextMode) => {
              setMode(nextMode);
              setActiveService(nextMode === 'Properties' ? 'real-estate' : 'contractors');
@@ -156,6 +179,13 @@ const styles = StyleSheet.create({
    locationMenu: { borderWidth: 1, borderRadius: 16, marginTop: -8, marginBottom: 10, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 3 },
    locationMenuScroll: { maxHeight: 220 },
    locationOption: { minHeight: 42, paddingHorizontal: 14, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+   buildingSection: { marginBottom: 14 },
+   buildingHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 },
+   buildingTitle: { fontSize: 13, fontWeight: '800' },
+   buildingSubtitle: { fontSize: 11, marginTop: 2 },
+   clearText: { fontSize: 12, fontWeight: '800' },
+   buildingChips: { gap: 8, paddingRight: 4 },
+   buildingChip: { minHeight: 38, maxWidth: 250, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
    filterChip: { height: 40, borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
    filterPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
    skeletonCard: { minHeight: 102, borderRadius: 20, borderWidth: 1, padding: 11, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
