@@ -12,15 +12,15 @@ export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService } = useApp();
+  const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('Providers');
   const selectedService = activeService ?? 'contractors';
 
   const filteredProviders = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return providers.filter((provider) => !normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized));
-  }, [query]);
+    return managedProviders.filter((provider) => !normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized));
+  }, [query, managedProviders]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

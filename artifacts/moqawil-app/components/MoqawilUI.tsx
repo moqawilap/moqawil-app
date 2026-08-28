@@ -18,9 +18,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
   const colors = useColors();
   return (
     <View style={styles.brandRow}>
-      <View style={[styles.brandIcon, compact && styles.brandIconCompact, { backgroundColor: colors.primary }]}>
-        <MaterialCommunityIcons name="office-building-outline" size={compact ? 18 : 22} color={colors.primaryForeground} />
-      </View>
+      <Image source={require('@/assets/images/moqawil-logo.png')} style={[styles.brandLogo, compact && styles.brandLogoCompact]} />
       {!compact && (
         <View>
           <Text style={[styles.brandName, { color: colors.foreground }]}>MOQAWIL</Text>
@@ -283,6 +281,8 @@ export function SegmentedControl({ value, onChange, options }: { value: string; 
 
 export const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  brandLogo: { width: 40, height: 40, borderRadius: 13 },
+  brandLogoCompact: { width: 34, height: 34, borderRadius: 11 },
   brandIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   brandIconCompact: { width: 34, height: 34, borderRadius: 11 },
   brandName: { fontSize: 15, fontWeight: '800', letterSpacing: 1.7 },

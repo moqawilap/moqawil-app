@@ -13,8 +13,8 @@ export default function ProviderDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isArabic, isSaved, toggleSaved } = useApp();
-  const provider = providers.find((item) => item.id === id) ?? providers[0];
+  const { isArabic, isSaved, toggleSaved, managedProviders } = useApp();
+  const provider = managedProviders.find((item) => item.id === id) ?? managedProviders[0];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -53,7 +53,7 @@ export default function ProviderDetail() {
         </View>
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
-        <ActionButton label="Call provider" icon="phone" onPress={() => Linking.openURL('tel:+96877224535')} style={{ flex: 1 }} />
+        <ActionButton label="Call provider" icon="phone" onPress={() => Linking.openURL(`tel:${provider.phone.replace(/\s/g, '')}`)} style={{ flex: 1 }} />
         <ActionButton label="Message" icon="message-circle" onPress={() => Linking.openURL('mailto:moqawil.om@gmail.com')} secondary style={{ flex: 1 }} />
       </View>
     </View>

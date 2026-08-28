@@ -1,4 +1,6 @@
 import { Feather } from '@expo/vector-icons';
+import { useAuth, useUser } from '@clerk/expo';
+import { router } from 'expo-router';
 import React from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +12,17 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { locale, setLocale, location, refreshLocation, isArabic, savedIds } = useApp();
+  const { isSignedIn, signOut } = useAuth();
+  const { user } = useUser();
+  const metadata = (user?.publicMetadata ?? {}) as Record<string, unknown>;
+  const isAdmin = metadata.role === 'admin' || metadata.isAdmin === true;
   const menu = [
     { icon: 'map-pin' as const, title: isArabic ? 'موقعك' : 'Your location', value: `${location.area}, ${location.city}`, onPress: refreshLocation },
     { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => Alert.alert('Notifications', 'Notification preferences will be available soon.') },
     { icon: 'help-circle' as const, title: isArabic ? 'مركز المساعدة' : 'Help center', value: '', onPress: () => Alert.alert('Moqawil Help', 'Call +968 7722 4535 or email moqawil.om@gmail.com.') },
+    ...(isAdmin ? [{ icon: 'shield' as const, title: 'Admin console', value: 'Contractors & evaluations', onPress: () => router.push('/admin') }] : []),
   ];
+  const profileName = user?.fullName || (isSignedIn ? user?.primaryEmailAddress?.emailAddress : null) || (isArabic ? 'مستخدم مقاول' : 'Moqawil user');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -22,8 +30,8 @@ export default function ProfileScreen() {
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'الحساب' : 'Profile'} subtitle={isArabic ? 'إعداداتك وتفضيلاتك' : 'Your settings and preferences'} />
           <View style={[styles.profileCard, { backgroundColor: colors.navy }]}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>M</Text></View>
-            <View style={styles.profileText}><Text style={styles.profileName}>{isArabic ? 'مستخدم مقاول' : 'Moqawil user'}</Text><Text style={styles.profileSub}>{isArabic ? 'استكشف خدمات عمان بثقة' : 'Explore Oman with confidence'}</Text></View>
+            <View style={styles.avatar}><Text style={styles.avatarText}>{profileName.charAt(0).toUpperCase()}</Text></View>
+            <View style={styles.profileText}><Text style={styles.profileName}>{profileName}</Text><Text style={styles.profileSub}>{isAdmin ? 'Administrator account' : isArabic ? 'استكشف خدمات عمان بثقة' : 'Explore Oman with confidence'}</Text></View>
             <Feather name="edit-2" size={17} color="rgba(255,255,255,0.7)" />
           </View>
           <View style={styles.languageHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'اللغة' : 'Language'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر لغة التطبيق' : 'Choose your app language'}</Text></View>
@@ -34,7 +42,7 @@ export default function ProfileScreen() {
           <View style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {menu.map((item, index) => <Pressable key={item.title} onPress={item.onPress} style={[styles.menuItem, index < menu.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}><View style={[styles.menuIcon, { backgroundColor: colors.primarySoft }]}><Feather name={item.icon} size={17} color={colors.primary} /></View><View style={styles.menuText}><Text style={[styles.menuTitle, { color: colors.foreground }]}>{item.title}</Text>{item.value ? <Text style={[styles.menuValue, { color: colors.mutedForeground }]}>{item.value}</Text> : null}</View><Feather name="chevron-right" size={17} color={colors.mutedForeground} /></Pressable>)}
           </View>
-          <ActionButton label={isArabic ? 'تسجيل الخروج' : 'Sign out'} onPress={() => Alert.alert('Sign out', 'You are currently browsing as a guest.')} secondary style={{ marginTop: 22 }} />
+           <ActionButton label={isSignedIn ? (isArabic ? 'تسجيل الخروج' : 'Sign out') : (isArabic ? 'تسجيل الدخول' : 'Sign in')} onPress={() => isSignedIn ? signOut() : router.push('/sign-in')} secondary style={{ marginTop: 22 }} />
           <View style={styles.footer}><BrandMark compact /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Everything property. One platform.</Text></View>
         </View>
       </ScrollView>

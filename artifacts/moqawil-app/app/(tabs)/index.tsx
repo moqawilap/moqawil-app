@@ -12,7 +12,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, location, refreshLocation, savedIds, toggleSaved, setActiveService } = useApp();
+  const { isArabic, location, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders } = useApp();
 
   const openService = (id: string) => {
     setActiveService(id);
@@ -46,7 +46,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'مزودون موصى بهم' : 'Recommended providers'} subtitle={isArabic ? 'قريبون منك في مسقط' : 'Trusted teams near you'} action={isArabic ? 'عرض الكل' : 'View all'} onAction={() => router.push('/explore')} />
-            {providers.slice(0, 2).map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
+            {managedProviders.slice(0, 2).map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
           </View>
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'عقارات مختارة' : 'Featured properties'} subtitle={isArabic ? 'أماكن تستحق الزيارة' : 'Places worth seeing'} action={isArabic ? 'كل العقارات' : 'See all'} onAction={() => openService('real-estate')} />
@@ -56,7 +56,7 @@ export default function HomeScreen() {
             <SectionHeading title={isArabic ? 'صيانة سريعة' : 'Quick maintenance'} subtitle={isArabic ? 'حل المشكلة قبل أن تكبر' : 'Fix the small things before they grow'} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.maintenanceRow}>{maintenanceItems.map((item) => <Pressable key={item.id} onPress={() => openService('maintenance')} style={[styles.maintenanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={[styles.maintenanceIcon, { backgroundColor: `${item.color}18` }]}><ServiceIcon icon={item.icon} color={item.color} size={21} /></View><Text style={[styles.maintenanceLabel, { color: colors.foreground }]}>{isArabic ? item.labelAr : item.label}</Text></Pressable>)}</ScrollView>
           </View>
-          <View style={styles.footer}><Image source={require('@/assets/images/moqawil-icon.png')} style={styles.footerMark} /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Moqawil · مقاول</Text></View>
+          <View style={styles.footer}><Image source={require('@/assets/images/moqawil-logo.png')} style={styles.footerMark} /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Moqawil · مقاول</Text></View>
         </View>
       </ScrollView>
     </View>

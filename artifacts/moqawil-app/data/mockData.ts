@@ -4,6 +4,7 @@ export type ServiceId = 'contractors' | 'consultants' | 'real-estate' | 'mainten
 
 export type Provider = {
   id: string;
+  role: 'contractor' | 'consultant' | 'maintenance';
   name: string;
   nameAr: string;
   specialty: string;
@@ -19,6 +20,8 @@ export type Provider = {
   descriptionAr: string;
   projects: number;
   startingPrice: string;
+  contractAmount: string;
+  phone: string;
 };
 
 export type Listing = {
@@ -88,6 +91,7 @@ export const serviceItems: Array<{
 export const providers: Provider[] = [
   {
     id: 'al-burj-builders',
+    role: 'contractor',
     name: 'Al Burj Builders',
     nameAr: 'البـرج للمقاولات',
     specialty: 'General contracting',
@@ -103,9 +107,12 @@ export const providers: Provider[] = [
     descriptionAr: 'فريق موثوق في مسقط للبناء السكني والتجديد وأعمال التشطيب.',
     projects: 34,
     startingPrice: 'From OMR 1,800',
+    contractAmount: 'OMR 42,000',
+    phone: '+968 7722 4535',
   },
   {
     id: 'vista-engineering',
+    role: 'consultant',
     name: 'Vista Engineering',
     nameAr: 'فيستا للاستشارات الهندسية',
     specialty: 'Structural & design',
@@ -121,9 +128,12 @@ export const providers: Provider[] = [
     descriptionAr: 'مهندسون معتمدون يساعدونك على تحويل فكرة العقار إلى مخطط قابل للتنفيذ.',
     projects: 21,
     startingPrice: 'From OMR 120',
+    contractAmount: 'OMR 8,500',
+    phone: '+968 7722 4535',
   },
   {
     id: 'dar-al-nour',
+    role: 'maintenance',
     name: 'Dar Al Nour Services',
     nameAr: 'دار النور للخدمات',
     specialty: 'Home maintenance',
@@ -139,6 +149,8 @@ export const providers: Provider[] = [
     descriptionAr: 'خدمة سريعة وموثوقة للكهرباء والسباكة والتكييف والعناية بالمنزل.',
     projects: 148,
     startingPrice: 'From OMR 15',
+    contractAmount: 'OMR 1,200',
+    phone: '+968 7722 4535',
   },
 ];
 

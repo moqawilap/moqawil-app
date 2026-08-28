@@ -12,9 +12,9 @@ export default function SavedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, savedIds, toggleSaved } = useApp();
+  const { isArabic, savedIds, toggleSaved, managedProviders } = useApp();
   const [mode, setMode] = React.useState('All');
-  const savedProviders = providers.filter((provider) => savedIds.includes(provider.id));
+  const savedProviders = managedProviders.filter((provider) => savedIds.includes(provider.id));
   const savedListings = listings.filter((listing) => savedIds.includes(listing.id));
   const hasSaved = savedProviders.length > 0 || savedListings.length > 0;
 

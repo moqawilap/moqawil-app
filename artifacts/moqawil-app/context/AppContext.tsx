@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, Platform } from 'react-native';
+import { images, providers as seedProviders, type Provider } from '@/data/mockData';
 
 type Locale = 'en' | 'ar';
 type LocationState = {
@@ -22,9 +23,19 @@ type AppContextValue = {
   isSaved: (id: string) => boolean;
   activeService: string | null;
   setActiveService: (service: string | null) => void;
+  managedProviders: Provider[];
+  addContractor: (input: {
+    name: string;
+    specialty: string;
+    city: string;
+    contractAmount: string;
+    phone: string;
+  }) => void;
+  updateProvider: (id: string, patch: Partial<Provider>) => void;
+  removeProvider: (id: string) => void;
 };
 
-const STORAGE_KEY = '@moqawil/preferences';
+const STORAGE_KEY = '@moqawil/preferences-v2';
 const defaultLocation: LocationState = { city: 'Muscat', area: 'Al Khuwair', source: 'default' };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -34,22 +45,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<LocationState>(defaultLocation);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [activeService, setActiveService] = useState<string | null>(null);
+  const [managedProviders, setManagedProviders] = useState<Provider[]>(seedProviders);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
         if (!value) return;
-        const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[] };
+        const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; managedProviders?: Provider[] };
         if (parsed.locale) setLocaleState(parsed.locale);
         if (parsed.location) setLocation(parsed.location);
         if (parsed.savedIds) setSavedIds(parsed.savedIds);
+        if (parsed.managedProviders) setManagedProviders(parsed.managedProviders);
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ locale, location, savedIds })).catch(() => undefined);
-  }, [locale, location, savedIds]);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ locale, location, savedIds, managedProviders })).catch(() => undefined);
+  }, [locale, location, savedIds, managedProviders]);
 
   const setLocale = (nextLocale: Locale) => {
     setLocaleState(nextLocale);
@@ -99,6 +112,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addContractor = (input: { name: string; specialty: string; city: string; contractAmount: string; phone: string }) => {
+    const id = `${input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
+    const contractor: Provider = {
+      id,
+      role: 'contractor',
+      name: input.name,
+      nameAr: input.name,
+      specialty: input.specialty || 'General contracting',
+      specialtyAr: input.specialty || 'مقاولات عامة',
+      rating: 0,
+      reviews: 0,
+      distance: 'New',
+      city: input.city || 'Muscat',
+      verified: false,
+      image: images.contractor,
+      accent: '#0F6FB7',
+      description: `Contract amount: ${input.contractAmount || 'Not set'} · Contact: ${input.phone || 'Not set'}`,
+      descriptionAr: `قيمة العقد: ${input.contractAmount || 'غير محدد'} · التواصل: ${input.phone || 'غير محدد'}`,
+      projects: 0,
+      startingPrice: input.contractAmount || 'Not set',
+      contractAmount: input.contractAmount || 'Not set',
+      phone: input.phone || 'Not set',
+    };
+    setManagedProviders((current) => [contractor, ...current]);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+  };
+
+  const updateProvider = (id: string, patch: Partial<Provider>) => {
+    setManagedProviders((current) => current.map((provider) => provider.id === id ? { ...provider, ...patch } : provider));
+    Haptics.selectionAsync().catch(() => undefined);
+  };
+
+  const removeProvider = (id: string) => {
+    setManagedProviders((current) => current.filter((provider) => provider.id !== id));
+    setSavedIds((current) => current.filter((savedId) => savedId !== id));
+  };
+
   const value = useMemo<AppContextValue>(
     () => ({
       locale,
@@ -111,8 +161,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isSaved: (id: string) => savedIds.includes(id),
       activeService,
       setActiveService,
+      managedProviders,
+      addContractor,
+      updateProvider,
+      removeProvider,
     }),
-    [locale, location, savedIds, activeService],
+    [locale, location, savedIds, activeService, managedProviders],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
