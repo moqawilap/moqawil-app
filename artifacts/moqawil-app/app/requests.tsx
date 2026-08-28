@@ -16,8 +16,8 @@ export default function RequestsScreen() {
   const { isSignedIn } = useAuth();
   const client = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const requests = useListMyServiceRequests({ query: { enabled: !!isSignedIn } });
-  const quotes = useListServiceRequestQuotes(selectedId ?? '', { query: { enabled: !!selectedId } });
+  const requests = useListMyServiceRequests({ query: { queryKey: getListMyServiceRequestsQueryKey(), enabled: !!isSignedIn } });
+  const quotes = useListServiceRequestQuotes(selectedId ?? '', { query: { queryKey: getListServiceRequestQuotesQueryKey(selectedId ?? ''), enabled: !!selectedId } });
   const accept = useAcceptQuote({ mutation: { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyServiceRequestsQueryKey() }); if (selectedId) client.invalidateQueries({ queryKey: getListServiceRequestQuotesQueryKey(selectedId) }); Alert.alert(isArabic ? 'تم اختيار العرض' : 'Quote accepted', isArabic ? 'يمكنك الآن التواصل مع الورشة والبدء بالعمل.' : 'You can now contact the workshop and start the work.'); }, onError: () => Alert.alert(isArabic ? 'تعذر اختيار العرض' : 'Could not accept quote', isArabic ? 'حاول مرة أخرى.' : 'Please try again.') } });
   if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لعرض طلباتك' : 'Sign in to view your requests'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
   return <View style={[styles.page, { backgroundColor: colors.background }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }}><View style={styles.content}>
@@ -25,7 +25,7 @@ export default function RequestsScreen() {
     <ScreenHeader title={isArabic ? 'طلباتي' : 'My requests'} subtitle={isArabic ? 'قارن عروض الورش واختر الأنسب' : 'Compare workshop quotes and choose the right one'} right={<Pressable onPress={() => router.push('/service-request' as never)} style={[styles.addButton, { backgroundColor: colors.primarySoft }]}><Feather name="plus" size={16} color={colors.primary} /></Pressable>} />
     {requests.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
     {requests.isError ? <Text style={{ color: colors.mutedForeground }}>{isArabic ? 'تعذر تحميل الطلبات.' : 'Requests are temporarily unavailable.'}</Text> : null}
-    {!requests.isLoading && !requests.data?.length ? <EmptyState icon="briefcase" title={isArabic ? 'لا توجد طلبات بعد' : 'No requests yet'} description={isArabic ? 'أرسل طلب خدمة واحدًا لعدة ورش.' : 'Send one service request to matching workshops.'} action={<ActionButton label={isArabic ? 'أحتاج خدمة' : 'I need a service'} onPress={() => router.push('/service-request' as never)} />} /> : null}
+    {!requests.isLoading && !requests.data?.length ? <><EmptyState icon="briefcase" title={isArabic ? 'لا توجد طلبات بعد' : 'No requests yet'} description={isArabic ? 'أرسل طلب خدمة واحدًا لعدة ورش.' : 'Send one service request to matching workshops.'} /><ActionButton label={isArabic ? 'أحتاج خدمة' : 'I need a service'} onPress={() => router.push('/service-request' as never)} /></> : null}
     {requests.data?.map((request) => {
       const expanded = selectedId === request.id;
       return <View key={request.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: expanded ? colors.primary : colors.border }]}>

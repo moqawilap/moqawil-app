@@ -42,6 +42,9 @@ function RootLayoutNav() {
         <Stack.Screen name="subscription" options={{ presentation: 'modal' }} />
         <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
         <Stack.Screen name="contractor-profile" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="service-request" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="requests" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="workshop-requests" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
