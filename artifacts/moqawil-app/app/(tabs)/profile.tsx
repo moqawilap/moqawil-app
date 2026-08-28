@@ -16,7 +16,7 @@ export default function ProfileScreen() {
   const { isSignedIn, signOut } = useAuth();
   const { user } = useUser();
   const metadata = (user?.publicMetadata ?? {}) as Record<string, unknown>;
-  const isAdmin = metadata.role === 'admin' || metadata.isAdmin === true;
+  const isAdmin = metadata.role === 'admin' || metadata.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
   const isContractor = metadata.role === 'contractor' || metadata.isContractor === true;
   const subscription = useGetMySubscription({ query: { queryKey: getGetMySubscriptionQueryKey(), enabled: !!isSignedIn && isContractor } });
   const menu = [

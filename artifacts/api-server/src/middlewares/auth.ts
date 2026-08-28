@@ -14,8 +14,8 @@ export async function requireUser(req: Request, res: Response, next: NextFunctio
   }
   const clerkUser = await clerkClient.users.getUser(userId);
   const metadata = clerkUser.publicMetadata as { role?: unknown; isAdmin?: unknown };
-  const metadataRole = resolveMarketplaceRole(metadata);
   const email = clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress;
+   const metadataRole = resolveMarketplaceRole(metadata, "customer", email);
   const displayName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || clerkUser.username || null;
   let user = await db.query.users.findFirst({ where: eq(users.clerkUserId, userId) });
   if (!user) {
@@ -26,7 +26,7 @@ export async function requireUser(req: Request, res: Response, next: NextFunctio
       role: metadataRole,
     }).returning();
   } else {
-    const role = resolveMarketplaceRole(metadata, user.role);
+     const role = resolveMarketplaceRole(metadata, user.role, email);
     [user] = await db.update(users).set({ email: email ?? user.email, displayName: displayName ?? user.displayName, role, updatedAt: new Date() }).where(eq(users.id, user.id)).returning();
   }
   (req as AuthenticatedRequest).marketplaceUser = user;

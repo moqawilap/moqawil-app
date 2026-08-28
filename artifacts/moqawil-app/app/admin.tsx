@@ -32,7 +32,7 @@ export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
-  const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true;
+  const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
 
   const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Subscriptions' | 'Payments' | 'Settings'>('Overview');
 

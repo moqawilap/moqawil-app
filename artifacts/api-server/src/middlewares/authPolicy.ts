@@ -1,6 +1,9 @@
 export type MarketplaceRole = "customer" | "contractor" | "admin";
 
-export function resolveMarketplaceRole(metadata: { role?: unknown; isAdmin?: unknown }, currentRole: MarketplaceRole = "customer"): MarketplaceRole {
+const configuredAdminEmails = new Set(["moqawil.ap@gmail.com"]);
+
+export function resolveMarketplaceRole(metadata: { role?: unknown; isAdmin?: unknown }, currentRole: MarketplaceRole = "customer", email?: string): MarketplaceRole {
+  if (email && configuredAdminEmails.has(email.trim().toLowerCase())) return "admin";
   if (metadata.isAdmin === true) return "admin";
   if (metadata.role === "admin" || metadata.role === "contractor" || metadata.role === "customer") return metadata.role;
   if (metadata.isAdmin === false) return "customer";
