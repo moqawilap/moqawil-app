@@ -1,36 +1,236 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Moqawil Oman contractor marketplace API
 servers:
   - url: /api
-    description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: contractors
+  - name: account
+  - name: admin
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
-        "200":
-          description: Healthy
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
+        "200": { description: Healthy, content: { application/json: { schema: { $ref: "#/components/schemas/HealthStatus" } } } }
+  /contractors:
+    get:
+      operationId: listContractors
+      tags: [contractors]
+      parameters:
+        - { name: city, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: verified, in: query, schema: { type: boolean } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: number, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: number, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        "200": { description: Directory page, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorDirectoryPage" } } } }
+  /contractors/{id}:
+    get:
+      operationId: getContractor
+      tags: [contractors]
+      parameters: [ { $ref: "#/components/parameters/ContractorId" } ]
+      responses:
+        "200": { description: Contractor detail, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /me/subscription:
+    get:
+      operationId: getMySubscription
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Subscription, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+    post:
+      operationId: startDevelopmentPayment
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DevelopmentPaymentRequest" } } } }
+      responses:
+        "200": { description: Development payment recorded, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+    delete:
+      operationId: cancelMySubscription
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Subscription cancelled, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+  /me/payments:
+    get:
+      operationId: listMyPayments
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Contractor payment history, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Payment" } } } } }
+  /me/contractor-profile:
+    put:
+      operationId: upsertMyContractorProfile
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorProfileUpsert" } } } }
+      responses:
+        "200": { description: Contractor profile and provisioned subscription, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorProvisioning" } } } }
+  /me/notifications:
+    get:
+      operationId: listMyNotifications
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Notifications, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Notification" } } } } }
+  /me/notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        "204": { description: Marked read }
+  /admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Marketplace metrics, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOverview" } } } }
+  /admin/contractors:
+    get:
+      operationId: listAdminContractors
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Contractors, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminContractor" } } } } }
+    post:
+      operationId: createAdminContractor
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminContractorInput" } } } }
+      responses:
+        "201": { description: Managed contractor created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminContractor" } } } }
+  /admin/subscriptions:
+    get:
+      operationId: listAdminSubscriptions
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Subscriptions, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Subscription" } } } } }
+  /admin/contractors/{id}:
+    patch:
+      operationId: updateAdminContractor
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/ContractorId" } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminContractorUpdate" } } } }
+      responses:
+        "200": { description: Updated contractor, content: { application/json: { schema: { $ref: "#/components/schemas/AdminContractor" } } } }
+    delete:
+      operationId: deleteAdminContractor
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters:
+        - $ref: "#/components/parameters/ContractorId"
+        - { name: confirm, in: query, required: true, schema: { type: boolean } }
+      responses:
+        "204": { description: Listing deleted }
+  /admin/subscriptions/{id}:
+    patch:
+      operationId: updateAdminSubscription
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSubscriptionUpdate" } } } }
+      responses:
+        "200": { description: Updated subscription, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+  /admin/payments:
+    get:
+      operationId: listAdminPayments
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Payments, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Payment" } } } } }
+    post:
+      operationId: createAdminPayment
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminPaymentCreate" } } } }
+      responses:
+        "201": { description: Payment recorded, content: { application/json: { schema: { $ref: "#/components/schemas/Payment" } } } }
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Settings, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceSettings" } } } }
+    put:
+      operationId: updateAdminSettings
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceSettings" } } } }
+      responses:
+        "200": { description: Saved settings, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceSettings" } } } }
 components:
+  securitySchemes: { clerkAuth: { type: http, scheme: bearer, bearerFormat: JWT } }
+  parameters:
+    ContractorId: { name: id, in: path, required: true, schema: { type: string } }
+  responses:
+    NotFound: { description: Resource not found }
   schemas:
-    HealthStatus:
+    HealthStatus: { type: object, properties: { status: { type: string } }, required: [status] }
+    Contractor:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        id: { type: string }
+        businessName: { type: string }
+        city: { type: string }
+        bio: { type: [string, "null"] }
+        avatarUrl: { type: [string, "null"] }
+        isVerified: { type: boolean }
+        isPublished: { type: boolean }
+        rating: { type: number }
+        reviewCount: { type: number }
+        rankingScore: { type: number }
+      required: [id, businessName, city, isVerified, isPublished, rating, reviewCount, rankingScore]
+    AdminContractor:
+      allOf:
+        - $ref: "#/components/schemas/Contractor"
+        - type: object
+          properties:
+            businessNameArabic: { type: [string, "null"] }
+            bioArabic: { type: [string, "null"] }
+            wilayat: { type: [string, "null"] }
+            serviceArea: { type: [string, "null"] }
+            phone: { type: [string, "null"] }
+            evaluationNotes: { type: [string, "null"] }
+            adminRating: { type: [number, "null"] }
+            agreedContractAmountOmaniRial: { type: [number, "null"] }
+            accountLinkStatus: { type: string, enum: [linked_clerk, managed_unlinked] }
+          required: [accountLinkStatus]
+    ContractorDirectoryPage:
+      type: object
+      properties: { items: { type: array, items: { $ref: "#/components/schemas/Contractor" } }, page: { type: number }, total: { type: number } }
+      required: [items, page, total]
+    ContractorDetail:
+      allOf:
+        - $ref: "#/components/schemas/Contractor"
+        - type: object
+          properties: { phone: { type: [string, "null"] }, services: { type: array, items: { $ref: "#/components/schemas/Service" } }, projects: { type: array, items: { $ref: "#/components/schemas/Project" } }, reviews: { type: array, items: { $ref: "#/components/schemas/Review" } } }
+          required: [phone, services, projects, reviews]
+    Service: { type: object, properties: { id: { type: string }, name: { type: string }, category: { type: string }, description: { type: [string, "null"] }, priceFromOmaniRial: { type: [number, "null"] } }, required: [id, name, category] }
+    Project: { type: object, properties: { id: { type: string }, title: { type: string }, description: { type: [string, "null"] }, imageUrls: { type: array, items: { type: string } } }, required: [id, title, imageUrls] }
+    Review: { type: object, properties: { id: { type: string }, rating: { type: number, minimum: 1, maximum: 5 }, comment: { type: [string, "null"] }, createdAt: { type: string, format: date-time } }, required: [id, rating, createdAt] }
+    Subscription: { type: object, properties: { id: { type: string }, contractorId: { type: string }, contractorName: { type: [string, "null"] }, planName: { type: string }, billingMonths: { type: number }, trialMonths: { type: number }, status: { type: string, enum: [free_trial, active, payment_due, expired, cancelled, suspended] }, trialStartedAt: { type: string, format: date-time }, trialEndsAt: { type: string, format: date-time }, currentPeriodStartsAt: { type: [string, "null"], format: date-time }, currentPeriodEndsAt: { type: [string, "null"], format: date-time }, cancelledAt: { type: [string, "null"], format: date-time }, priceOmaniRial: { type: number } }, required: [id, contractorId, planName, billingMonths, trialMonths, status, trialStartedAt, trialEndsAt, priceOmaniRial] }
+    DevelopmentPaymentRequest: { type: object, properties: { outcome: { type: string, enum: [succeed, fail] } }, required: [outcome] }
+    Payment: { type: object, properties: { id: { type: string }, subscriptionId: { type: string }, contractorId: { type: [string, "null"] }, contractorName: { type: [string, "null"] }, amountOmaniRial: { type: number }, status: { type: string }, provider: { type: string }, providerReference: { type: [string, "null"] }, createdAt: { type: string, format: date-time } }, required: [id, subscriptionId, amountOmaniRial, status, provider, createdAt] }
+    Notification: { type: object, properties: { id: { type: string }, type: { type: string }, channel: { type: string, enum: [in_app, email, push] }, deliveryStatus: { type: string, enum: [pending, sent, delivered, failed] }, deliveryMetadata: { type: object, additionalProperties: true }, title: { type: string }, body: { type: string }, readAt: { type: [string, "null"], format: date-time }, deliveredAt: { type: [string, "null"], format: date-time }, createdAt: { type: string, format: date-time } }, required: [id, type, channel, deliveryStatus, deliveryMetadata, title, body, createdAt] }
+    AdminContractorInput: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, required: [businessName, city] }
+    AdminContractorUpdate: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, minProperties: 1 }
+    AdminSubscriptionUpdate: { type: object, properties: { status: { type: string, enum: [free_trial, active, payment_due, expired, cancelled, suspended] }, extendTrialMonths: { type: number, minimum: 1, maximum: 24 } }, minProperties: 1 }
+    AdminPaymentCreate: { type: object, properties: { subscriptionId: { type: string }, amountOmaniRial: { type: number, minimum: 0 }, status: { type: string, enum: [pending, paid, failed, refunded, void] }, provider: { type: string }, providerReference: { type: string } }, required: [subscriptionId, amountOmaniRial, status, provider] }
+    ContractorProfileUpsert: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, bio: { type: string }, serviceArea: { type: string }, phone: { type: string }, avatarUrl: { type: string } }, required: [businessName, city] }
+    ContractorProvisioning: { type: object, properties: { contractor: { $ref: "#/components/schemas/Contractor" }, subscription: { $ref: "#/components/schemas/Subscription" } }, required: [contractor, subscription] }
+    RankingWeights: { type: object, properties: { rating: { type: number }, reviews: { type: number }, projects: { type: number }, profile: { type: number }, verification: { type: number }, activity: { type: number }, engagement: { type: number } }, required: [rating, reviews, projects, profile, verification, activity, engagement] }
+    MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights] }
+    AdminOverview: { type: object, properties: { contractors: { type: number }, activeSubscriptions: { type: number }, paymentDueSubscriptions: { type: number }, paymentsRecorded: { type: number } }, required: [contractors, activeSubscriptions, paymentDueSubscriptions, paymentsRecorded] }

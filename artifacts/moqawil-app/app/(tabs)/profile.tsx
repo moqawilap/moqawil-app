@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getGetMySubscriptionQueryKey, useGetMySubscription } from '@workspace/api-client-react';
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -16,11 +17,15 @@ export default function ProfileScreen() {
   const { user } = useUser();
   const metadata = (user?.publicMetadata ?? {}) as Record<string, unknown>;
   const isAdmin = metadata.role === 'admin' || metadata.isAdmin === true;
+  const isContractor = metadata.role === 'contractor' || metadata.isContractor === true;
+  const subscription = useGetMySubscription({ query: { queryKey: getGetMySubscriptionQueryKey(), enabled: !!isSignedIn && isContractor } });
   const menu = [
     { icon: 'map-pin' as const, title: isArabic ? 'موقعك' : 'Your location', value: `${location.area}, ${location.city}`, onPress: refreshLocation },
-    { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => Alert.alert('Notifications', 'Notification preferences will be available soon.') },
+    { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => router.push('/notifications' as never) },
     { icon: 'help-circle' as const, title: isArabic ? 'مركز المساعدة' : 'Help center', value: '', onPress: () => Alert.alert('Moqawil Help', 'Call +968 7722 4535 or email moqawil.om@gmail.com.') },
     ...(isAdmin ? [{ icon: 'shield' as const, title: 'Admin console', value: 'Contractors & evaluations', onPress: () => router.push('/admin') }] : []),
+    ...(isContractor ? [{ icon: 'credit-card' as const, title: isArabic ? 'اشتراكي' : 'My subscription', value: subscription.data ? `${subscription.data.planName} · ${subscription.data.priceOmaniRial} OMR / ${subscription.data.billingMonths === 12 ? (isArabic ? 'سنة' : 'year') : `${subscription.data.billingMonths} ${isArabic ? 'أشهر' : 'months'}`}` : (isArabic ? 'جاري تحميل الخطة…' : 'Plan details loading…'), onPress: () => router.push('/subscription' as never) }] : []),
+    ...(isSignedIn && !isAdmin ? [{ icon: 'briefcase' as const, title: isContractor ? (isArabic ? 'إدارة ملف المقاول' : 'Manage contractor profile') : (isArabic ? 'انضم كمقاول' : 'Join as contractor'), value: '', onPress: () => router.push('/contractor-profile' as never) }] : []),
   ];
   const profileName = user?.fullName || (isSignedIn ? user?.primaryEmailAddress?.emailAddress : null) || (isArabic ? 'مستخدم مقاول' : 'Moqawil user');
 

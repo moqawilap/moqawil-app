@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
 import { listings, providers, serviceItems } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useListContractors } from '@workspace/api-client-react';
 
 export default function ExploreScreen() {
   const colors = useColors();
@@ -15,21 +16,41 @@ export default function ExploreScreen() {
   const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('Providers');
+  const [city, setCity] = useState('');
+  const [minimumRating, setMinimumRating] = useState(0);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const selectedService = activeService ?? 'contractors';
+  const directory = useListContractors({
+    search: query.trim() || undefined,
+    category: selectedService === 'contractors' ? undefined : selectedService,
+    city: city || undefined,
+    verified: verifiedOnly || undefined,
+    limit: 50,
+  });
 
   const filteredProviders = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return managedProviders.filter((provider) => !normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized));
-  }, [query, managedProviders]);
+    const apiProviders = directory.data?.items.map((contractor) => ({
+      id: contractor.id, name: contractor.businessName, nameAr: contractor.businessName, specialty: contractor.bio || 'Contractor',
+      specialtyAr: contractor.bio || 'مقاول', rating: contractor.rating, reviews: contractor.reviewCount, distance: contractor.city,
+      city: contractor.city, verified: contractor.isVerified, image: contractor.avatarUrl ? { uri: contractor.avatarUrl } : undefined,
+      rankingScore: contractor.rankingScore,
+    }));
+    const source = apiProviders ?? managedProviders;
+    return source
+      .filter((provider) => (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized)) && provider.rating >= minimumRating)
+      .sort((a, b) => ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0));
+  }, [query, managedProviders, directory.data, minimumRating]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'اكتشف الخدمات' : 'Explore services'} subtitle={`${isArabic ? 'حول' : 'Around'} ${location.city}`} />
+          {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>الخدمة غير متاحة مؤقتًا — showing offline directory.</Text> : null}
           <View style={[styles.searchInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="search" size={18} color={colors.mutedForeground} />
-            <TextInput value={query} onChangeText={setQuery} placeholder={isArabic ? 'ابحث عن خدمة أو مزود' : 'Search a service or provider'} placeholderTextColor={colors.mutedForeground} style={[styles.searchInput, { color: colors.foreground }]} />
+            <TextInput testID="contractor-search" value={query} onChangeText={setQuery} placeholder={isArabic ? 'ابحث عن خدمة أو مزود' : 'Search a service or provider'} placeholderTextColor={colors.mutedForeground} textAlign={isArabic ? 'right' : 'left'} style={[styles.searchInput, { color: colors.foreground }]} />
             {query ? <Pressable onPress={() => setQuery('')}><Feather name="x-circle" size={17} color={colors.mutedForeground} /></Pressable> : null}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -41,11 +62,18 @@ export default function ExploreScreen() {
               </Pressable>;
             })}
           </ScrollView>
+          <View style={styles.filters}>
+            <TextInput testID="city-filter" value={city} onChangeText={setCity} placeholder={isArabic ? 'الولاية / المدينة' : 'Wilayat / city'} placeholderTextColor={colors.mutedForeground} textAlign={isArabic ? 'right' : 'left'} style={[styles.filterInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+            {[0, 3, 4].map((rating) => <Pressable testID={`rating-filter-${rating}`} key={rating} onPress={() => setMinimumRating(rating)} style={[styles.filterChip, { borderColor: minimumRating === rating ? colors.primary : colors.border, backgroundColor: minimumRating === rating ? colors.primarySoft : colors.surface }]}><Text style={{ color: colors.foreground }}>{rating ? `★ ${rating}+` : (isArabic ? 'كل التقييمات' : 'Any rating')}</Text></Pressable>)}
+            <Pressable testID="verified-filter" onPress={() => setVerifiedOnly((value) => !value)} style={[styles.filterChip, { borderColor: verifiedOnly ? colors.primary : colors.border, backgroundColor: verifiedOnly ? colors.primarySoft : colors.surface }]}><Text style={{ color: colors.foreground }}>{isArabic ? 'موثّق' : 'Verified'}</Text></Pressable>
+          </View>
           <SegmentedControl value={mode} onChange={setMode} options={['Providers', 'Properties']} />
           {mode === 'Providers' ? (
             <View>
               <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? 'مزودون موصى بهم' : 'Recommended providers'}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>Best match</Text></View></View>
-              {filteredProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
+               {directory.isLoading ? <ActivityIndicator testID="contractors-loading" color={colors.primary} /> : null}
+               {filteredProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image ?? require('@/assets/images/contractor-project.jpg')} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
+               {!directory.isLoading && !filteredProviders.length ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'لا توجد نتائج مطابقة.' : 'No matching contractors.'}</Text> : null}
             </View>
           ) : (
             <View>
@@ -72,4 +100,8 @@ const styles = StyleSheet.create({
   sortRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sortText: { fontSize: 11, fontWeight: '700' },
   propertyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  filterInput: { width: 145, height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, fontSize: 12 },
+  filterChip: { height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
+  apiHint: { fontSize: 12, marginBottom: 10, lineHeight: 18 },
 });

@@ -1,114 +1,33 @@
-import { useAuth, useUser } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
+import { useAuth, useUser } from '@clerk/expo';
+import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
-import { useApp } from '@/context/AppContext';
-import { useColors } from '@/hooks/useColors';
-import type { Provider } from '@/data/mockData';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
+import { useColors } from '@/hooks/useColors';
+import { getListAdminContractorsQueryKey, type AdminContractor, type AdminContractorInput, useCreateAdminContractor, useDeleteAdminContractor, useListAdminContractors, useUpdateAdminContractor } from '@workspace/api-client-react';
 
-type FormState = { name: string; specialty: string; city: string; contractAmount: string; phone: string; rating: string; reviews: string; verified: boolean };
-const emptyForm: FormState = { name: '', specialty: '', city: 'Muscat', contractAmount: '', phone: '+968 ', rating: '0', reviews: '0', verified: false };
-
+const blank = (): AdminContractorInput => ({ businessName: '', city: '', businessNameArabic: '', wilayat: '', bio: '', bioArabic: '', serviceArea: '', phone: '', evaluationNotes: '', adminRating: null, agreedContractAmountOmaniRial: null, isVerified: false, isPublished: false });
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not save this change.';
 export default function AdminScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const { isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { managedProviders, addContractor, updateProvider, removeProvider } = useApp();
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const contractors = useMemo(() => managedProviders.filter((provider) => provider.role === 'contractor'), [managedProviders]);
-  const metadata = (user?.publicMetadata ?? {}) as Record<string, unknown>;
-  const isAdmin = metadata.role === 'admin' || metadata.isAdmin === true;
-
-  if (!isLoaded) {
-    return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator color={colors.primary} /></View>;
-  }
-
-  if (!isSignedIn) {
-    return <View style={[styles.center, { backgroundColor: colors.background, padding: 28 }]}><BrandMark /><Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Admin access</Text><Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Sign in with an administrator account to manage contractors, ratings, and contract settings.</Text><ActionButton label="Sign in" onPress={() => router.push('/sign-in')} style={{ minWidth: 170 }} /><Pressable onPress={() => router.back()}><Text style={[styles.cancelLink, { color: colors.primary }]}>Return to Moqawil</Text></Pressable></View>;
-  }
-
-  if (!isAdmin) {
-    return <View style={[styles.center, { backgroundColor: colors.background, padding: 28 }]}><Feather name="shield-off" size={44} color={colors.primary} /><Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Restricted area</Text><Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your account is signed in, but it does not have administrator permissions.</Text><ActionButton label="Go back" secondary onPress={() => router.back()} style={{ minWidth: 170 }} /></View>;
-  }
-
-  const updateForm = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
-  const startEdit = (provider: Provider) => {
-    setEditingId(provider.id);
-    setForm({ name: provider.name, specialty: provider.specialty, city: provider.city, contractAmount: provider.contractAmount, phone: provider.phone, rating: String(provider.rating), reviews: String(provider.reviews), verified: Boolean(provider.verified) });
-  };
-  const resetForm = () => { setEditingId(null); setForm(emptyForm); };
-  const save = () => {
-    if (!form.name.trim() || !form.specialty.trim()) {
-      Alert.alert('Missing details', 'Add the contractor name and specialty before saving.');
-      return;
-    }
-    const patch: Partial<Provider> = { name: form.name.trim(), nameAr: form.name.trim(), specialty: form.specialty.trim(), specialtyAr: form.specialty.trim(), city: form.city.trim() || 'Muscat', contractAmount: form.contractAmount.trim() || 'Not set', phone: form.phone.trim() || 'Not set', rating: Math.min(5, Math.max(0, Number(form.rating) || 0)), reviews: Math.max(0, Number.parseInt(form.reviews, 10) || 0), verified: form.verified };
-    if (editingId) {
-      updateProvider(editingId, patch);
-      Alert.alert('Contractor updated', 'The contractor profile and evaluation were saved.');
-    } else {
-      addContractor({ name: patch.name!, specialty: patch.specialty!, city: patch.city!, contractAmount: patch.contractAmount!, phone: patch.phone! });
-      Alert.alert('Contractor added', 'The new contractor is now available in the marketplace.');
-    }
-    resetForm();
-  };
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.topRow}><Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.border }]}><Feather name="arrow-left" size={18} color={colors.foreground} /></Pressable><BrandMark compact /><View style={{ flex: 1 }} /><Pressable onPress={() => router.push('/')}><Text style={[styles.exitText, { color: colors.primary }]}>Exit</Text></Pressable></View>
-          <ScreenHeader title="Admin console" subtitle="Contractor operations and evaluations" />
-          <View style={[styles.banner, { backgroundColor: colors.navy }]}><Feather name="shield" size={20} color={colors.accent} /><View style={{ flex: 1 }}><Text style={styles.bannerTitle}>Administrator mode</Text><Text style={styles.bannerText}>Changes are stored on this device for the prototype.</Text></View></View>
-          <View style={styles.sectionHead}><View><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{editingId ? 'Edit contractor' : 'Add contractor'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>Use the agreed contract amount and current evaluation.</Text></View>{editingId ? <Pressable onPress={resetForm}><Text style={[styles.cancelLink, { color: colors.primary }]}>Cancel</Text></Pressable> : null}</View>
-          <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {([['name', 'Contractor name'], ['specialty', 'Specialty'], ['city', 'City'], ['contractAmount', 'Agreed contract amount'], ['phone', 'Contact phone'], ['rating', 'Rating (0–5)'], ['reviews', 'Review count']] as const).map(([key, label]) => <View key={key} style={styles.field}><Text style={[styles.label, { color: colors.foreground }]}>{label}</Text><TextInput keyboardType={key === 'rating' || key === 'reviews' ? 'decimal-pad' : 'default'} value={form[key]} onChangeText={(value) => updateForm(key, value)} placeholder={label} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.background, borderColor: colors.border }]} /></View>)}
-            <View style={styles.switchRow}><View style={{ flex: 1 }}><Text style={[styles.label, { color: colors.foreground, marginBottom: 2 }]}>Verified provider</Text><Text style={[styles.switchHint, { color: colors.mutedForeground }]}>Show the verification badge in discovery.</Text></View><Switch value={form.verified} onValueChange={(value) => updateForm('verified', value)} trackColor={{ false: colors.border, true: colors.primarySoft }} thumbColor={form.verified ? colors.primary : colors.mutedForeground} /></View>
-            <ActionButton label={editingId ? 'Save contractor changes' : 'Add contractor'} icon={editingId ? 'check' : 'plus'} onPress={save} />
-          </View>
-          <View style={styles.sectionHead}><View><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Managed contractors</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{contractors.length} profiles in your workspace</Text></View></View>
-          {contractors.map((provider) => <View key={provider.id} style={[styles.contractorCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={styles.contractorTop}><View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}><Text style={[styles.avatarText, { color: colors.primary }]}>{provider.name.charAt(0)}</Text></View><View style={{ flex: 1 }}><Text style={[styles.contractorName, { color: colors.foreground }]}>{provider.name}</Text><Text style={[styles.contractorMeta, { color: colors.mutedForeground }]}>{provider.specialty} · {provider.city}</Text></View><Pressable onPress={() => startEdit(provider)} style={[styles.smallButton, { backgroundColor: colors.primarySoft }]}><Feather name="edit-2" size={15} color={colors.primary} /></Pressable></View><View style={[styles.statsRow, { borderTopColor: colors.border }]}><Text style={[styles.stat, { color: colors.foreground }]}>★ {provider.rating.toFixed(1)} <Text style={{ color: colors.mutedForeground }}>({provider.reviews})</Text></Text><Text style={[styles.stat, { color: colors.foreground }]}>{provider.contractAmount}</Text><Pressable onPress={() => Alert.alert('Remove contractor?', 'This removes the profile from this device.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => removeProvider(provider.id) }])}><Text style={[styles.removeText, { color: '#C55353' }]}>Remove</Text></Pressable></View></View>)}
-        </View>
-      </ScrollView>
-    </View>
-  );
+ const colors=useColors(), insets=useSafeAreaInsets(), client=useQueryClient(); const {isLoaded,isSignedIn}=useAuth(); const {user}=useUser();
+ const isAdmin=(user?.publicMetadata as Record<string,unknown> | undefined)?.role==='admin'||(user?.publicMetadata as Record<string,unknown> | undefined)?.isAdmin===true;
+ const contractors=useListAdminContractors({query:{queryKey:getListAdminContractorsQueryKey(),enabled:isAdmin}});
+ const [form,setForm]=useState<AdminContractorInput>(blank()); const [editing,setEditing]=useState<string|null>(null); const [showForm,setShowForm]=useState(false);
+ const invalidate=()=>client.invalidateQueries({queryKey:getListAdminContractorsQueryKey()});
+ const create=useCreateAdminContractor({mutation:{onSuccess:()=>{invalidate();setShowForm(false);setForm(blank());},onError:(e)=>Alert.alert('Server validation',errorMessage(e))}});
+ const update=useUpdateAdminContractor({mutation:{onSuccess:invalidate,onError:(e)=>Alert.alert('Server validation',errorMessage(e))}});
+ const archive=useDeleteAdminContractor({mutation:{onSuccess:invalidate,onError:(e)=>Alert.alert('Archive failed',errorMessage(e))}});
+ const set=(key:keyof AdminContractorInput,value:string)=>setForm(v=>({...v,[key]:value}));
+ const begin=(c?:AdminContractor)=>{if(c){setEditing(c.id);setForm({businessName:c.businessName,businessNameArabic:c.businessNameArabic??'',city:c.city,wilayat:c.wilayat??'',bio:c.bio??'',bioArabic:c.bioArabic??'',serviceArea:c.serviceArea??'',phone:c.phone??'',evaluationNotes:c.evaluationNotes??'',adminRating:c.adminRating??null,agreedContractAmountOmaniRial:c.agreedContractAmountOmaniRial??null,isVerified:c.isVerified,isPublished:c.isPublished});}else{setEditing(null);setForm(blank());}setShowForm(true);};
+ if(!isLoaded)return <View style={[styles.center,{backgroundColor:colors.background}]}><ActivityIndicator color={colors.primary}/></View>;
+ if(!isSignedIn||!isAdmin)return <View style={[styles.center,{backgroundColor:colors.background}]}><BrandMark/><Text style={[styles.title,{color:colors.foreground}]}>Admin access required</Text><ActionButton label={isSignedIn?'Go back':'Sign in'} onPress={()=>isSignedIn?router.back():router.push('/sign-in')}/></View>;
+ const save=()=>{if(form.businessName.trim().length<2||form.city.trim().length<2){Alert.alert('Missing details','Business name and city are required.');return;}const data={...form,businessName:form.businessName.trim(),city:form.city.trim(),adminRating:form.adminRating===null?null:Number(form.adminRating)||null,agreedContractAmountOmaniRial:form.agreedContractAmountOmaniRial===null?null:Number(form.agreedContractAmountOmaniRial)||null};editing?update.mutate({id:editing,data}):create.mutate({data});};
+ return <View style={[styles.page,{backgroundColor:colors.background}]}><ScrollView contentContainerStyle={{paddingTop:insets.top+16,paddingBottom:45}} keyboardShouldPersistTaps="handled"><View style={styles.content}><View style={styles.top}><Pressable testID="admin-back" onPress={()=>router.back()}><Feather name="arrow-left" size={20} color={colors.foreground}/></Pressable><BrandMark compact/></View><ScreenHeader title="إدارة المقاولين" subtitle="Contractor moderation & records" right={<Pressable testID="add-contractor" onPress={()=>begin()}><Feather name="plus-circle" size={26} color={colors.primary}/></Pressable>}/>
+ {contractors.isLoading?<ActivityIndicator color={colors.primary}/>:null}{contractors.isError?<Text style={{color:colors.mutedForeground}}>Unable to load server contractors. Please retry.</Text>:null}
+ {contractors.data?.map(c=><View key={c.id} style={[styles.card,{backgroundColor:colors.surface,borderColor:colors.border}]}><View style={styles.row}><View style={{flex:1}}><Text style={[styles.name,{color:colors.foreground}]}>{c.businessName} {c.businessNameArabic?`/ ${c.businessNameArabic}`:''}</Text><Text style={[styles.meta,{color:colors.mutedForeground}]}>{c.city}{c.wilayat?` · ${c.wilayat}`:''} · {c.accountLinkStatus}</Text><Text style={[styles.meta,{color:colors.mutedForeground}]}>{c.isPublished?'Published':'Hidden'} · {c.isVerified?'Verified':'Unverified'}</Text></View><Pressable testID={`edit-contractor-${c.id}`} onPress={()=>begin(c)}><Feather name="edit-2" size={18} color={colors.primary}/></Pressable></View><View style={styles.actions}><Pressable testID={`toggle-verify-${c.id}`} onPress={()=>update.mutate({id:c.id,data:{isVerified:!c.isVerified}})}><Text style={[styles.link,{color:colors.primary}]}>{c.isVerified?'Unverify':'Verify'}</Text></Pressable><Pressable testID={`toggle-publish-${c.id}`} onPress={()=>update.mutate({id:c.id,data:{isPublished:!c.isPublished}})}><Text style={[styles.link,{color:colors.primary}]}>{c.isPublished?'Unpublish':'Publish'}</Text></Pressable><Pressable testID={`archive-contractor-${c.id}`} onPress={()=>Alert.alert('Archive contractor?','This archives the server contractor profile.',[{text:'Cancel',style:'cancel'},{text:'Archive',style:'destructive',onPress:()=>archive.mutate({id:c.id,params:{confirm:true}})}])}><Text style={[styles.link,{color:'#C55353'}]}>Archive</Text></Pressable></View></View>)}
+ {showForm?<View style={[styles.form,{backgroundColor:colors.surface,borderColor:colors.border}]}><Text style={[styles.name,{color:colors.foreground}]}>{editing?'Edit server contractor':'Add server contractor'}</Text>{([['businessName','Business name / اسم المنشأة'],['businessNameArabic','Arabic business name / الاسم بالعربية'],['city','City / المدينة'],['wilayat','Wilayat / الولاية'],['serviceArea','Service area / منطقة الخدمة'],['phone','Phone / الهاتف'],['bio','Bio / نبذة'],['bioArabic','Arabic bio / النبذة بالعربية'],['evaluationNotes','Admin evaluation notes / ملاحظات الإدارة'],['adminRating','Admin rating (1–5) / تقييم الإدارة'],['agreedContractAmountOmaniRial','Agreed amount OMR / قيمة العقد'] ] as const).map(([key,label])=><View key={key}><Text style={[styles.label,{color:colors.foreground}]}>{label}</Text><TextInput testID={`contractor-field-${key}`} value={String(form[key]??'')} onChangeText={v=>set(key,v)} multiline={key==='bio'||key==='bioArabic'||key==='evaluationNotes'} keyboardType={key==='adminRating'||key==='agreedContractAmountOmaniRial'?'decimal-pad':'default'} textAlign={key.includes('Arabic')?'right':'left'} style={[styles.input,{color:colors.foreground,borderColor:colors.border,backgroundColor:colors.background}]}/></View>)}<View style={styles.actions}><Pressable testID="form-verified" onPress={()=>setForm(v=>({...v,isVerified:!v.isVerified}))}><Text style={[styles.link,{color:colors.primary}]}>{form.isVerified?'✓ Verified':'Verify'}</Text></Pressable><Pressable testID="form-published" onPress={()=>setForm(v=>({...v,isPublished:!v.isPublished}))}><Text style={[styles.link,{color:colors.primary}]}>{form.isPublished?'✓ Published':'Publish intent'}</Text></Pressable></View><View testID="save-server-contractor"><ActionButton label={create.isPending||update.isPending?'Saving…':'Save server contractor'} onPress={save}/></View><Pressable testID="cancel-contractor-form" onPress={()=>setShowForm(false)}><Text style={[styles.link,{color:colors.mutedForeground}]}>Cancel</Text></Pressable></View>:null}</View></ScrollView></View>;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
-  restrictedTitle: { fontSize: 25, fontWeight: '800', marginTop: 14 },
-  restrictedText: { fontSize: 14, lineHeight: 21, textAlign: 'center', maxWidth: 330, marginBottom: 8 },
-  cancelLink: { fontSize: 12, fontWeight: '800' },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
-  backButton: { width: 39, height: 39, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  exitText: { fontSize: 12, fontWeight: '800' },
-  banner: { borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
-  bannerTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  bannerText: { color: 'rgba(255,255,255,0.68)', fontSize: 11, marginTop: 3 },
-  sectionHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 27, marginBottom: 11 },
-  sectionTitle: { fontSize: 17, fontWeight: '800' },
-  sectionHint: { fontSize: 11, marginTop: 4 },
-  formCard: { borderRadius: 18, borderWidth: 1, padding: 15 },
-  field: { marginBottom: 10 },
-  label: { fontSize: 11, fontWeight: '800', marginBottom: 6 },
-  input: { minHeight: 45, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, fontSize: 13 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 10 },
-  switchHint: { fontSize: 10 },
-  contractorCard: { borderRadius: 17, borderWidth: 1, padding: 14, marginBottom: 10 },
-  contractorTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  avatar: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 17, fontWeight: '800' },
-  contractorName: { fontSize: 13, fontWeight: '800' },
-  contractorMeta: { fontSize: 11, marginTop: 3 },
-  smallButton: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  statsRow: { borderTopWidth: 1, marginTop: 13, paddingTop: 11, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  stat: { fontSize: 11, fontWeight: '700', flex: 1 },
-  removeText: { fontSize: 11, fontWeight: '800' },
-});
+const styles=StyleSheet.create({page:{flex:1},center:{flex:1,alignItems:'center',justifyContent:'center',gap:18,padding:25},content:{paddingHorizontal:20,gap:13},top:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},title:{fontSize:22,fontWeight:'800'},card:{borderWidth:1,borderRadius:17,padding:14,gap:11},row:{flexDirection:'row',gap:10},name:{fontSize:15,fontWeight:'800'},meta:{fontSize:11,marginTop:3},actions:{flexDirection:'row',flexWrap:'wrap',gap:16},link:{fontSize:12,fontWeight:'800'},form:{borderWidth:1,borderRadius:18,padding:15,gap:10,marginTop:8},label:{fontSize:11,fontWeight:'800',marginBottom:5},input:{borderWidth:1,borderRadius:11,minHeight:43,paddingHorizontal:10,fontSize:13}});

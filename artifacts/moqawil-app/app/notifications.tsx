@@ -1,0 +1,16 @@
+import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/expo';
+import { router } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EmptyState, ScreenHeader } from '@/components/MoqawilUI';
+import { useColors } from '@/hooks/useColors';
+import { getListMyNotificationsQueryKey, useListMyNotifications, useMarkNotificationRead } from '@workspace/api-client-react';
+export default function NotificationsScreen() {
+ const colors=useColors(), insets=useSafeAreaInsets(), client=useQueryClient(); const { isSignedIn }=useAuth(); const notices=useListMyNotifications({query:{queryKey:getListMyNotificationsQueryKey(),enabled:!!isSignedIn}});
+ const mark=useMarkNotificationRead({mutation:{onSuccess:()=>client.invalidateQueries({queryKey:getListMyNotificationsQueryKey()})}});
+ return <View style={[styles.page,{backgroundColor:colors.background}]}><ScrollView contentContainerStyle={{paddingTop:insets.top+18,paddingBottom:40}}><View style={styles.content}><Pressable testID="notifications-back" onPress={()=>router.back()}><Feather name="arrow-left" size={20} color={colors.foreground}/></Pressable><ScreenHeader title="الإشعارات / Notifications" subtitle="تحديثات مقاول · Updates from Moqawil"/>{!isSignedIn?<EmptyState icon="lock" title="سجّل الدخول / Sign in" description="Sign in to view your notifications."/>:null}{isSignedIn?<React.Fragment>{notices.isLoading?<ActivityIndicator color={colors.primary}/>:null}{notices.isError?<Text style={{color:colors.mutedForeground}}>الإشعارات غير متاحة مؤقتًا / Notifications are temporarily unavailable.</Text>:null}{notices.data?.map(n=><Pressable testID={`notification-${n.id}`} key={n.id} onPress={()=>!n.readAt&&mark.mutate({id:n.id})} style={[styles.item,{backgroundColor:colors.surface,borderColor:colors.border},!n.readAt&&{borderLeftColor:colors.primary,borderLeftWidth:3}]}><Text style={[styles.title,{color:colors.foreground}]}>{n.title}</Text><Text style={{color:colors.mutedForeground}}>{n.body}</Text><Text style={{color:colors.mutedForeground,fontSize:11}}>{n.channel} · {n.deliveryStatus} · {new Date(n.deliveredAt ?? n.createdAt).toLocaleDateString()}</Text></Pressable>)}{!notices.isLoading&&!notices.isError&&!notices.data?.length?<EmptyState icon="bell" title="لا توجد إشعارات" description="You're all caught up."/>:null}</React.Fragment>:null}</View></ScrollView></View>;
+}
+const styles=StyleSheet.create({page:{flex:1},content:{paddingHorizontal:20,gap:14},item:{borderWidth:1,borderRadius:16,padding:14,gap:5},title:{fontWeight:'800',fontSize:14}});

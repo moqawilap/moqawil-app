@@ -14,13 +14,24 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProvider } from '@/context/AppContext';
-import { ClerkProvider } from '@clerk/expo';
+import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+const apiDomain = process.env.EXPO_PUBLIC_DOMAIN;
+setBaseUrl(apiDomain ? `https://${apiDomain}` : null);
+
+function ApiAuthBridge() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setAuthTokenGetter(async () => (await getToken()) ?? null);
+  }, [getToken]);
+  return null;
+}
 
 function RootLayoutNav() {
   return (
@@ -28,6 +39,9 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ presentation: 'modal' }} />
       <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="subscription" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="contractor-profile" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
@@ -52,6 +66,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ''} tokenCache={tokenCache}>
+          <ApiAuthBridge />
           <AppProvider>
             <QueryClientProvider client={queryClient}>
               <GestureHandlerRootView style={{ flex: 1 }}>

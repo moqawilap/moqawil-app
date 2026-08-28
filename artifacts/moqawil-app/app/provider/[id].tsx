@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, IconButton, Rating } from '@/components/MoqawilUI';
 import { providers } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useGetContractor } from '@workspace/api-client-react';
 
 export default function ProviderDetail() {
   const colors = useColors();
@@ -14,7 +15,19 @@ export default function ProviderDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isArabic, isSaved, toggleSaved, managedProviders } = useApp();
-  const provider = managedProviders.find((item) => item.id === id) ?? managedProviders[0];
+  const contractor = useGetContractor(id);
+  const fallback = managedProviders.find((item) => item.id === id);
+  const provider = contractor.data ? {
+    id: contractor.data.id, name: contractor.data.businessName, nameAr: contractor.data.businessName,
+    specialty: contractor.data.services.map((service) => service.name).join(' · ') || 'Contractor',
+    specialtyAr: contractor.data.services.map((service) => service.name).join(' · ') || 'مقاول',
+    city: contractor.data.city, rating: contractor.data.rating, reviews: contractor.data.reviewCount,
+    verified: contractor.data.isVerified, projects: contractor.data.projects.length,
+    image: contractor.data.avatarUrl ? { uri: contractor.data.avatarUrl } : require('@/assets/images/contractor-project.jpg'),
+    description: contractor.data.bio || '', descriptionAr: contractor.data.bio || '', distance: contractor.data.city,
+    phone: contractor.data.phone ?? '', contractAmount: '', startingPrice: '', role: 'contractor' as const, accent: '',
+  } : fallback;
+  if (!provider) return <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }]}><Text style={{ color: colors.foreground }}>Provider unavailable.</Text><ActionButton label="Go back" secondary onPress={() => router.back()} /></View>;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -24,7 +37,7 @@ export default function ProviderDetail() {
           <BrandMark compact />
           <IconButton icon="heart" active={isSaved(provider.id)} onPress={() => toggleSaved(provider.id)} accessibilityLabel="Save provider" />
         </View>
-        <Image source={provider.image} style={styles.heroImage} />
+         <Image source={provider.image} style={styles.heroImage} />
         <View style={styles.content}>
           <View style={styles.titleRow}>
             <View style={styles.titleBlock}>
@@ -44,6 +57,10 @@ export default function ProviderDetail() {
           </View>
           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>{isArabic ? 'عن مقدم الخدمة' : 'About this provider'}</Text>
           <Text style={[styles.description, { color: colors.mutedForeground }]}>{isArabic ? provider.descriptionAr : provider.description}</Text>
+           {contractor.isLoading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 14 }} /> : null}
+           {contractor.data?.services.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'الخدمات' : 'Services'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.services.map((service) => service.name).join(' • ')}</Text></> : null}
+           {contractor.data?.projects.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المشاريع' : 'Projects'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.projects.map((project) => project.title).join(' • ')}</Text></> : null}
+           {contractor.data?.reviews.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المراجعات' : 'Reviews'}</Text>{contractor.data.reviews.slice(0, 3).map((review) => <Text key={review.id} style={[styles.description, { color: colors.mutedForeground }]}>★ {review.rating} {review.comment ?? ''}</Text>)}</> : null}
           <Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'لماذا تختاره' : 'Why customers choose them'}</Text>
           <View style={styles.benefitList}>
             {['Verified business profile', 'Clear project communication', 'Reviews from local customers'].map((item) => (
@@ -53,7 +70,7 @@ export default function ProviderDetail() {
         </View>
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
-        <ActionButton label="Call provider" icon="phone" onPress={() => Linking.openURL(`tel:${provider.phone.replace(/\s/g, '')}`)} style={{ flex: 1 }} />
+         {contractor.data && !contractor.data.phone ? <View style={{ flex: 1 }}><ActionButton label="Phone unavailable" icon="phone-off" secondary onPress={() => undefined} /></View> : <ActionButton label="Call provider" icon="phone" onPress={() => Linking.openURL(`tel:${provider.phone.replace(/\s/g, '')}`)} style={{ flex: 1 }} />}
         <ActionButton label="Message" icon="message-circle" onPress={() => Linking.openURL('mailto:moqawil.om@gmail.com')} secondary style={{ flex: 1 }} />
       </View>
     </View>

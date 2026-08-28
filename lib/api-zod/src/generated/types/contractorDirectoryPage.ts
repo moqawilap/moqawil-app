@@ -5,7 +5,10 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
+import type { Contractor } from './contractor';
 
-export interface HealthStatus {
-  status: string;
+export interface ContractorDirectoryPage {
+  items: Contractor[];
+  page: number;
+  total: number;
 }
