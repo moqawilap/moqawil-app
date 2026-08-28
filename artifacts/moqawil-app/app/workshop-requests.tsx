@@ -1,0 +1,35 @@
+import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@clerk/expo';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
+import { ActionButton, EmptyState, ScreenHeader } from '@/components/MoqawilUI';
+import { useApp } from '@/context/AppContext';
+import { useColors } from '@/hooks/useColors';
+import { getListWorkshopRequestsQueryKey, useCreateWorkshopQuote, useListWorkshopRequests } from '@workspace/api-client-react';
+
+export default function WorkshopRequestsScreen() {
+  const colors = useColors(), insets = useSafeAreaInsets();
+  const { isArabic } = useApp();
+  const { isSignedIn } = useAuth();
+  const client = useQueryClient();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [amount, setAmount] = useState('');
+  const [days, setDays] = useState('3');
+  const [details, setDetails] = useState('');
+  const requests = useListWorkshopRequests({ query: { enabled: !!isSignedIn } });
+  const quote = useCreateWorkshopQuote({ mutation: { onSuccess: () => { setSelectedId(null); setAmount(''); setDays('3'); setDetails(''); client.invalidateQueries({ queryKey: getListWorkshopRequestsQueryKey() }); Alert.alert(isArabic ? 'تم إرسال العرض' : 'Quote sent', isArabic ? 'سيصل العرض للعميل الآن.' : 'The customer can now compare your quote.'); }, onError: () => Alert.alert(isArabic ? 'تعذر إرسال العرض' : 'Could not send quote', isArabic ? 'أنشئ ملف الورشة وتأكد من بيانات العرض.' : 'Create your workshop profile and check the quote details.') } });
+  if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لإدارة طلبات الورشة' : 'Sign in to manage workshop requests'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
+  return <View style={[styles.page, { backgroundColor: colors.background }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45, paddingHorizontal: 20 }}><Pressable onPress={() => router.back()}><Feather name="arrow-left" size={20} color={colors.foreground} /></Pressable><ScreenHeader title={isArabic ? 'طلبات الورشة' : 'Workshop requests'} subtitle={isArabic ? 'راجع الطلبات وأرسل عروضك' : 'Review requests and send your quote'} />
+    {requests.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
+    {requests.isError ? <Text style={{ color: colors.mutedForeground }}>{isArabic ? 'هذه الصفحة متاحة لأصحاب الورش بعد إنشاء الملف.' : 'This page is available to workshop owners with a profile.'}</Text> : null}
+    {!requests.isLoading && !requests.isError && !requests.data?.length ? <EmptyState icon="inbox" title={isArabic ? 'لا توجد طلبات جديدة' : 'No incoming requests'} description={isArabic ? 'ستظهر هنا طلبات الخدمات المطابقة لموقع ورشتك.' : 'Matching service requests will appear here.'} /> : null}
+    {requests.data?.map((request) => { const selected = selectedId === request.id; return <View key={request.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: selected ? colors.primary : colors.border }]}><Pressable onPress={() => setSelectedId(selected ? null : request.id)} style={styles.header}><View style={[styles.icon, { backgroundColor: colors.primarySoft }]}><Feather name="inbox" size={17} color={colors.primary} /></View><View style={{ flex: 1, gap: 3 }}><Text style={[styles.requestTitle, { color: colors.foreground }]}>{request.serviceName}</Text><Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{request.wilayat} · {new Date(request.createdAt).toLocaleDateString()}</Text></View><Text style={[styles.status, { color: colors.primary, backgroundColor: colors.primarySoft }]}>{request.recipientStatus === 'quoted' ? (isArabic ? 'تم الرد' : 'Quoted') : (isArabic ? 'جديد' : 'New')}</Text></Pressable><Text style={[styles.description, { color: colors.mutedForeground }]}>{request.requirements}</Text>{selected && request.recipientStatus !== 'quoted' ? <View style={[styles.form, { borderTopColor: colors.border }]}><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'قيمة العرض (ر.ع)' : 'Your price (OMR)'}</Text><TextInput value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="150" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'المدة المتوقعة بالأيام' : 'Estimated days'}</Text><TextInput value={days} onChangeText={setDays} keyboardType="number-pad" placeholder="3" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'تفاصيل العرض' : 'Quote details'}</Text><TextInput value={details} onChangeText={setDetails} multiline placeholder={isArabic ? 'ما الذي يشمله العرض؟' : 'What is included?'} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.textarea, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /><ActionButton label={quote.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Sending…') : (isArabic ? 'إرسال العرض' : 'Send quote')} onPress={() => { if (!Number.isFinite(Number(amount)) || Number(amount) < 0 || !Number.isInteger(Number(days)) || Number(days) < 1 || details.trim().length < 4) { Alert.alert(isArabic ? 'بيانات العرض ناقصة' : 'Quote details needed', isArabic ? 'أدخل السعر والمدة والتفاصيل.' : 'Enter a price, duration, and details.'); return; } quote.mutate({ id: request.id, data: { amountOmaniRial: Number(amount), estimatedDays: Number(days), details: details.trim() } }); }} /></View> : null}</View>; })}
+  </ScrollView></View>;
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 18 }, title: { fontSize: 22, fontWeight: '800', textAlign: 'center' }, header: { flexDirection: 'row', alignItems: 'center', gap: 10 }, card: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 10 }, icon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, requestTitle: { fontSize: 14, fontWeight: '800' }, status: { fontSize: 10, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8 }, description: { fontSize: 13, lineHeight: 20 }, form: { borderTopWidth: 1, paddingTop: 10, gap: 8 }, label: { fontSize: 12, fontWeight: '800', marginTop: 3 }, input: { minHeight: 45, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, fontSize: 14 }, textarea: { minHeight: 80, paddingTop: 11, textAlignVertical: 'top' },
+});

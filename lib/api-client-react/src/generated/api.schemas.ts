@@ -193,6 +193,75 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface ServiceRequestCreate {
+  serviceCategory: string;
+  serviceName: string;
+  governorate: string;
+  wilayat: string;
+  /** @minLength 8 */
+  requirements: string;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  budgetOmaniRial?: number | null;
+  imageUrls?: string[];
+}
+
+export interface ServiceRequest {
+  id: string;
+  serviceCategory: string;
+  serviceName: string;
+  governorate: string;
+  wilayat: string;
+  requirements: string;
+  /** @nullable */
+  budgetOmaniRial?: number | null;
+  imageUrls: string[];
+  status: string;
+  recipientCount?: number;
+  quoteCount?: number;
+  createdAt: string;
+}
+
+export interface QuoteCreate {
+  /** @minimum 0 */
+  amountOmaniRial: number;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  estimatedDays: number;
+  /** @minLength 4 */
+  details: string;
+}
+
+export interface Quote {
+  id: string;
+  requestId: string;
+  contractorId: string;
+  amountOmaniRial: number;
+  estimatedDays: number;
+  details: string;
+  status: string;
+  /** @nullable */
+  businessName?: string | null;
+  /** @nullable */
+  businessNameArabic?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  wilayat?: string | null;
+  /** @nullable */
+  isVerified?: boolean | null;
+  createdAt: string;
+}
+
+export type WorkshopRequest = ServiceRequest & {
+  recipientId: string;
+  recipientStatus: string;
+};
+
 export interface AdminContractorInput {
   /**
      * @minLength 2

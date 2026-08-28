@@ -1,0 +1,44 @@
+import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@clerk/expo';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActionButton, EmptyState, ScreenHeader } from '@/components/MoqawilUI';
+import { useApp } from '@/context/AppContext';
+import { useColors } from '@/hooks/useColors';
+import { getListMyServiceRequestsQueryKey, getListServiceRequestQuotesQueryKey, useAcceptQuote, useListMyServiceRequests, useListServiceRequestQuotes } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+
+export default function RequestsScreen() {
+  const colors = useColors(), insets = useSafeAreaInsets();
+  const { isArabic } = useApp();
+  const { isSignedIn } = useAuth();
+  const client = useQueryClient();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const requests = useListMyServiceRequests({ query: { enabled: !!isSignedIn } });
+  const quotes = useListServiceRequestQuotes(selectedId ?? '', { query: { enabled: !!selectedId } });
+  const accept = useAcceptQuote({ mutation: { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyServiceRequestsQueryKey() }); if (selectedId) client.invalidateQueries({ queryKey: getListServiceRequestQuotesQueryKey(selectedId) }); Alert.alert(isArabic ? 'تم اختيار العرض' : 'Quote accepted', isArabic ? 'يمكنك الآن التواصل مع الورشة والبدء بالعمل.' : 'You can now contact the workshop and start the work.'); }, onError: () => Alert.alert(isArabic ? 'تعذر اختيار العرض' : 'Could not accept quote', isArabic ? 'حاول مرة أخرى.' : 'Please try again.') } });
+  if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لعرض طلباتك' : 'Sign in to view your requests'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
+  return <View style={[styles.page, { backgroundColor: colors.background }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }}><View style={styles.content}>
+    <Pressable onPress={() => router.back()}><Feather name="arrow-left" size={20} color={colors.foreground} /></Pressable>
+    <ScreenHeader title={isArabic ? 'طلباتي' : 'My requests'} subtitle={isArabic ? 'قارن عروض الورش واختر الأنسب' : 'Compare workshop quotes and choose the right one'} right={<Pressable onPress={() => router.push('/service-request' as never)} style={[styles.addButton, { backgroundColor: colors.primarySoft }]}><Feather name="plus" size={16} color={colors.primary} /></Pressable>} />
+    {requests.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
+    {requests.isError ? <Text style={{ color: colors.mutedForeground }}>{isArabic ? 'تعذر تحميل الطلبات.' : 'Requests are temporarily unavailable.'}</Text> : null}
+    {!requests.isLoading && !requests.data?.length ? <EmptyState icon="briefcase" title={isArabic ? 'لا توجد طلبات بعد' : 'No requests yet'} description={isArabic ? 'أرسل طلب خدمة واحدًا لعدة ورش.' : 'Send one service request to matching workshops.'} action={<ActionButton label={isArabic ? 'أحتاج خدمة' : 'I need a service'} onPress={() => router.push('/service-request' as never)} />} /> : null}
+    {requests.data?.map((request) => {
+      const expanded = selectedId === request.id;
+      return <View key={request.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: expanded ? colors.primary : colors.border }]}>
+        <Pressable onPress={() => setSelectedId(expanded ? null : request.id)} style={styles.requestHeader}><View style={[styles.iconBox, { backgroundColor: colors.primarySoft }]}><Feather name="tool" size={18} color={colors.primary} /></View><View style={styles.requestMain}><Text style={[styles.requestTitle, { color: colors.foreground }]}>{request.serviceName}</Text><Text style={[styles.meta, { color: colors.mutedForeground }]}>{request.wilayat} · {request.governorate} · {new Date(request.createdAt).toLocaleDateString()}</Text></View><View style={styles.count}><Text style={[styles.countNumber, { color: colors.primary }]}>{request.quoteCount ?? 0}</Text><Text style={{ color: colors.mutedForeground, fontSize: 10 }}>{isArabic ? 'عروض' : 'quotes'}</Text></View></Pressable>
+        <Text style={[styles.description, { color: colors.mutedForeground }]}>{request.requirements}</Text>
+        {request.imageUrls?.[0] ? <Image source={{ uri: request.imageUrls[0] }} style={styles.requestImage} /> : null}
+        <View style={styles.statusRow}><Text style={[styles.status, { backgroundColor: request.status === 'awarded' ? '#DDF7EE' : colors.primarySoft, color: request.status === 'awarded' ? '#127853' : colors.primary }]}>{request.status === 'awarded' ? (isArabic ? 'تم الاختيار' : 'Awarded') : request.status === 'quoted' ? (isArabic ? 'وصلت عروض' : 'Quotes received') : (isArabic ? 'بانتظار العروض' : 'Waiting for quotes')}</Text><Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{request.budgetOmaniRial ? `${request.budgetOmaniRial} OMR` : (isArabic ? 'ميزانية مفتوحة' : 'Open budget')}</Text></View>
+        {expanded ? <View style={[styles.quotesPanel, { borderTopColor: colors.border }]}>{quotes.isLoading ? <ActivityIndicator color={colors.primary} /> : null}{!quotes.isLoading && !quotes.data?.length ? <Text style={{ color: colors.mutedForeground }}>{isArabic ? 'لم تصل عروض بعد.' : 'No quotes yet.'}</Text> : null}{quotes.data?.map((quote) => <View key={quote.id} style={[styles.quote, { borderColor: quote.status === 'accepted' ? colors.primary : colors.border }]}><View style={styles.quoteTop}><View style={{ flex: 1 }}><Text style={[styles.quoteName, { color: colors.foreground }]}>{isArabic ? quote.businessNameArabic || quote.businessName : quote.businessName}</Text><Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{quote.wilayat || quote.city} {quote.isVerified ? ' · ✓ Verified' : ''}</Text></View><Text style={[styles.price, { color: colors.primary }]}>{quote.amountOmaniRial} OMR</Text></View><Text style={[styles.quoteDetails, { color: colors.mutedForeground }]}>{quote.details}</Text><View style={styles.quoteBottom}><Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{isArabic ? `المدة: ${quote.estimatedDays} يوم` : `${quote.estimatedDays} day estimate`}</Text>{quote.status === 'submitted' && request.status !== 'awarded' ? <Pressable onPress={() => accept.mutate({ id: quote.id })} style={[styles.accept, { backgroundColor: colors.primary }]}><Text style={{ color: colors.primaryForeground, fontSize: 11, fontWeight: '800' }}>{isArabic ? 'اختيار العرض' : 'Accept quote'}</Text></Pressable> : <Text style={{ color: quote.status === 'accepted' ? colors.primary : colors.mutedForeground, fontSize: 11, fontWeight: '700' }}>{quote.status === 'accepted' ? (isArabic ? 'العرض المختار' : 'Selected') : (isArabic ? 'غير متاح' : 'Unavailable')}</Text>}</View></View>)}</View> : null}
+      </View>;
+    })}
+  </View></ScrollView></View>;
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 18 }, title: { fontSize: 22, fontWeight: '800', textAlign: 'center' }, content: { paddingHorizontal: 20, gap: 13 }, addButton: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, card: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 10 }, requestHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 }, iconBox: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, requestMain: { flex: 1, gap: 3 }, requestTitle: { fontSize: 15, fontWeight: '800' }, meta: { fontSize: 11 }, count: { alignItems: 'center' }, countNumber: { fontSize: 18, fontWeight: '800' }, description: { fontSize: 13, lineHeight: 20 }, requestImage: { width: '100%', height: 130, borderRadius: 12 }, statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, status: { fontSize: 10, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 6, borderRadius: 8 }, quotesPanel: { borderTopWidth: 1, paddingTop: 12, gap: 10 }, quote: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 }, quoteTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, quoteName: { fontSize: 13, fontWeight: '800' }, price: { fontSize: 16, fontWeight: '800' }, quoteDetails: { fontSize: 12, lineHeight: 18 }, quoteBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, accept: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+});

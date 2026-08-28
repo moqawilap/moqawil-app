@@ -268,6 +268,153 @@ export const MarkNotificationReadParams = zod.object({
 export const MarkNotificationReadResponse = zod.void()
 
 
+export const createServiceRequestBodyRequirementsMin = 8;
+
+export const createServiceRequestBodyBudgetOmaniRialMin = 0;
+
+
+
+export const CreateServiceRequestBody = zod.object({
+  "serviceCategory": zod.string(),
+  "serviceName": zod.string(),
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "requirements": zod.string().min(createServiceRequestBodyRequirementsMin),
+  "budgetOmaniRial": zod.number().min(createServiceRequestBodyBudgetOmaniRialMin).nullish(),
+  "imageUrls": zod.array(zod.string()).optional()
+})
+
+export const CreateServiceRequestResponse = zod.object({
+  "id": zod.string(),
+  "serviceCategory": zod.string(),
+  "serviceName": zod.string(),
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "requirements": zod.string(),
+  "budgetOmaniRial": zod.number().nullish(),
+  "imageUrls": zod.array(zod.string()),
+  "status": zod.string(),
+  "recipientCount": zod.number().optional(),
+  "quoteCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const ListMyServiceRequestsResponseItem = zod.object({
+  "id": zod.string(),
+  "serviceCategory": zod.string(),
+  "serviceName": zod.string(),
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "requirements": zod.string(),
+  "budgetOmaniRial": zod.number().nullish(),
+  "imageUrls": zod.array(zod.string()),
+  "status": zod.string(),
+  "recipientCount": zod.number().optional(),
+  "quoteCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyServiceRequestsResponse = zod.array(ListMyServiceRequestsResponseItem)
+
+
+export const ListServiceRequestQuotesParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListServiceRequestQuotesResponseItem = zod.object({
+  "id": zod.string(),
+  "requestId": zod.string(),
+  "contractorId": zod.string(),
+  "amountOmaniRial": zod.number(),
+  "estimatedDays": zod.number(),
+  "details": zod.string(),
+  "status": zod.string(),
+  "businessName": zod.string().nullish(),
+  "businessNameArabic": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "wilayat": zod.string().nullish(),
+  "isVerified": zod.boolean().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListServiceRequestQuotesResponse = zod.array(ListServiceRequestQuotesResponseItem)
+
+
+export const ListWorkshopRequestsResponseItem = zod.object({
+  "id": zod.string(),
+  "serviceCategory": zod.string(),
+  "serviceName": zod.string(),
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "requirements": zod.string(),
+  "budgetOmaniRial": zod.number().nullish(),
+  "imageUrls": zod.array(zod.string()),
+  "status": zod.string(),
+  "recipientCount": zod.number().optional(),
+  "quoteCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "recipientId": zod.string(),
+  "recipientStatus": zod.string()
+}))
+export const ListWorkshopRequestsResponse = zod.array(ListWorkshopRequestsResponseItem)
+
+
+export const CreateWorkshopQuoteParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const createWorkshopQuoteBodyAmountOmaniRialMin = 0;
+
+export const createWorkshopQuoteBodyEstimatedDaysMax = 365;
+
+export const createWorkshopQuoteBodyDetailsMin = 4;
+
+
+
+export const CreateWorkshopQuoteBody = zod.object({
+  "amountOmaniRial": zod.number().min(createWorkshopQuoteBodyAmountOmaniRialMin),
+  "estimatedDays": zod.number().min(1).max(createWorkshopQuoteBodyEstimatedDaysMax),
+  "details": zod.string().min(createWorkshopQuoteBodyDetailsMin)
+})
+
+export const CreateWorkshopQuoteResponse = zod.object({
+  "id": zod.string(),
+  "requestId": zod.string(),
+  "contractorId": zod.string(),
+  "amountOmaniRial": zod.number(),
+  "estimatedDays": zod.number(),
+  "details": zod.string(),
+  "status": zod.string(),
+  "businessName": zod.string().nullish(),
+  "businessNameArabic": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "wilayat": zod.string().nullish(),
+  "isVerified": zod.boolean().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AcceptQuoteParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AcceptQuoteResponse = zod.object({
+  "id": zod.string(),
+  "requestId": zod.string(),
+  "contractorId": zod.string(),
+  "amountOmaniRial": zod.number(),
+  "estimatedDays": zod.number(),
+  "details": zod.string(),
+  "status": zod.string(),
+  "businessName": zod.string().nullish(),
+  "businessNameArabic": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "wilayat": zod.string().nullish(),
+  "isVerified": zod.boolean().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
 export const GetAdminOverviewResponse = zod.object({
   "contractors": zod.number(),
   "activeSubscriptions": zod.number(),
