@@ -43,9 +43,27 @@ export default function HomeScreen() {
                {serviceItems.map((service) => <Pressable accessibilityRole="button" key={service.id} onPress={() => openService(service.id)} style={({ pressed }) => [styles.serviceCard, { backgroundColor: service.color }, pressed && styles.pressed]}><View style={styles.serviceIcon}><ServiceIcon icon={service.icon} color="#FFFFFF" size={24} /></View><Text style={styles.serviceLabel}>{isArabic ? service.labelAr : service.label}</Text><Text style={styles.serviceSubtitle}>{isArabic ? service.subtitleAr : service.subtitle}</Text><Feather name="arrow-up-right" size={16} color="rgba(255,255,255,0.75)" style={styles.serviceArrow} /></Pressable>)}
             </ScrollView>
           </View>
-          <View style={[styles.locationBanner, { backgroundColor: colors.navy }]}>
-            <View style={styles.bannerCopy}><View style={styles.liveDot}><View style={styles.liveDotInner} /></View><Text style={styles.bannerEyebrow}>{isArabic ? 'مصمم حولك' : 'MADE FOR YOUR AREA'}</Text><Text style={styles.bannerTitle}>{isArabic ? `أفضل الخيارات حول ${location.city}` : `The best options around ${location.city}`}</Text><Text style={styles.bannerSubtitle}>{isArabic ? 'نرتب النتائج حسب الموقع والتقييم.' : 'Ranked by distance and trusted reviews.'}</Text></View>
-            <View style={styles.bannerShape}><Feather name="navigation" size={34} color="#21D8B7" /></View>
+          <View style={[styles.locationBanner, { backgroundColor: colors.navy, borderColor: `${colors.primary}66` }, isArabic && styles.locationBannerArabic]}>
+            <View style={styles.bannerTopline}>
+              <View style={[styles.bannerToplineRule, { backgroundColor: colors.accentForeground }]} />
+              <Text style={[styles.bannerEyebrow, { color: colors.accentForeground }]}>{isArabic ? 'الدليل المحلي الرسمي' : 'OFFICIAL LOCAL DIRECTORY'}</Text>
+              <View style={[styles.bannerToplineRule, { backgroundColor: colors.accentForeground }]} />
+            </View>
+            <View style={styles.bannerMain}>
+              <View style={[styles.bannerCopy, isArabic && styles.bannerCopyArabic]}>
+                <View style={[styles.bannerStatus, isArabic && styles.bannerStatusArabic]}>
+                  <View style={[styles.liveDot, { backgroundColor: `${colors.accentForeground}2E` }]}><View style={[styles.liveDotInner, { backgroundColor: colors.accentForeground }]} /></View>
+                  <Text style={[styles.bannerStatusText, { color: colors.surfaceMuted }]}>{isArabic ? 'الموقع الحالي' : 'CURRENT LOCATION'}</Text>
+                </View>
+                <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86} style={styles.bannerTitle}>{isArabic ? `خدمات موثوقة بالقرب من ${location.area}` : `Trusted services near ${location.area}`}</Text>
+                <Text numberOfLines={2} style={styles.bannerSubtitle}>{isArabic ? `مزودون معتمدون وخدمات مختارة في ${location.city}.` : `Verified professionals and selected services in ${location.city}.`}</Text>
+              </View>
+              <View style={[styles.bannerEmblem, { borderColor: `${colors.accentForeground}70`, backgroundColor: `${colors.primary}26` }]}>
+                <View style={[styles.bannerEmblemInner, { borderColor: `${colors.accentForeground}45` }]}>
+                  <Feather name="navigation" size={25} color={colors.accentForeground} />
+                </View>
+              </View>
+            </View>
           </View>
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'مزودون موصى بهم' : 'Recommended providers'} subtitle={isArabic ? 'قريبون منك في مسقط' : 'Trusted teams near you'} action={isArabic ? 'عرض الكل' : 'View all'} onAction={() => router.push('/explore')} />
@@ -88,14 +106,23 @@ const styles = StyleSheet.create({
   serviceSubtitle: { color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 4 },
   serviceArrow: { position: 'absolute', right: 14, bottom: 14 },
   sectionBlock: { marginTop: 28 },
-  locationBanner: { minHeight: 142, borderRadius: 23, padding: 20, marginTop: 28, flexDirection: 'row', overflow: 'hidden' },
-  bannerCopy: { flex: 1, gap: 7, zIndex: 1 },
-  liveDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(33,216,183,0.18)', alignItems: 'center', justifyContent: 'center' },
-  liveDotInner: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#21D8B7' },
-  bannerEyebrow: { color: '#21D8B7', fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  bannerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', maxWidth: 235, lineHeight: 22 },
-  bannerSubtitle: { color: 'rgba(255,255,255,0.65)', fontSize: 11 },
-  bannerShape: { position: 'absolute', right: -15, bottom: -18, width: 135, height: 135, borderRadius: 70, backgroundColor: 'rgba(15,111,183,0.58)', alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-25deg' }] },
+  locationBanner: { minHeight: 174, borderRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, marginTop: 28, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  locationBannerArabic: { paddingHorizontal: 17 },
+  bannerTopline: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 },
+  bannerToplineRule: { width: 20, height: 1 },
+  bannerEyebrow: { fontSize: 9, fontWeight: '800', letterSpacing: 1.05 },
+  bannerMain: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  bannerCopy: { flex: 1, gap: 7, zIndex: 1, paddingRight: 13 },
+  bannerCopyArabic: { paddingRight: 0, paddingLeft: 13, alignItems: 'flex-end' },
+  bannerStatus: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  bannerStatusArabic: { flexDirection: 'row-reverse' },
+  liveDot: { width: 17, height: 17, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  liveDotInner: { width: 6, height: 6, borderRadius: 3 },
+  bannerStatusText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.85 },
+  bannerTitle: { color: '#FFFFFF', fontSize: 19, fontWeight: '800', maxWidth: 245, lineHeight: 24, letterSpacing: -0.25 },
+  bannerSubtitle: { color: 'rgba(255,255,255,0.68)', fontSize: 11, lineHeight: 16 },
+  bannerEmblem: { width: 69, height: 69, borderRadius: 35, borderWidth: 1, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-12deg' }] },
+  bannerEmblemInner: { width: 51, height: 51, borderRadius: 26, borderWidth: 1, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '12deg' }] },
   propertyRow: { paddingBottom: 4 },
   maintenanceRow: { gap: 10 },
   maintenanceCard: { width: 112, padding: 12, borderRadius: 17, borderWidth: 1, gap: 10 },
