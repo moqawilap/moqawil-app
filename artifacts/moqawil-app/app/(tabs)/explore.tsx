@@ -1,9 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
+import { EmptyState, ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
 import { images, listings, serviceItems } from '@/data/mockData';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
@@ -39,6 +39,7 @@ export default function ExploreScreen() {
     setMode(serviceId === 'real-estate' ? 'Properties' : 'Providers');
   };
   const selectedGovernorateInfo = omanGovernorates.find((item) => item.name === selectedGovernorate);
+  const selectedWilayatInfo = selectedGovernorateInfo?.wilayats.find((item) => item.name === selectedWilayat);
   const locationOptions = locationMenu === 'governorate' ? omanGovernorates : selectedGovernorateInfo?.wilayats ?? [];
 
   const filteredProviders = useMemo(() => {
@@ -60,14 +61,14 @@ export default function ExploreScreen() {
     return source
       .filter((provider) => (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized)) && provider.rating >= minimumRating)
       .sort((a, b) => ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0));
-  }, [query, managedProviders, directory.data, minimumRating, selectedService]);
+  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'اكتشف الخدمات' : 'Explore services'} subtitle={`${isArabic ? 'حول' : 'Around'} ${location.city}`} />
-          {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>الخدمة غير متاحة مؤقتًا — showing offline directory.</Text> : null}
+           {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'الخدمة غير متاحة مؤقتًا — نعرض الدليل المحفوظ.' : 'The live directory is unavailable — showing the saved directory.'}</Text> : null}
           <View style={[styles.searchInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="search" size={18} color={colors.mutedForeground} />
             <TextInput testID="contractor-search" value={query} onChangeText={setQuery} placeholder={isArabic ? 'ابحث عن خدمة أو مزود' : 'Search a service or provider'} placeholderTextColor={colors.mutedForeground} textAlign={isArabic ? 'right' : 'left'} style={[styles.searchInput, { color: colors.foreground }]} />
@@ -88,11 +89,11 @@ export default function ExploreScreen() {
                <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
              </Pressable>
              <Pressable testID="wilayat-filter" disabled={!selectedGovernorate} onPress={() => setLocationMenu(locationMenu === 'wilayat' ? null : 'wilayat')} style={[styles.locationFilter, { backgroundColor: colors.surface, borderColor: colors.border, opacity: selectedGovernorate ? 1 : 0.55 }]}>
-               <Text numberOfLines={1} style={[styles.locationFilterText, { color: selectedWilayat ? colors.foreground : colors.mutedForeground }]}>{selectedWilayat || (isArabic ? 'اختر الولاية' : 'Wilayat')}</Text>
+                <Text numberOfLines={1} style={[styles.locationFilterText, { color: selectedWilayat ? colors.foreground : colors.mutedForeground }]}>{selectedWilayatInfo ? (isArabic ? selectedWilayatInfo.nameAr : selectedWilayatInfo.name) : (isArabic ? 'اختر الولاية' : 'Wilayat')}</Text>
                <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
              </Pressable>
-            {[0, 3, 4].map((rating) => <Pressable testID={`rating-filter-${rating}`} key={rating} onPress={() => setMinimumRating(rating)} style={[styles.filterChip, { borderColor: minimumRating === rating ? colors.primary : colors.border, backgroundColor: minimumRating === rating ? colors.primarySoft : colors.surface }]}><Text style={{ color: colors.foreground }}>{rating ? `★ ${rating}+` : (isArabic ? 'كل التقييمات' : 'Any rating')}</Text></Pressable>)}
-            <Pressable testID="verified-filter" onPress={() => setVerifiedOnly((value) => !value)} style={[styles.filterChip, { borderColor: verifiedOnly ? colors.primary : colors.border, backgroundColor: verifiedOnly ? colors.primarySoft : colors.surface }]}><Text style={{ color: colors.foreground }}>{isArabic ? 'موثّق' : 'Verified'}</Text></Pressable>
+             {[0, 3, 4].map((rating) => <Pressable testID={`rating-filter-${rating}`} key={rating} onPress={() => setMinimumRating(rating)} style={({ pressed }) => [styles.filterChip, { borderColor: minimumRating === rating ? colors.primary : colors.border, backgroundColor: minimumRating === rating ? colors.primarySoft : colors.surface }, pressed && styles.filterPressed]}>{rating ? <><Feather name="star" size={12} color={colors.star} fill={colors.star} /><Text style={{ color: colors.foreground }}>{rating}+</Text></> : <Text style={{ color: colors.foreground }}>{isArabic ? 'كل التقييمات' : 'Any rating'}</Text>}</Pressable>)}
+             <Pressable testID="verified-filter" onPress={() => setVerifiedOnly((value) => !value)} style={({ pressed }) => [styles.filterChip, { borderColor: verifiedOnly ? colors.primary : colors.border, backgroundColor: verifiedOnly ? colors.primarySoft : colors.surface }, pressed && styles.filterPressed]}><Feather name="check-circle" size={13} color={verifiedOnly ? colors.primary : colors.mutedForeground} /><Text style={{ color: colors.foreground }}>{isArabic ? 'موثّق' : 'Verified'}</Text></Pressable>
           </View>
            {locationMenu ? <View style={[styles.locationMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
              <ScrollView nestedScrollEnabled style={styles.locationMenuScroll}>
@@ -113,20 +114,20 @@ export default function ExploreScreen() {
                })}
              </ScrollView>
            </View> : null}
-           <SegmentedControl value={visibleMode} onChange={(nextMode) => {
+            <SegmentedControl value={visibleMode} onChange={(nextMode) => {
              setMode(nextMode);
              setActiveService(nextMode === 'Properties' ? 'real-estate' : 'contractors');
-           }} options={['Providers', 'Properties']} />
+            }} options={['Providers', 'Properties']} labels={{ Providers: isArabic ? 'المزودون' : 'Providers', Properties: isArabic ? 'العقارات' : 'Properties' }} />
            {visibleMode === 'Providers' ? (
             <View>
-               <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? `${selectedServiceInfo.labelAr} قريبون منك` : `${selectedServiceInfo.label} near you`}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>Best match</Text></View></View>
-               {directory.isLoading ? <ActivityIndicator testID="contractors-loading" color={colors.primary} /> : null}
-               {filteredProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image ?? require('@/assets/images/contractor-project.jpg')} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
-               {!directory.isLoading && !filteredProviders.length ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'لا توجد نتائج مطابقة.' : 'No matching contractors.'}</Text> : null}
+                <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? `${selectedServiceInfo.labelAr} قريبون منك` : `${selectedServiceInfo.label} near you`}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? 'الأفضل تطابقًا' : 'Best match'}</Text></View></View>
+                {directory.isLoading && !directory.data ? <View testID="contractors-loading">{[1, 2, 3].map((item) => <View key={item} style={[styles.skeletonCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={[styles.skeletonImage, { backgroundColor: colors.surfaceMuted }]} /><View style={styles.skeletonCopy}><View style={[styles.skeletonLine, { backgroundColor: colors.surfaceMuted, width: '72%' }]} /><View style={[styles.skeletonLine, { backgroundColor: colors.surfaceMuted, width: '52%' }]} /><View style={[styles.skeletonLine, { backgroundColor: colors.surfaceMuted, width: '38%' }]} /></View></View>)}</View> : null}
+                {(!directory.isLoading || directory.data) ? filteredProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image ?? require('@/assets/images/contractor-project.jpg')} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />) : null}
+                {!directory.isLoading && !filteredProviders.length ? <EmptyState icon="search" title={isArabic ? 'لم نجد ما يطابق بحثك' : 'Nothing matched your search'} description={isArabic ? 'جرّب تغيير الخدمة أو إزالة أحد الفلاتر.' : 'Try another service, location, or remove a filter.'} /> : null}
             </View>
           ) : (
             <View>
-              <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? 'عقارات قريبة' : 'Properties nearby'}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>Newest</Text></View></View>
+               <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? 'عقارات قريبة' : 'Properties nearby'}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? 'الأحدث' : 'Newest'}</Text></View></View>
               <View style={styles.propertyGrid}>{listings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id)} />)}</View>
             </View>
           )}
@@ -139,10 +140,10 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20 },
-  searchInputWrap: { height: 52, borderRadius: 17, borderWidth: 1, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  searchInputWrap: { height: 56, borderRadius: 18, borderWidth: 1, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#08284A', shadowOpacity: 0.05, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   searchInput: { flex: 1, fontSize: 14 },
   chips: { gap: 9, paddingVertical: 16 },
-  chip: { height: 39, paddingHorizontal: 13, borderRadius: 13, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  chip: { height: 42, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
   chipText: { fontSize: 12, fontWeight: '700' },
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 13 },
   resultTitle: { fontSize: 17, fontWeight: '800' },
@@ -152,9 +153,14 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
    locationFilter: { minWidth: 145, maxWidth: 175, height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
    locationFilterText: { flex: 1, fontSize: 12 },
-   locationMenu: { borderWidth: 1, borderRadius: 14, marginTop: -8, marginBottom: 10, overflow: 'hidden' },
+   locationMenu: { borderWidth: 1, borderRadius: 16, marginTop: -8, marginBottom: 10, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 3 },
    locationMenuScroll: { maxHeight: 220 },
    locationOption: { minHeight: 42, paddingHorizontal: 14, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  filterChip: { height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
+   filterChip: { height: 40, borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
+   filterPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
+   skeletonCard: { minHeight: 102, borderRadius: 20, borderWidth: 1, padding: 11, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+   skeletonImage: { width: 78, height: 78, borderRadius: 16 },
+   skeletonCopy: { flex: 1, gap: 10, marginLeft: 12 },
+   skeletonLine: { height: 10, borderRadius: 5 },
   apiHint: { fontSize: 12, marginBottom: 10, lineHeight: 18 },
 });

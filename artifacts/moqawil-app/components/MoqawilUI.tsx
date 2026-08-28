@@ -7,8 +7,6 @@ import {
   StyleProp,
   StyleSheet,
   Text,
-  TextInput,
-  TextStyle,
   View,
   ViewStyle,
 } from 'react-native';
@@ -63,8 +61,10 @@ export function IconButton({
 export function SearchBar({ placeholder, onPress }: { placeholder: string; onPress: () => void }) {
   const colors = useColors();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && styles.pressed]}>
-      <Feather name="search" size={19} color={colors.mutedForeground} />
+    <Pressable accessibilityRole="button" accessibilityLabel={placeholder} onPress={onPress} style={({ pressed }) => [styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && styles.pressed]}>
+      <View style={[styles.searchIcon, { backgroundColor: colors.primarySoft }]}>
+        <Feather name="search" size={16} color={colors.primary} />
+      </View>
       <Text style={[styles.searchPlaceholder, { color: colors.mutedForeground }]}>{placeholder}</Text>
       <View style={[styles.searchFilter, { backgroundColor: colors.primarySoft }]}>
         <Feather name="sliders" size={15} color={colors.primary} />
@@ -166,7 +166,9 @@ export function ProviderCard({
           </View>
         </View>
       </View>
-      <IconButton icon={saved ? 'heart' : 'heart'} active={saved} onPress={onSave} accessibilityLabel={saved ? 'Remove from saved' : 'Save provider'} style={styles.providerSave} />
+      <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved' : 'Save provider'} onPress={onSave} hitSlop={8} style={({ pressed }) => [styles.providerSave, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
+        <Feather name="heart" size={16} color={saved ? colors.primary : colors.mutedForeground} fill={saved ? colors.primary : 'transparent'} />
+      </Pressable>
     </Pressable>
   );
 }
@@ -190,7 +192,7 @@ export function PropertyCard({
       <View style={styles.propertyImageWrap}>
         <Image source={listing.image} style={styles.propertyImage} />
         <View style={styles.propertyTypePill}><Text style={styles.propertyTypeText}>{listing.type}</Text></View>
-        <Pressable onPress={onSave} style={[styles.propertyHeart, { backgroundColor: 'rgba(12,29,53,0.72)' }]} hitSlop={6}>
+        <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved' : 'Save property'} onPress={onSave} style={({ pressed }) => [styles.propertyHeart, { backgroundColor: 'rgba(8,40,74,0.78)' }, pressed && styles.pressed]} hitSlop={6}>
           <Feather name="heart" size={16} color={saved ? '#FF8E8E' : '#FFFFFF'} fill={saved ? '#FF8E8E' : 'transparent'} />
         </Pressable>
       </View>
@@ -266,13 +268,13 @@ export function ScreenHeader({ title, subtitle, right }: { title: string; subtit
   );
 }
 
-export function SegmentedControl({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: string[] }) {
+export function SegmentedControl({ value, onChange, options, labels }: { value: string; onChange: (value: string) => void; options: string[]; labels?: Record<string, string> }) {
   const colors = useColors();
   return (
     <View style={[styles.segmented, { backgroundColor: colors.surfaceMuted }]}>
       {options.map((option) => (
-        <Pressable key={option} onPress={() => onChange(option)} style={[styles.segment, value === option && { backgroundColor: colors.surface }]}>
-          <Text style={[styles.segmentText, { color: value === option ? colors.foreground : colors.mutedForeground }]}>{option}</Text>
+        <Pressable key={option} onPress={() => onChange(option)} style={({ pressed }) => [styles.segment, value === option && { backgroundColor: colors.surface }, pressed && styles.pressed]}>
+          <Text style={[styles.segmentText, { color: value === option ? colors.foreground : colors.mutedForeground }]}>{labels?.[option] ?? option}</Text>
         </Pressable>
       ))}
     </View>
@@ -287,13 +289,14 @@ export const styles = StyleSheet.create({
   brandIconCompact: { width: 34, height: 34, borderRadius: 11 },
   brandName: { fontSize: 15, fontWeight: '800', letterSpacing: 1.7 },
   brandArabic: { fontSize: 11, fontWeight: '700', marginTop: -1 },
-  iconButton: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  iconButton: { width: 44, height: 44, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-  cardPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
-  searchBar: { height: 52, borderRadius: 17, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 11 },
+  cardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
+  searchBar: { height: 56, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, gap: 11, shadowColor: '#08284A', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  searchIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   searchPlaceholder: { fontSize: 14, flex: 1 },
   searchFilter: { width: 31, height: 31, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 },
   sectionHeadingText: { gap: 3 },
   sectionTitle: { fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   sectionSubtitle: { fontSize: 12 },
@@ -301,8 +304,8 @@ export const styles = StyleSheet.create({
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingValue: { fontSize: 12, fontWeight: '700' },
   reviewCount: { fontSize: 11 },
-  providerCard: { minHeight: 98, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', padding: 10, marginBottom: 10 },
-  providerImage: { width: 76, height: 76, borderRadius: 14 },
+  providerCard: { minHeight: 102, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', padding: 11, marginBottom: 10, shadowColor: '#08284A', shadowOpacity: 0.045, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 1 },
+  providerImage: { width: 78, height: 78, borderRadius: 16 },
   providerInfo: { flex: 1, marginLeft: 12, gap: 5 },
   providerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 26 },
   providerName: { fontSize: 14, fontWeight: '800', flexShrink: 1 },
@@ -310,14 +313,14 @@ export const styles = StyleSheet.create({
   providerMeta: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   distanceRow: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   distanceText: { fontSize: 11 },
-  providerSave: { position: 'absolute', right: 10, top: 10, width: 30, height: 30, borderRadius: 10, borderWidth: 0 },
-  propertyCard: { width: 236, borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginRight: 12 },
+  providerSave: { position: 'absolute', right: 11, top: 11, width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  propertyCard: { width: 236, borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginRight: 12, shadowColor: '#08284A', shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   propertyCardFeatured: { width: 280 },
-  propertyImageWrap: { height: 155, position: 'relative' },
+  propertyImageWrap: { height: 158, position: 'relative' },
   propertyImage: { width: '100%', height: '100%' },
   propertyTypePill: { position: 'absolute', left: 12, top: 12, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.93)' },
   propertyTypeText: { fontSize: 10, fontWeight: '800', color: '#153457' },
-  propertyHeart: { position: 'absolute', right: 11, top: 11, width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  propertyHeart: { position: 'absolute', right: 11, top: 11, width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   propertyInfo: { padding: 14, gap: 6 },
   propertyTitle: { fontSize: 14, fontWeight: '800' },
   propertyPrice: { fontSize: 15, fontWeight: '800' },
@@ -326,16 +329,16 @@ export const styles = StyleSheet.create({
   propertySpecs: { flexDirection: 'row', gap: 7, alignItems: 'center', borderTopWidth: 1, paddingTop: 9, marginTop: 3 },
   propertySpec: { fontSize: 10 },
   propertyDot: { fontSize: 12 },
-  emptyState: { borderRadius: 20, borderWidth: 1, alignItems: 'center', padding: 28, gap: 8, marginTop: 16 },
+  emptyState: { borderRadius: 22, borderWidth: 1, alignItems: 'center', padding: 30, gap: 8, marginTop: 16, shadowColor: '#08284A', shadowOpacity: 0.035, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 1 },
   emptyIcon: { width: 55, height: 55, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   emptyTitle: { fontSize: 16, fontWeight: '800' },
   emptyDescription: { fontSize: 13, textAlign: 'center', lineHeight: 19 },
-  actionButton: { minHeight: 48, paddingHorizontal: 18, borderRadius: 15, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  actionButton: { minHeight: 52, paddingHorizontal: 18, borderRadius: 16, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   actionButtonText: { fontSize: 13, fontWeight: '800' },
-  screenHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  screenTitle: { fontSize: 27, fontWeight: '800', letterSpacing: -0.7 },
+  screenHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20 },
+  screenTitle: { fontSize: 29, fontWeight: '800', letterSpacing: -0.8 },
   screenSubtitle: { fontSize: 13, marginTop: 5 },
-  segmented: { flexDirection: 'row', borderRadius: 14, padding: 4, marginBottom: 18 },
+  segmented: { flexDirection: 'row', borderRadius: 16, padding: 4, marginBottom: 20 },
   segment: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   segmentText: { fontSize: 12, fontWeight: '700' },
 });

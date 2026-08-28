@@ -4,7 +4,7 @@ import React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, IconButton, PropertyCard, ProviderCard, SearchBar, SectionHeading, ServiceIcon } from '@/components/MoqawilUI';
-import { listings, maintenanceItems, providers, serviceItems } from '@/data/mockData';
+import { listings, maintenanceItems, serviceItems } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -32,12 +32,15 @@ export default function HomeScreen() {
             <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{isArabic ? 'تبحث في' : 'You are browsing in'}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
             <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
           </Pressable>
-          <View style={styles.greeting}><Text style={[styles.eyebrow, { color: colors.primary }]}>{isArabic ? 'كل ما يخص العقار' : 'EVERYTHING PROPERTY'}</Text><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'ابنِ، اعثر، واعتنِ بمكانك.' : 'Build, find, and care for your place.'}</Text><Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{isArabic ? 'خدمات موثوقة في عمان، بالقرب منك.' : 'Trusted services in Oman, right around you.'}</Text></View>
-          <SearchBar placeholder={isArabic ? 'ماذا تحتاج اليوم؟' : 'What do you need today?'} onPress={() => router.push('/explore')} />
+          <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.heroRule, { backgroundColor: colors.accentForeground }]} />
+            <View style={styles.greeting}><Text style={[styles.eyebrow, { color: colors.primary }]}>{isArabic ? 'كل ما يخص العقار' : 'EVERYTHING PROPERTY'}</Text><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'ابنِ، اعثر، واعتنِ بمكانك.' : 'Build, find, and care for your place.'}</Text><Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{isArabic ? 'خدمات موثوقة في عمان، بالقرب منك.' : 'Trusted services in Oman, right around you.'}</Text></View>
+            <SearchBar placeholder={isArabic ? 'ماذا تحتاج اليوم؟' : 'What do you need today?'} onPress={() => router.push('/explore')} />
+          </View>
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'ماذا تحتاج؟' : 'What do you need?'} subtitle={isArabic ? 'اختر خدمة للبدء' : 'Choose a service to get started'} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceRow}>
-              {serviceItems.map((service) => <Pressable key={service.id} onPress={() => openService(service.id)} style={({ pressed }) => [styles.serviceCard, { backgroundColor: service.color }, pressed && styles.pressed]}><View style={styles.serviceIcon}><ServiceIcon icon={service.icon} color="#FFFFFF" size={24} /></View><Text style={styles.serviceLabel}>{isArabic ? service.labelAr : service.label}</Text><Text style={styles.serviceSubtitle}>{service.subtitle}</Text><Feather name="arrow-up-right" size={16} color="rgba(255,255,255,0.75)" style={styles.serviceArrow} /></Pressable>)}
+               {serviceItems.map((service) => <Pressable accessibilityRole="button" key={service.id} onPress={() => openService(service.id)} style={({ pressed }) => [styles.serviceCard, { backgroundColor: service.color }, pressed && styles.pressed]}><View style={styles.serviceIcon}><ServiceIcon icon={service.icon} color="#FFFFFF" size={24} /></View><Text style={styles.serviceLabel}>{isArabic ? service.labelAr : service.label}</Text><Text style={styles.serviceSubtitle}>{isArabic ? service.subtitleAr : service.subtitle}</Text><Feather name="arrow-up-right" size={16} color="rgba(255,255,255,0.75)" style={styles.serviceArrow} /></Pressable>)}
             </ScrollView>
           </View>
           <View style={[styles.locationBanner, { backgroundColor: colors.navy }]}>
@@ -72,12 +75,14 @@ const styles = StyleSheet.create({
   locationText: { flex: 1, gap: 2 },
   locationEyebrow: { fontSize: 10 },
   locationName: { fontSize: 13, fontWeight: '800' },
-  greeting: { gap: 7, marginBottom: 18 },
+   heroCard: { borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 2, shadowColor: '#08284A', shadowOpacity: 0.05, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 2 },
+   heroRule: { width: 34, height: 4, borderRadius: 4, marginBottom: 17 },
+   greeting: { gap: 7, marginBottom: 18 },
   eyebrow: { fontSize: 10, letterSpacing: 1.2, fontWeight: '800' },
   title: { fontSize: 28, lineHeight: 33, fontWeight: '800', letterSpacing: -0.8, maxWidth: 345 },
   subtitle: { fontSize: 13, lineHeight: 19 },
   serviceRow: { gap: 11, paddingBottom: 5 },
-  serviceCard: { width: 152, height: 150, borderRadius: 22, padding: 15, overflow: 'hidden' },
+  serviceCard: { width: 152, height: 150, borderRadius: 22, padding: 15, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   serviceIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   serviceLabel: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   serviceSubtitle: { color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 4 },

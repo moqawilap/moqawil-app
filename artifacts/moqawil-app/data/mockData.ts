@@ -52,6 +52,7 @@ export const serviceItems: Array<{
   label: string;
   labelAr: string;
   subtitle: string;
+  subtitleAr: string;
   icon: 'hard-hat' | 'compass' | 'home' | 'tool';
   color: string;
 }> = [
@@ -60,6 +61,7 @@ export const serviceItems: Array<{
     label: 'Contractors',
     labelAr: 'المقاولون',
     subtitle: 'Build with confidence',
+    subtitleAr: 'ابنِ بثقة',
     icon: 'hard-hat',
     color: '#0F6FB7',
   },
@@ -68,6 +70,7 @@ export const serviceItems: Array<{
     label: 'Consultants',
     labelAr: 'الاستشاريون',
     subtitle: 'Plan it right',
+    subtitleAr: 'خطّط بشكل صحيح',
     icon: 'compass',
     color: '#0B9B8C',
   },
@@ -76,6 +79,7 @@ export const serviceItems: Array<{
     label: 'Real estate',
     labelAr: 'العقارات',
     subtitle: 'Find your place',
+    subtitleAr: 'اعثر على مكانك',
     icon: 'home',
     color: '#C07B42',
   },
@@ -84,6 +88,7 @@ export const serviceItems: Array<{
     label: 'Maintenance',
     labelAr: 'الصيانة',
     subtitle: 'Fix it fast',
+    subtitleAr: 'أصلحها بسرعة',
     icon: 'tool',
     color: '#7D62BE',
   },
