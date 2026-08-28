@@ -27,7 +27,7 @@ export default function HomeScreen() {
             <BrandMark />
             <IconButton icon="bell" onPress={() => router.push('/profile')} accessibilityLabel="Open notifications" />
           </View>
-          <Pressable onPress={refreshLocation} style={styles.locationButton}>
+          <Pressable onPress={() => { refreshLocation().catch(() => undefined); }} style={styles.locationButton}>
             <View style={[styles.locationPin, { backgroundColor: colors.primarySoft }]}><Feather name="map-pin" size={15} color={colors.primary} /></View>
             <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{isArabic ? 'تبحث في' : 'You are browsing in'}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
             <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
