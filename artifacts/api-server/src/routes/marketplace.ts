@@ -1,9 +1,9 @@
 import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
-import { and, asc, desc, eq, gt, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import {
-  auditEvents, contractorProfiles, db, marketplaceSettings, notifications, payments, projects, rankingWeightsSchema, reviews,
-  services, subscriptionPlans, subscriptions, users,
+  auditEvents, contractorProfiles, db, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  serviceRequests, services, subscriptionPlans, subscriptions, users,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
@@ -29,6 +29,12 @@ const router: IRouter = Router();
 const decimal = (value: string | null) => value === null ? null : Number(value);
 async function logAudit(actorUserId: string, action: string, entityType: string, entityId: string, metadata: Record<string, unknown> = {}) {
   await db.insert(auditEvents).values({ actorUserId, action, entityType, entityId, metadata });
+}
+async function createInAppNotification(userId: string, title: string, body: string, metadata: Record<string, unknown> = {}) {
+  await db.insert(notifications).values({ userId, type: "system", channel: "in_app", deliveryStatus: "delivered", title, body, deliveryMetadata: metadata, deliveredAt: new Date() });
+}
+function validImageUrls(value: unknown) {
+  return Array.isArray(value) && value.length <= 5 && value.every((item) => typeof item === "string" && item.length <= 2_000_000);
 }
 async function subscriptionResponse(item: typeof subscriptions.$inferSelect) {
   const [plan, profile, settings] = await Promise.all([
@@ -276,6 +282,111 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
     });
     const persistedProfile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, result.profile.id) });
     res.json({ contractor: await contractorSummary(persistedProfile!), subscription: await subscriptionResponse(result.subscription) });
+  } catch (error) { next(error); }
+});
+
+router.post("/service-requests", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const input = req.body ?? {};
+    if (typeof input.serviceCategory !== "string" || input.serviceCategory.length < 2 || input.serviceCategory.length > 100 || typeof input.serviceName !== "string" || input.serviceName.length < 2 || input.serviceName.length > 160 || typeof input.governorate !== "string" || input.governorate.length < 2 || input.governorate.length > 100 || typeof input.wilayat !== "string" || input.wilayat.length < 2 || input.wilayat.length > 100 || typeof input.requirements !== "string" || input.requirements.trim().length < 8 || input.requirements.length > 5000 || (input.budgetOmaniRial !== undefined && input.budgetOmaniRial !== null && (!Number.isFinite(input.budgetOmaniRial) || input.budgetOmaniRial < 0)) || !validImageUrls(input.imageUrls ?? [])) {
+      res.status(400).json({ error: "Invalid service request fields" });
+      return;
+    }
+    const request = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(serviceRequests).values({
+        customerId: user.id, serviceCategory: input.serviceCategory.trim(), serviceName: input.serviceName.trim(),
+        governorate: input.governorate.trim(), wilayat: input.wilayat.trim(), requirements: input.requirements.trim(),
+        budgetOmaniRial: input.budgetOmaniRial == null ? null : Number(input.budgetOmaniRial).toFixed(3), imageUrls: input.imageUrls ?? [],
+      }).returning();
+      const now = new Date();
+      const candidates = await tx.select({ id: contractorProfiles.id, userId: contractorProfiles.userId }).from(contractorProfiles)
+        .innerJoin(subscriptions, eq(subscriptions.contractorId, contractorProfiles.id))
+        .where(and(eq(contractorProfiles.city, input.governorate.trim()), eq(contractorProfiles.wilayat, input.wilayat.trim()), eq(contractorProfiles.isPublished, true), isNull(contractorProfiles.archivedAt), or(
+          and(eq(subscriptions.status, "free_trial"), gt(subscriptions.trialEndsAt, now)),
+          and(eq(subscriptions.status, "active"), gt(subscriptions.currentPeriodEndsAt, now)),
+        )));
+      if (candidates.length) {
+        await tx.insert(requestRecipients).values(candidates.map((candidate) => ({ requestId: created.id, contractorId: candidate.id })));
+        await tx.insert(notifications).values(candidates.map((candidate) => ({
+          userId: candidate.userId, type: "system" as const, channel: "in_app" as const, deliveryStatus: "delivered" as const,
+          title: "New service request", body: `${input.serviceName} requested in ${input.wilayat}.`, deliveryMetadata: { requestId: created.id }, deliveredAt: now,
+        })));
+      }
+      return { created, recipientCount: candidates.length };
+    });
+    await createInAppNotification(user.id, "Request sent", request.recipientCount ? `Your request was sent to ${request.recipientCount} matching workshop${request.recipientCount === 1 ? "" : "s"}.` : "Your request is saved. Matching workshops will appear when available.", { requestId: request.created.id });
+    res.status(201).json({ ...request.created, budgetOmaniRial: decimal(request.created.budgetOmaniRial), recipientCount: request.recipientCount, quoteCount: 0 });
+  } catch (error) { next(error); }
+});
+
+router.get("/me/service-requests", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const rows = await db.select({ request: serviceRequests, quoteCount: sql<number>`count(distinct ${quotes.id})`, recipientCount: sql<number>`count(distinct ${requestRecipients.id})` })
+      .from(serviceRequests).leftJoin(requestRecipients, eq(requestRecipients.requestId, serviceRequests.id)).leftJoin(quotes, eq(quotes.requestId, serviceRequests.id))
+      .where(eq(serviceRequests.customerId, user.id)).groupBy(serviceRequests.id).orderBy(desc(serviceRequests.createdAt));
+    res.json(rows.map((row) => ({ ...row.request, budgetOmaniRial: decimal(row.request.budgetOmaniRial), imageUrls: row.request.imageUrls, quoteCount: Number(row.quoteCount), recipientCount: Number(row.recipientCount) })));
+  } catch (error) { next(error); }
+});
+
+router.get("/me/service-requests/:id/quotes", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const request = await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, String(req.params.id)), eq(serviceRequests.customerId, user.id)) });
+    if (!request) { res.status(404).json({ error: "Service request not found" }); return; }
+    const rows = await db.select({ quote: quotes, businessName: contractorProfiles.businessName, businessNameArabic: contractorProfiles.businessNameArabic, city: contractorProfiles.city, wilayat: contractorProfiles.wilayat, isVerified: contractorProfiles.isVerified })
+      .from(quotes).innerJoin(contractorProfiles, eq(contractorProfiles.id, quotes.contractorId)).where(eq(quotes.requestId, request.id)).orderBy(asc(quotes.amountOmaniRial), desc(quotes.createdAt));
+    res.json(rows.map((row) => ({ ...row.quote, amountOmaniRial: decimal(row.quote.amountOmaniRial), businessName: row.businessName, businessNameArabic: row.businessNameArabic, city: row.city, wilayat: row.wilayat, isVerified: row.isVerified })));
+  } catch (error) { next(error); }
+});
+
+router.get("/me/workshop-requests", requireUser, requireContractor, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
+    if (!profile) { res.status(404).json({ error: "A workshop profile is required" }); return; }
+    const rows = await db.select({ request: serviceRequests, recipientId: requestRecipients.id, recipientStatus: requestRecipients.status })
+      .from(requestRecipients).innerJoin(serviceRequests, eq(serviceRequests.id, requestRecipients.requestId))
+      .where(eq(requestRecipients.contractorId, profile.id)).orderBy(desc(serviceRequests.createdAt));
+    res.json(rows.map((row) => ({ ...row.request, budgetOmaniRial: decimal(row.request.budgetOmaniRial), recipientId: row.recipientId, recipientStatus: row.recipientStatus })));
+  } catch (error) { next(error); }
+});
+
+router.post("/me/workshop-requests/:id/quote", requireUser, requireContractor, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
+    const input = req.body ?? {};
+    if (!profile || !Number.isFinite(input.amountOmaniRial) || input.amountOmaniRial < 0 || !Number.isInteger(input.estimatedDays) || input.estimatedDays < 1 || input.estimatedDays > 365 || typeof input.details !== "string" || input.details.trim().length < 4 || input.details.length > 3000) { res.status(400).json({ error: "Invalid quote fields" }); return; }
+    const request = await db.query.serviceRequests.findFirst({ where: eq(serviceRequests.id, String(req.params.id)) });
+    const recipient = request && await db.query.requestRecipients.findFirst({ where: and(eq(requestRecipients.requestId, request.id), eq(requestRecipients.contractorId, profile.id)) });
+    if (!request || !recipient || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Request is unavailable" }); return; }
+    const [quote] = await db.transaction(async (tx) => {
+      const created = await tx.insert(quotes).values({ requestId: request.id, contractorId: profile.id, amountOmaniRial: Number(input.amountOmaniRial).toFixed(3), estimatedDays: input.estimatedDays, details: input.details.trim() }).returning();
+      await tx.update(requestRecipients).set({ status: "quoted", updatedAt: new Date() }).where(eq(requestRecipients.id, recipient.id));
+      await tx.update(serviceRequests).set({ status: "quoted", updatedAt: new Date() }).where(eq(serviceRequests.id, request.id));
+      await tx.insert(notifications).values({ userId: request.customerId, type: "system", channel: "in_app", deliveryStatus: "delivered", title: "New quote received", body: `${profile.businessName} sent a quote for ${request.serviceName}.`, deliveryMetadata: { requestId: request.id, quoteId: created[0]!.id }, deliveredAt: new Date() });
+      return created;
+    });
+    res.status(201).json({ ...quote, amountOmaniRial: decimal(quote!.amountOmaniRial) });
+  } catch (error) { next(error); }
+});
+
+router.post("/me/quotes/:id/accept", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const quote = await db.query.quotes.findFirst({ where: eq(quotes.id, String(req.params.id)) });
+    const request = quote && await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, quote.requestId), eq(serviceRequests.customerId, user.id)) });
+    if (!quote || !request || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Quote is unavailable" }); return; }
+    const contractor = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, quote.contractorId) });
+    await db.transaction(async (tx) => {
+      await tx.update(quotes).set({ status: "accepted", updatedAt: new Date() }).where(eq(quotes.id, quote.id));
+      await tx.update(quotes).set({ status: "rejected", updatedAt: new Date() }).where(and(eq(quotes.requestId, request.id), sql`${quotes.id} <> ${quote.id}`));
+      await tx.update(serviceRequests).set({ status: "awarded", updatedAt: new Date() }).where(eq(serviceRequests.id, request.id));
+      await tx.insert(notifications).values({ userId: contractor!.userId, type: "system", channel: "in_app", deliveryStatus: "delivered", title: "Quote accepted", body: `Your quote for ${request.serviceName} was accepted.`, deliveryMetadata: { requestId: request.id, quoteId: quote.id }, deliveredAt: new Date() });
+    });
+    res.json({ ...quote, amountOmaniRial: decimal(quote.amountOmaniRial), status: "accepted" });
   } catch (error) { next(error); }
 });
 

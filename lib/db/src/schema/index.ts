@@ -29,6 +29,9 @@ export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "f
 export const notificationTypeEnum = pgEnum("notification_type", ["subscription", "payment", "system", "review"]);
 export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email", "push"]);
 export const notificationDeliveryStatusEnum = pgEnum("notification_delivery_status", ["pending", "sent", "delivered", "failed"]);
+export const serviceRequestStatusEnum = pgEnum("service_request_status", ["open", "quoted", "awarded", "closed", "cancelled"]);
+export const requestRecipientStatusEnum = pgEnum("request_recipient_status", ["invited", "viewed", "quoted", "declined"]);
+export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "accepted", "rejected", "withdrawn"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -154,6 +157,48 @@ export const notifications = pgTable("notifications", {
   ...timestamps,
 }, (table) => [index("notifications_user_idx").on(table.userId, table.readAt, table.createdAt)]);
 
+export const serviceRequests = pgTable("service_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  customerId: uuid("customer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  serviceCategory: varchar("service_category", { length: 100 }).notNull(),
+  serviceName: varchar("service_name", { length: 160 }).notNull(),
+  governorate: varchar("governorate", { length: 100 }).notNull(),
+  wilayat: varchar("wilayat", { length: 100 }).notNull(),
+  requirements: text("requirements").notNull(),
+  budgetOmaniRial: numeric("budget_omani_rial", { precision: 10, scale: 3 }),
+  imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
+  status: serviceRequestStatusEnum("status").notNull().default("open"),
+  ...timestamps,
+}, (table) => [
+  index("service_requests_customer_idx").on(table.customerId, table.createdAt),
+  index("service_requests_location_idx").on(table.governorate, table.wilayat, table.status),
+]);
+
+export const requestRecipients = pgTable("request_recipients", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requestId: uuid("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  contractorId: uuid("contractor_id").notNull().references(() => contractorProfiles.id, { onDelete: "cascade" }),
+  status: requestRecipientStatusEnum("status").notNull().default("invited"),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("request_recipients_unique_idx").on(table.requestId, table.contractorId),
+  index("request_recipients_contractor_idx").on(table.contractorId, table.status),
+]);
+
+export const quotes = pgTable("quotes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requestId: uuid("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  contractorId: uuid("contractor_id").notNull().references(() => contractorProfiles.id, { onDelete: "cascade" }),
+  amountOmaniRial: numeric("amount_omani_rial", { precision: 10, scale: 3 }).notNull(),
+  estimatedDays: integer("estimated_days").notNull(),
+  details: text("details").notNull(),
+  status: quoteStatusEnum("status").notNull().default("submitted"),
+  ...timestamps,
+}, (table) => [
+  index("quotes_request_idx").on(table.requestId, table.status),
+  index("quotes_contractor_idx").on(table.contractorId, table.createdAt),
+]);
+
 export const marketplaceSettings = pgTable("marketplace_settings", {
   key: varchar("key", { length: 100 }).primaryKey(),
   value: jsonb("value").notNull(),
@@ -174,6 +219,7 @@ export const auditEvents = pgTable("audit_events", {
 export const contractorRelations = relations(contractorProfiles, ({ one, many }) => ({
   user: one(users, { fields: [contractorProfiles.userId], references: [users.id] }),
   services: many(services), projects: many(projects), reviews: many(reviews), subscription: one(subscriptions),
+  requestRecipients: many(requestRecipients), quotes: many(quotes),
 }));
 
 export const insertContractorProfileSchema = createInsertSchema(contractorProfiles).omit({ id: true, createdAt: true, updatedAt: true });
