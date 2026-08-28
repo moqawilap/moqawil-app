@@ -97,6 +97,53 @@ paths:
       parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
       responses:
         "204": { description: Marked read }
+  /service-requests:
+    post:
+      operationId: createServiceRequest
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ServiceRequestCreate" } } } }
+      responses:
+        "201": { description: Service request created, content: { application/json: { schema: { $ref: "#/components/schemas/ServiceRequest" } } } }
+  /me/service-requests:
+    get:
+      operationId: listMyServiceRequests
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Customer service requests, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ServiceRequest" } } } } }
+  /me/service-requests/{id}/quotes:
+    get:
+      operationId: listServiceRequestQuotes
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/RequestId" } ]
+      responses:
+        "200": { description: Quotes for a request, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Quote" } } } } }
+  /me/workshop-requests:
+    get:
+      operationId: listWorkshopRequests
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Requests sent to the workshop, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/WorkshopRequest" } } } } }
+  /me/workshop-requests/{id}/quote:
+    post:
+      operationId: createWorkshopQuote
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/RequestId" } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/QuoteCreate" } } } }
+      responses:
+        "201": { description: Quote submitted, content: { application/json: { schema: { $ref: "#/components/schemas/Quote" } } } }
+  /me/quotes/{id}/accept:
+    post:
+      operationId: acceptQuote
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/QuoteId" } ]
+      responses:
+        "200": { description: Quote accepted, content: { application/json: { schema: { $ref: "#/components/schemas/Quote" } } } }
   /admin/overview:
     get:
       operationId: getAdminOverview
@@ -184,6 +231,8 @@ components:
   securitySchemes: { clerkAuth: { type: http, scheme: bearer, bearerFormat: JWT } }
   parameters:
     ContractorId: { name: id, in: path, required: true, schema: { type: string } }
+    RequestId: { name: id, in: path, required: true, schema: { type: string } }
+    QuoteId: { name: id, in: path, required: true, schema: { type: string } }
   responses:
     NotFound: { description: Resource not found }
   schemas:
@@ -235,6 +284,11 @@ components:
     DevelopmentPaymentRequest: { type: object, properties: { outcome: { type: string, enum: [succeed, fail] } }, required: [outcome] }
     Payment: { type: object, properties: { id: { type: string }, subscriptionId: { type: string }, contractorId: { type: [string, "null"] }, contractorName: { type: [string, "null"] }, amountOmaniRial: { type: number }, status: { type: string }, provider: { type: string }, providerReference: { type: [string, "null"] }, createdAt: { type: string, format: date-time } }, required: [id, subscriptionId, amountOmaniRial, status, provider, createdAt] }
     Notification: { type: object, properties: { id: { type: string }, type: { type: string }, channel: { type: string, enum: [in_app, email, push] }, deliveryStatus: { type: string, enum: [pending, sent, delivered, failed] }, deliveryMetadata: { type: object, additionalProperties: true }, title: { type: string }, body: { type: string }, readAt: { type: [string, "null"], format: date-time }, deliveredAt: { type: [string, "null"], format: date-time }, createdAt: { type: string, format: date-time } }, required: [id, type, channel, deliveryStatus, deliveryMetadata, title, body, createdAt] }
+    ServiceRequestCreate: { type: object, properties: { serviceCategory: { type: string }, serviceName: { type: string }, governorate: { type: string }, wilayat: { type: string }, requirements: { type: string, minLength: 8 }, budgetOmaniRial: { type: [number, "null"], minimum: 0 }, imageUrls: { type: array, items: { type: string } } }, required: [serviceCategory, serviceName, governorate, wilayat, requirements] }
+    ServiceRequest: { type: object, properties: { id: { type: string }, serviceCategory: { type: string }, serviceName: { type: string }, governorate: { type: string }, wilayat: { type: string }, requirements: { type: string }, budgetOmaniRial: { type: [number, "null"] }, imageUrls: { type: array, items: { type: string } }, status: { type: string }, recipientCount: { type: number }, quoteCount: { type: number }, createdAt: { type: string, format: date-time } }, required: [id, serviceCategory, serviceName, governorate, wilayat, requirements, imageUrls, status, createdAt] }
+    QuoteCreate: { type: object, properties: { amountOmaniRial: { type: number, minimum: 0 }, estimatedDays: { type: number, minimum: 1, maximum: 365 }, details: { type: string, minLength: 4 } }, required: [amountOmaniRial, estimatedDays, details] }
+    Quote: { type: object, properties: { id: { type: string }, requestId: { type: string }, contractorId: { type: string }, amountOmaniRial: { type: number }, estimatedDays: { type: number }, details: { type: string }, status: { type: string }, businessName: { type: [string, "null"] }, businessNameArabic: { type: [string, "null"] }, city: { type: [string, "null"] }, wilayat: { type: [string, "null"] }, isVerified: { type: [boolean, "null"] }, createdAt: { type: string, format: date-time } }, required: [id, requestId, contractorId, amountOmaniRial, estimatedDays, details, status, createdAt] }
+    WorkshopRequest: { allOf: [ { $ref: "#/components/schemas/ServiceRequest" }, { type: object, properties: { recipientId: { type: string }, recipientStatus: { type: string } }, required: [recipientId, recipientStatus] } ] }
     AdminContractorInput: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, required: [businessName, city] }
     AdminContractorUpdate: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, minProperties: 1 }
     AdminSubscriptionUpdate: { type: object, properties: { status: { type: string, enum: [free_trial, active, payment_due, expired, cancelled, suspended] }, extendTrialMonths: { type: number, minimum: 1, maximum: 24 } }, minProperties: 1 }
