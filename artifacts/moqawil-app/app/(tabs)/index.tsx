@@ -29,7 +29,7 @@ export default function HomeScreen() {
           </View>
           <Pressable onPress={() => { refreshLocation().catch(() => undefined); }} style={styles.locationButton}>
             <View style={[styles.locationPin, { backgroundColor: colors.primarySoft }]}><Feather name="map-pin" size={15} color={colors.primary} /></View>
-            <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{isArabic ? 'تبحث في' : 'You are browsing in'}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
+            <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{location.source === 'default' ? (isArabic ? 'اضغط لتحديد موقعك الحالي' : 'Tap to detect your location') : (isArabic ? 'تبحث في موقعك الحالي' : 'You are browsing in your location')}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
             <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
           </Pressable>
           <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>

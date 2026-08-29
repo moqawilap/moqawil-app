@@ -20,7 +20,7 @@ export default function ProfileScreen() {
   const isContractor = metadata.role === 'contractor' || metadata.isContractor === true;
   const subscription = useGetMySubscription({ query: { queryKey: getGetMySubscriptionQueryKey(), enabled: !!isSignedIn && isContractor } });
   const menu = [
-    { icon: 'map-pin' as const, title: isArabic ? 'موقعك' : 'Your location', value: `${location.area}, ${location.city}`, onPress: refreshLocation },
+     { icon: 'map-pin' as const, title: isArabic ? 'موقعك الحالي' : 'Current location', value: location.source === 'default' ? (isArabic ? 'اضغط للسماح بتحديد موقعك' : 'Tap to allow location access') : `${location.area}, ${location.city}`, onPress: refreshLocation },
     { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => router.push('/notifications' as never) },
      ...(isSignedIn ? [{ icon: 'edit-3' as const, title: isArabic ? 'أحتاج خدمة' : 'I need a service', value: isArabic ? 'أرسل طلبًا لعدة ورش' : 'Ask multiple workshops', onPress: () => router.push('/service-request' as never) }, { icon: 'clipboard' as const, title: isArabic ? 'طلباتي وعروضي' : 'My requests & quotes', value: isArabic ? 'قارن واختر العرض المناسب' : 'Compare and choose a quote', onPress: () => router.push('/requests' as never) }] : []),
     { icon: 'help-circle' as const, title: isArabic ? 'مركز المساعدة' : 'Help center', value: '', onPress: () => Alert.alert('Moqawil Help', 'Call +968 7722 4535 or email moqawil.om@gmail.com.') },
