@@ -484,6 +484,95 @@ components:
     RankingWeights: { type: object, properties: { rating: { type: number }, reviews: { type: number }, projects: { type: number }, profile: { type: number }, verification: { type: number }, activity: { type: number }, engagement: { type: number } }, required: [rating, reviews, projects, profile, verification, activity, engagement] }
     MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights] }
     AdminOverview: { type: object, properties: { contractors: { type: number }, activeSubscriptions: { type: number }, paymentDueSubscriptions: { type: number }, paymentsRecorded: { type: number } }, required: [contractors, activeSubscriptions, paymentDueSubscriptions, paymentsRecorded] }
+     AdAudience:
+       type: object
+       properties:
+         cities: { type: array, items: { type: string } }
+         wilayats: { type: array, items: { type: string } }
+         serviceCategories: { type: array, items: { type: string } }
+     AdCampaign:
+       type: object
+       properties:
+         id: { type: string }
+         contractorId: { type: string }
+         advertiserName: { type: [string, "null"] }
+         advertiserNameArabic: { type: [string, "null"] }
+         title: { type: string }
+         description: { type: string }
+         ctaLabel: { type: string }
+         ctaUrl: { type: [string, "null"] }
+         mediaUrl: { type: string }
+         mediaType: { type: string, enum: [image, video] }
+         audience: { $ref: "#/components/schemas/AdAudience" }
+         totalBudgetOmaniRial: { type: number }
+         dailyBudgetOmaniRial: { type: number }
+         billingModel: { type: string, enum: [cpm, cpc, cpa] }
+         unitRateOmaniRial: { type: number }
+         startAt: { type: string, format: date-time }
+         endAt: { type: string, format: date-time }
+         status: { type: string, enum: [draft, active, paused, completed] }
+         impressionCount: { type: number }
+         clickCount: { type: number }
+         conversionCount: { type: number }
+         spentOmaniRial: { type: number }
+         remainingOmaniRial: { type: number }
+         dailySpentOmaniRial: { type: number }
+         createdAt: { type: string, format: date-time }
+         updatedAt: { type: string, format: date-time }
+       required: [id, contractorId, title, description, ctaLabel, mediaUrl, mediaType, audience, totalBudgetOmaniRial, dailyBudgetOmaniRial, billingModel, unitRateOmaniRial, startAt, endAt, status, impressionCount, clickCount, conversionCount, spentOmaniRial, remainingOmaniRial, dailySpentOmaniRial, createdAt, updatedAt]
+     AdEventInput:
+       type: object
+       properties:
+         eventType: { type: string, enum: [impression, click, conversion] }
+         eventKey: { type: string, minLength: 8, maxLength: 128 }
+       required: [eventType, eventKey]
+     AdEventResult:
+       type: object
+       properties:
+         accepted: { type: boolean }
+         reason: { type: string }
+         eventType: { type: string, enum: [impression, click, conversion] }
+         costOmaniRial: { type: number }
+         campaign: { $ref: "#/components/schemas/AdCampaign" }
+       required: [accepted]
+     AdminAdCampaignInput:
+       type: object
+       properties:
+         contractorId: { type: string }
+         title: { type: string, minLength: 2, maxLength: 200 }
+         description: { type: string, minLength: 2, maxLength: 5000 }
+         ctaLabel: { type: string, minLength: 1, maxLength: 50 }
+         ctaUrl: { type: [string, "null"], maxLength: 2000 }
+         mediaUrl: { type: string, minLength: 20, maxLength: 2000000 }
+         mediaType: { type: string, enum: [image, video] }
+         audience: { $ref: "#/components/schemas/AdAudience" }
+         totalBudgetOmaniRial: { type: number, exclusiveMinimum: 0 }
+         dailyBudgetOmaniRial: { type: number, exclusiveMinimum: 0 }
+         billingModel: { type: string, enum: [cpm, cpc, cpa] }
+         unitRateOmaniRial: { type: number, exclusiveMinimum: 0 }
+         startAt: { type: string, format: date-time }
+         endAt: { type: string, format: date-time }
+         status: { type: string, enum: [draft, active, paused] }
+       required: [contractorId, title, description, ctaLabel, mediaUrl, mediaType, audience, totalBudgetOmaniRial, dailyBudgetOmaniRial, billingModel, unitRateOmaniRial, startAt, endAt]
+     AdminAdCampaignUpdate:
+       allOf:
+         - $ref: "#/components/schemas/AdminAdCampaignInput"
+       minProperties: 1
+     AdCampaignDay:
+       type: object
+       properties:
+         date: { type: string }
+         impressions: { type: number }
+         clicks: { type: number }
+         conversions: { type: number }
+         spentOmaniRial: { type: number }
+       required: [date, impressions, clicks, conversions, spentOmaniRial]
+     AdCampaignReport:
+       type: object
+       properties:
+         campaign: { $ref: "#/components/schemas/AdCampaign" }
+         days: { type: array, items: { $ref: "#/components/schemas/AdCampaignDay" } }
+       required: [campaign, days]
     ListingEngagement:
       type: object
       properties:
