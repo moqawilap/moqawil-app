@@ -17,6 +17,8 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loginVerificationStarted, setLoginVerificationStarted] = useState(false);
+  const [loginVerificationCode, setLoginVerificationCode] = useState('');
   const [resetStep, setResetStep] = useState<'idle' | 'code' | 'newPassword'>('idle');
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,13 +42,44 @@ export default function SignInScreen() {
       if (result.error) throw result.error;
       if (signIn.status === 'complete') {
         await finishSignIn();
+      } else if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
+        const emailCodeFactor = signIn.supportedSecondFactors.find((factor) => factor.strategy === 'email_code');
+        if (!emailCodeFactor) {
+          setErrorMessage('This account requires another verification method. Please use the verification method enabled for your account.');
+          return;
+        }
+        const verification = await signIn.mfa.sendEmailCode();
+        if (verification.error) throw verification.error;
+        setLoginVerificationStarted(true);
       } else {
-        setErrorMessage('Additional verification is required. Complete the verification step and try again.');
+        setErrorMessage('Sign-in could not be completed. Please check your account details and try again.');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Check your email and password and try again.';
       setErrorMessage(message);
       if (Platform.OS !== 'web') Alert.alert('Unable to sign in', message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyLoginCode = async () => {
+    if (busy) return;
+    setErrorMessage(null);
+    if (!loginVerificationCode.trim()) {
+      setErrorMessage('Enter the verification code sent to your email.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await signIn.mfa.verifyEmailCode({ code: loginVerificationCode.trim() });
+      if (result.error) throw result.error;
+      if (signIn.status === 'complete') await finishSignIn();
+      else setErrorMessage('The verification is not complete. Request a new code and try again.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The verification code is not valid.';
+      setErrorMessage(message);
+      if (Platform.OS !== 'web') Alert.alert('Unable to verify', message);
     } finally {
       setBusy(false);
     }
@@ -136,6 +169,8 @@ export default function SignInScreen() {
     setNewPassword('');
     setConfirmPassword('');
     setResetStep('idle');
+    setLoginVerificationStarted(false);
+    setLoginVerificationCode('');
     await signIn.reset();
   };
 
@@ -148,7 +183,14 @@ export default function SignInScreen() {
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Sign in to manage your Moqawil account and access admin tools.</Text>
         <Text style={[styles.label, { color: colors.foreground }]}>Email address</Text>
         <TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
-        {resetStep === 'idle' ? <>
+        {loginVerificationStarted ? <>
+          <Text style={[styles.resetHint, { color: colors.mutedForeground }]}>We sent a security verification code to your email address.</Text>
+          <Text style={[styles.label, { color: colors.foreground }]}>Security verification code</Text>
+          <TextInput testID="login-verification-code" keyboardType="number-pad" value={loginVerificationCode} onChangeText={setLoginVerificationCode} placeholder="Enter the code" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+          <Pressable onPress={() => signIn.mfa.sendEmailCode()} disabled={busy} style={styles.secondaryAction}>
+            <Text style={[styles.link, { color: colors.primary }]}>Send a new code</Text>
+          </Pressable>
+        </> : resetStep === 'idle' ? <>
           <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
           <View style={styles.passwordWrap}>
             <TextInput testID="sign-in-password" secureTextEntry={!showPassword} value={password} onChangeText={setPassword} placeholder="Enter your password" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.passwordInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
@@ -181,10 +223,10 @@ export default function SignInScreen() {
           </View>
         </>}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-        <Pressable onPress={resetStep === 'idle' ? submit : resetStep === 'code' ? verifyResetCode : saveNewPassword} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
-          {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>{resetStep === 'idle' ? 'Sign in' : resetStep === 'code' ? 'Verify code' : 'Save new password'}</Text>}
+        <Pressable onPress={loginVerificationStarted ? verifyLoginCode : resetStep === 'idle' ? submit : resetStep === 'code' ? verifyResetCode : saveNewPassword} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
+          {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.submitText, { color: colors.primaryForeground }]}>{loginVerificationStarted ? 'Complete sign in' : resetStep === 'idle' ? 'Sign in' : resetStep === 'code' ? 'Verify code' : 'Save new password'}</Text>}
         </Pressable>
-        {resetStep !== 'idle' ? <Pressable onPress={resetFlow} disabled={busy} style={styles.secondaryAction}>
+        {loginVerificationStarted || resetStep !== 'idle' ? <Pressable onPress={resetFlow} disabled={busy} style={styles.secondaryAction}>
           <Text style={[styles.link, { color: colors.primary }]}>Back to sign in</Text>
         </Pressable> : null}
         <View style={styles.footerRow}><Text style={[styles.footerText, { color: colors.mutedForeground }]}>New to Moqawil?</Text><Link href="/sign-up" asChild><Pressable><Text style={[styles.link, { color: colors.primary }]}>Create an account</Text></Pressable></Link></View>
