@@ -233,6 +233,7 @@ export const marketplaceListings = pgTable("marketplace_listings", {
   bathrooms: integer("bathrooms").notNull().default(0),
   area: varchar("area", { length: 50 }).notNull(),
   imageUrl: varchar("image_url", { length: 2048 }),
+  contactPhone: varchar("contact_phone", { length: 32 }),
   isPublished: boolean("is_published").notNull().default(false),
   ...timestamps,
 }, (table) => [

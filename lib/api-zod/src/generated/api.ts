@@ -99,6 +99,7 @@ export const ListListingsResponseItem = zod.object({
   "bathrooms": zod.number().min(listListingsResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "contactPhone": zod.string().nullable(),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -131,6 +132,7 @@ export const GetListingResponse = zod.object({
   "bathrooms": zod.number().min(getListingResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "contactPhone": zod.string().nullable(),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -652,7 +654,8 @@ export const CreateAdminContractorBody = zod.object({
   "adminRating": zod.number().min(1).max(createAdminContractorBodyAdminRatingMax).nullish(),
   "agreedContractAmountOmaniRial": zod.number().min(createAdminContractorBodyAgreedContractAmountOmaniRialMin).nullish(),
   "isVerified": zod.boolean().optional(),
-  "isPublished": zod.boolean().optional()
+  "isPublished": zod.boolean().optional(),
+  "isWorkshop": zod.boolean().optional()
 })
 
 export const CreateAdminContractorResponse = zod.object({
@@ -698,6 +701,7 @@ export const ListAdminListingsResponseItem = zod.object({
   "bathrooms": zod.number().min(listAdminListingsResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "contactPhone": zod.string().nullable(),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -723,6 +727,8 @@ export const createAdminListingBodyAreaMax = 50;
 
 export const createAdminListingBodyImageUrlMax = 2048;
 
+export const createAdminListingBodyContactPhoneMax = 32;
+
 
 
 export const CreateAdminListingBody = zod.object({
@@ -736,6 +742,7 @@ export const CreateAdminListingBody = zod.object({
   "bathrooms": zod.number().min(createAdminListingBodyBathroomsMin).optional(),
   "area": zod.string().min(1).max(createAdminListingBodyAreaMax),
   "imageUrl": zod.string().max(createAdminListingBodyImageUrlMax).nullish(),
+  "contactPhone": zod.string().max(createAdminListingBodyContactPhoneMax).nullish(),
   "isPublished": zod.boolean().optional()
 })
 
@@ -757,6 +764,7 @@ export const CreateAdminListingResponse = zod.object({
   "bathrooms": zod.number().min(createAdminListingResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "contactPhone": zod.string().nullable(),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -767,37 +775,40 @@ export const UpdateAdminListingParams = zod.object({
   "id": zod.coerce.string()
 })
 
-export const updateAdminListingBodyOneTitleMax = 200;
+export const updateAdminListingBodyTitleMax = 200;
 
-export const updateAdminListingBodyOneTitleArabicMax = 200;
+export const updateAdminListingBodyTitleArabicMax = 200;
 
-export const updateAdminListingBodyOnePriceMax = 100;
+export const updateAdminListingBodyPriceMax = 100;
 
-export const updateAdminListingBodyOneLocationMax = 200;
+export const updateAdminListingBodyLocationMax = 200;
 
-export const updateAdminListingBodyOneLocationArabicMax = 200;
+export const updateAdminListingBodyLocationArabicMax = 200;
 
-export const updateAdminListingBodyOneBedroomsMin = 0;
+export const updateAdminListingBodyBedroomsMin = 0;
 
-export const updateAdminListingBodyOneBathroomsMin = 0;
+export const updateAdminListingBodyBathroomsMin = 0;
 
-export const updateAdminListingBodyOneAreaMax = 50;
+export const updateAdminListingBodyAreaMax = 50;
 
-export const updateAdminListingBodyOneImageUrlMax = 2048;
+export const updateAdminListingBodyImageUrlMax = 2048;
+
+export const updateAdminListingBodyContactPhoneMax = 32;
 
 
 
 export const UpdateAdminListingBody = zod.object({
-  "title": zod.string().min(1).max(updateAdminListingBodyOneTitleMax),
-  "titleArabic": zod.string().min(1).max(updateAdminListingBodyOneTitleArabicMax),
+  "title": zod.string().min(1).max(updateAdminListingBodyTitleMax).optional(),
+  "titleArabic": zod.string().min(1).max(updateAdminListingBodyTitleArabicMax).optional(),
   "type": zod.enum(['sale', 'rent']).optional(),
-  "price": zod.string().min(1).max(updateAdminListingBodyOnePriceMax),
-  "location": zod.string().min(1).max(updateAdminListingBodyOneLocationMax),
-  "locationArabic": zod.string().min(1).max(updateAdminListingBodyOneLocationArabicMax),
-  "bedrooms": zod.number().min(updateAdminListingBodyOneBedroomsMin).optional(),
-  "bathrooms": zod.number().min(updateAdminListingBodyOneBathroomsMin).optional(),
-  "area": zod.string().min(1).max(updateAdminListingBodyOneAreaMax),
-  "imageUrl": zod.string().max(updateAdminListingBodyOneImageUrlMax).nullish(),
+  "price": zod.string().min(1).max(updateAdminListingBodyPriceMax).optional(),
+  "location": zod.string().min(1).max(updateAdminListingBodyLocationMax).optional(),
+  "locationArabic": zod.string().min(1).max(updateAdminListingBodyLocationArabicMax).optional(),
+  "bedrooms": zod.number().min(updateAdminListingBodyBedroomsMin).optional(),
+  "bathrooms": zod.number().min(updateAdminListingBodyBathroomsMin).optional(),
+  "area": zod.string().min(1).max(updateAdminListingBodyAreaMax).optional(),
+  "imageUrl": zod.string().max(updateAdminListingBodyImageUrlMax).nullish(),
+  "contactPhone": zod.string().max(updateAdminListingBodyContactPhoneMax).nullish(),
   "isPublished": zod.boolean().optional()
 })
 
@@ -819,6 +830,7 @@ export const UpdateAdminListingResponse = zod.object({
   "bathrooms": zod.number().min(updateAdminListingResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "contactPhone": zod.string().nullable(),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()

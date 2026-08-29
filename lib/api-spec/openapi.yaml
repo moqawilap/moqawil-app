@@ -364,7 +364,7 @@ components:
     QuoteCreate: { type: object, properties: { amountOmaniRial: { type: number, minimum: 0 }, estimatedDays: { type: number, minimum: 1, maximum: 365 }, details: { type: string, minLength: 4 } }, required: [amountOmaniRial, estimatedDays, details] }
     Quote: { type: object, properties: { id: { type: string }, requestId: { type: string }, contractorId: { type: string }, amountOmaniRial: { type: number }, estimatedDays: { type: number }, details: { type: string }, status: { type: string }, businessName: { type: [string, "null"] }, businessNameArabic: { type: [string, "null"] }, city: { type: [string, "null"] }, wilayat: { type: [string, "null"] }, isVerified: { type: [boolean, "null"] }, createdAt: { type: string, format: date-time } }, required: [id, requestId, contractorId, amountOmaniRial, estimatedDays, details, status, createdAt] }
     WorkshopRequest: { allOf: [ { $ref: "#/components/schemas/ServiceRequest" }, { type: object, properties: { recipientId: { type: string }, recipientStatus: { type: string } }, required: [recipientId, recipientStatus] } ] }
-    AdminContractorInput: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, required: [businessName, city] }
+    AdminContractorInput: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean }, isWorkshop: { type: boolean } }, required: [businessName, city] }
     AdminContractorUpdate: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, businessNameArabic: { type: [string, "null"], maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: [string, "null"], maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, bioArabic: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"] }, evaluationNotes: { type: [string, "null"], maxLength: 5000 }, adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }, agreedContractAmountOmaniRial: { type: [number, "null"], minimum: 0 }, isVerified: { type: boolean }, isPublished: { type: boolean } }, minProperties: 1 }
     AdminSubscriptionUpdate: { type: object, properties: { status: { type: string, enum: [free_trial, active, payment_due, expired, cancelled, suspended] }, extendTrialMonths: { type: number, minimum: 1, maximum: 24 } }, minProperties: 1 }
     AdminPaymentCreate: { type: object, properties: { subscriptionId: { type: string }, amountOmaniRial: { type: number, minimum: 0 }, status: { type: string, enum: [pending, paid, failed, refunded, void] }, provider: { type: string }, providerReference: { type: string } }, required: [subscriptionId, amountOmaniRial, status, provider] }
@@ -405,10 +405,11 @@ components:
         bathrooms: { type: number, minimum: 0 }
         area: { type: string }
         imageUrl: { type: [string, "null"] }
+        contactPhone: { type: [string, "null"] }
         isPublished: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, title, titleArabic, type, price, location, locationArabic, bedrooms, bathrooms, area, imageUrl, isPublished, createdAt, updatedAt]
+      required: [id, title, titleArabic, type, price, location, locationArabic, bedrooms, bathrooms, area, imageUrl, contactPhone, isPublished, createdAt, updatedAt]
     AdminListingInput:
       type: object
       properties:
@@ -422,9 +423,22 @@ components:
         bathrooms: { type: number, minimum: 0 }
         area: { type: string, minLength: 1, maxLength: 50 }
         imageUrl: { type: [string, "null"], maxLength: 2048 }
+        contactPhone: { type: [string, "null"], maxLength: 32 }
         isPublished: { type: boolean }
       required: [title, titleArabic, price, location, locationArabic, area]
     AdminListingUpdate:
-      allOf:
-        - $ref: "#/components/schemas/AdminListingInput"
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        titleArabic: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [sale, rent] }
+        price: { type: string, minLength: 1, maxLength: 100 }
+        location: { type: string, minLength: 1, maxLength: 200 }
+        locationArabic: { type: string, minLength: 1, maxLength: 200 }
+        bedrooms: { type: number, minimum: 0 }
+        bathrooms: { type: number, minimum: 0 }
+        area: { type: string, minLength: 1, maxLength: 50 }
+        imageUrl: { type: [string, "null"], maxLength: 2048 }
+        contactPhone: { type: [string, "null"], maxLength: 32 }
+        isPublished: { type: boolean }
       minProperties: 1

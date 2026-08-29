@@ -255,6 +255,7 @@ const blankWorkshop = () => ({ name: '', nameArabic: '', specialty: '', city: ''
 
 function WorkshopsTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const client = useQueryClient();
   const workshops = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
   const create = useCreateAdminContractor({
@@ -268,7 +269,7 @@ function WorkshopsTab() {
   const set = (key: keyof ReturnType<typeof blankWorkshop>, value: string | boolean) => setForm((current) => ({ ...current, [key]: value }));
   const save = () => {
     if (form.name.trim().length < 2 || form.city.trim().length < 2) {
-      Alert.alert(isArabicText() ? 'بيانات ناقصة' : 'Missing details', isArabicText() ? 'اسم الورشة والمدينة مطلوبان.' : 'Workshop name and city are required.');
+      Alert.alert(isArabic ? 'بيانات ناقصة' : 'Missing details', isArabic ? 'اسم الورشة والمدينة مطلوبان.' : 'Workshop name and city are required.');
       return;
     }
     const data: AdminContractorInput = {
@@ -281,11 +282,10 @@ function WorkshopsTab() {
       phone: form.phone.trim() || null,
       isPublished: form.isPublished,
       isVerified: false,
+      isWorkshop: true,
     };
     create.mutate({ data });
   };
-  const isArabicText = () => false;
-
   return (
     <View testID="admin-workshops" style={styles.tabContainer}>
       <View style={styles.tabHeader}>
@@ -339,7 +339,21 @@ function WorkshopsTab() {
   );
 }
 
-const blankListing = () => ({ title: '', titleArabic: '', type: 'sale' as const, price: '', location: '', locationArabic: '', bedrooms: '0', bathrooms: '0', area: '', imageUrl: '', isPublished: false });
+type ListingForm = {
+  title: string;
+  titleArabic: string;
+  type: 'sale' | 'rent';
+  price: string;
+  location: string;
+  locationArabic: string;
+  bedrooms: string;
+  bathrooms: string;
+  area: string;
+  imageUrl: string;
+  contactPhone: string;
+  isPublished: boolean;
+};
+const blankListing = (): ListingForm => ({ title: '', titleArabic: '', type: 'sale', price: '', location: '', locationArabic: '', bedrooms: '0', bathrooms: '0', area: '', imageUrl: '', contactPhone: '', isPublished: false });
 
 function ListingsTab() {
   const colors = useColors();
@@ -353,12 +367,12 @@ function ListingsTab() {
   const create = useCreateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert('Validation', errorMessage(e)) } });
   const update = useUpdateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert('Validation', errorMessage(e)) } });
   const remove = useDeleteAdminListing({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert('Failed', errorMessage(e)) } });
-  const set = (key: string, value: string | boolean) => setForm((current) => ({ ...current, [key]: value }));
+  const set = <Key extends keyof ListingForm>(key: Key, value: ListingForm[Key]) => setForm((current) => ({ ...current, [key]: value }));
   const begin = (listing?: MarketplaceListing) => {
     if (!listing) { setForm(blankListing()); setEditing(null); }
     else {
       setEditing(listing.id);
-      setForm({ title: listing.title, titleArabic: listing.titleArabic, type: listing.type, price: listing.price, location: listing.location, locationArabic: listing.locationArabic, bedrooms: String(listing.bedrooms), bathrooms: String(listing.bathrooms), area: listing.area, imageUrl: listing.imageUrl ?? '', isPublished: listing.isPublished });
+      setForm({ title: listing.title, titleArabic: listing.titleArabic, type: listing.type, price: listing.price, location: listing.location, locationArabic: listing.locationArabic, bedrooms: String(listing.bedrooms), bathrooms: String(listing.bathrooms), area: listing.area, imageUrl: listing.imageUrl ?? '', contactPhone: listing.contactPhone ?? '', isPublished: listing.isPublished });
     }
     setShowForm(true);
   };
@@ -371,7 +385,7 @@ function ListingsTab() {
       title: form.title.trim(), titleArabic: form.titleArabic.trim(), type: form.type,
       price: form.price.trim(), location: form.location.trim(), locationArabic: form.locationArabic.trim(),
       bedrooms: Math.max(0, Number(form.bedrooms) || 0), bathrooms: Math.max(0, Number(form.bathrooms) || 0),
-      area: form.area.trim(), imageUrl: form.imageUrl.trim() || null, isPublished: form.isPublished,
+      area: form.area.trim(), imageUrl: form.imageUrl.trim() || null, contactPhone: form.contactPhone.trim() || null, isPublished: form.isPublished,
     };
     editing ? update.mutate({ id: editing, data }) : create.mutate({ data });
   };
@@ -392,7 +406,7 @@ function ListingsTab() {
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? 'Edit Listing' : 'New Listing'}</Text>
           <View style={styles.formGrid}>
-            {([['title', 'Title'], ['titleArabic', 'Arabic title'], ['price', 'Price'], ['location', 'Location'], ['locationArabic', 'Arabic location'], ['area', 'Area'], ['bedrooms', 'Bedrooms'], ['bathrooms', 'Bathrooms'], ['imageUrl', 'Image URL']] as const).map(([key, label]) => (
+            {([['title', 'Title'], ['titleArabic', 'Arabic title'], ['price', 'Price'], ['location', 'Location'], ['locationArabic', 'Arabic location'], ['area', 'Area'], ['bedrooms', 'Bedrooms'], ['bathrooms', 'Bathrooms'], ['contactPhone', 'Contact phone'], ['imageUrl', 'Image URL']] as const).map(([key, label]) => (
               <View key={key} style={styles.formGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
                 <TextInput testID={`listing-field-${key}`} value={String(form[key])} onChangeText={(value) => set(key, value)} keyboardType={key === 'bedrooms' || key === 'bathrooms' ? 'number-pad' : 'default'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />

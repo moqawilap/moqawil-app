@@ -21,7 +21,7 @@ type AppContextValue = {
   locationLoading: boolean;
   refreshLocation: (options?: { silent?: boolean }) => Promise<void>;
   savedIds: string[];
-  toggleSaved: (id: string) => void;
+  toggleSaved: (id: string, options?: { listing?: boolean }) => void;
   isSaved: (id: string) => boolean;
   engagementClientId: string | null;
   activeService: string | null;
@@ -80,10 +80,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     Haptics.selectionAsync().catch(() => undefined);
   };
 
-  const toggleSaved = (id: string) => {
+  const toggleSaved = (id: string, options?: { listing?: boolean }) => {
     const willSave = !savedIds.includes(id);
     setSavedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-    if (engagementClientId && listings.some((listing) => listing.id === id)) {
+    if (engagementClientId && (options?.listing || listings.some((listing) => listing.id === id))) {
       recordListingEngagement(id, { action: 'save', clientId: engagementClientId, active: willSave }).catch(() => undefined);
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);

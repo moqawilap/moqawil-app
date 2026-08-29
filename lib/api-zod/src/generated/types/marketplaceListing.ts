@@ -22,6 +22,8 @@ export interface MarketplaceListing {
   area: string;
   /** @nullable */
   imageUrl: string | null;
+  /** @nullable */
+  contactPhone: string | null;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;

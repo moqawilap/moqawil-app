@@ -1,3 +1,4 @@
 - [Clerk Expo custom flows](clerk-expo-custom-flows.md) — Clerk Expo 4 uses signal-based future resources; finalize sign-in/sign-up through the resource itself.
 - [Clerk role regression tests](clerk-role-regression-tests.md) — API roles come from the Clerk user record, so claim overrides alone cannot reset a mutated test identity.
 - [Moqawil logo source](moqawil-logo-source.md) — preserve the exact attached PDF artwork instead of recreating the building mark in code.
+- [OpenAPI counter compatibility](openapi-counter-compatibility.md) — use number schemas for counters until the workspace Zod version supports generated integer validators.

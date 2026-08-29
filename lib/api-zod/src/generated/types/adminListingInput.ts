@@ -48,5 +48,10 @@ export interface AdminListingInput {
      * @nullable
      */
   imageUrl?: string | null;
+  /**
+     * @maxLength 32
+     * @nullable
+     */
+  contactPhone?: string | null;
   isPublished?: boolean;
 }

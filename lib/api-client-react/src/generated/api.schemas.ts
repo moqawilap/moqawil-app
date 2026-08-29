@@ -323,6 +323,7 @@ export interface AdminContractorInput {
   agreedContractAmountOmaniRial?: number | null;
   isVerified?: boolean;
   isPublished?: boolean;
+  isWorkshop?: boolean;
 }
 
 export interface AdminContractorUpdate {
@@ -549,6 +550,8 @@ export interface MarketplaceListing {
   area: string;
   /** @nullable */
   imageUrl: string | null;
+  /** @nullable */
+  contactPhone: string | null;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
@@ -603,10 +606,70 @@ export interface AdminListingInput {
      * @nullable
      */
   imageUrl?: string | null;
+  /**
+     * @maxLength 32
+     * @nullable
+     */
+  contactPhone?: string | null;
   isPublished?: boolean;
 }
 
-export type AdminListingUpdate = AdminListingInput;
+export type AdminListingUpdateType = typeof AdminListingUpdateType[keyof typeof AdminListingUpdateType];
+
+
+export const AdminListingUpdateType = {
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+export interface AdminListingUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  titleArabic?: string;
+  type?: AdminListingUpdateType;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  price?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  location?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  locationArabic?: string;
+  /** @minimum 0 */
+  bedrooms?: number;
+  /** @minimum 0 */
+  bathrooms?: number;
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  area?: string;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  imageUrl?: string | null;
+  /**
+     * @maxLength 32
+     * @nullable
+     */
+  contactPhone?: string | null;
+  isPublished?: boolean;
+}
 
 /**
  * Resource not found

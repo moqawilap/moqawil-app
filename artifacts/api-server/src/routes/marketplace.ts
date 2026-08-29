@@ -85,6 +85,7 @@ function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
     bathrooms: listing.bathrooms,
     area: listing.area,
     imageUrl: listing.imageUrl,
+    contactPhone: listing.contactPhone,
     isPublished: listing.isPublished,
     createdAt: listing.createdAt.toISOString(),
     updatedAt: listing.updatedAt.toISOString(),
@@ -99,6 +100,7 @@ function validListingInput(input: Record<string, unknown>, partial = false) {
     if (input[field] !== undefined && (!Number.isInteger(input[field]) || Number(input[field]) < 0 || Number(input[field]) > 100)) return false;
   }
   if (input.imageUrl !== undefined && input.imageUrl !== null && !validOptionalText(input.imageUrl, 2048)) return false;
+  if (input.contactPhone !== undefined && input.contactPhone !== null && !validOptionalText(input.contactPhone, 32)) return false;
   if (input.isPublished !== undefined && typeof input.isPublished !== "boolean") return false;
   return true;
 }
@@ -592,6 +594,7 @@ router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next)
       bathrooms: Number(input.bathrooms ?? 0),
       area: String(input.area).trim(),
       imageUrl: input.imageUrl ? String(input.imageUrl).trim() : null,
+      contactPhone: input.contactPhone ? String(input.contactPhone).trim() : null,
       isPublished: input.isPublished === true,
     }).returning();
     res.status(201).json(listingResponse(created));
@@ -605,7 +608,7 @@ router.patch("/admin/listings/:id", requireUser, requireAdmin, async (req, res, 
     }
     const input = req.body as Record<string, unknown>;
     const updates: Record<string, unknown> = {};
-    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "isPublished", "bedrooms", "bathrooms", "type"]) {
+    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "contactPhone", "isPublished", "bedrooms", "bathrooms", "type"]) {
       if (input[field] !== undefined) updates[field === "titleArabic" ? "titleArabic" : field] = typeof input[field] === "string" ? String(input[field]).trim() : input[field];
     }
     if (input.type !== undefined) updates.type = input.type;
@@ -624,7 +627,12 @@ router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res,
       res.status(400).json({ error: "Invalid listing identifier" });
       return;
     }
-    const [deleted] = await db.delete(marketplaceListings).where(eq(marketplaceListings.id, String(req.params.id))).returning({ id: marketplaceListings.id });
+    const [deleted] = await db.transaction(async (tx) => {
+      const listingId = String(req.params.id);
+      await tx.delete(listingEngagementActions).where(eq(listingEngagementActions.listingId, listingId));
+      await tx.delete(listingEngagement).where(eq(listingEngagement.listingId, listingId));
+      return tx.delete(marketplaceListings).where(eq(marketplaceListings.id, listingId)).returning({ id: marketplaceListings.id });
+    });
     if (!deleted) {
       res.status(404).json({ error: "Listing not found" });
       return;
@@ -635,7 +643,7 @@ router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res,
 router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean")) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean")) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
     const settings = await getSettings();
     const profile = await db.transaction(async (tx) => {
       const [managedUser] = await tx.insert(users).values({ clerkUserId: `managed:${crypto.randomUUID()}`, email: `managed-${crypto.randomUUID()}@listing.invalid`, displayName: input.businessName.trim(), role: "contractor", identitySource: "managed_listing" }).returning();
@@ -644,6 +652,14 @@ router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, ne
       if (!plan) throw new Error("No active subscription plan is configured");
       const now = new Date();
       await tx.insert(subscriptions).values({ contractorId: created.id, planId: plan.id, status: "free_trial", trialStartedAt: now, trialEndsAt: addMonths(now, settings.trialMonths) });
+      if (input.isWorkshop === true) {
+        await tx.insert(services).values({
+          contractorId: created.id,
+          name: (typeof input.bio === "string" && input.bio.trim() ? input.bio.trim() : "Building workshop").slice(0, 160),
+          category: "building",
+          description: typeof input.bioArabic === "string" ? input.bioArabic : null,
+        });
+      }
       await tx.insert(auditEvents).values({ actorUserId: (req as AuthenticatedRequest).marketplaceUser.id, action: "managed_contractor_created", entityType: "contractor", entityId: created.id, metadata: { accountLinkStatus: "managed_unlinked" } });
       return created;
     });

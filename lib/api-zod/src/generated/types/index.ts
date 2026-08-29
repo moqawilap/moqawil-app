@@ -13,6 +13,7 @@ export * from './adminContractorUpdate';
 export * from './adminListingInput';
 export * from './adminListingInputType';
 export * from './adminListingUpdate';
+export * from './adminListingUpdateType';
 export * from './adminOverview';
 export * from './adminPaymentCreate';
 export * from './adminPaymentCreateStatus';

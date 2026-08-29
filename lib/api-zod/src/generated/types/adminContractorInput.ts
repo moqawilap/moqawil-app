@@ -67,4 +67,5 @@ export interface AdminContractorInput {
   agreedContractAmountOmaniRial?: number | null;
   isVerified?: boolean;
   isPublished?: boolean;
+  isWorkshop?: boolean;
 }

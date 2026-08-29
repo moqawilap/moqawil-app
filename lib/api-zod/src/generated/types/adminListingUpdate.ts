@@ -5,6 +5,53 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminListingInput } from './adminListingInput';
+import type { AdminListingUpdateType } from './adminListingUpdateType';
 
-export type AdminListingUpdate = AdminListingInput;
+export interface AdminListingUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  titleArabic?: string;
+  type?: AdminListingUpdateType;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  price?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  location?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  locationArabic?: string;
+  /** @minimum 0 */
+  bedrooms?: number;
+  /** @minimum 0 */
+  bathrooms?: number;
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  area?: string;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  imageUrl?: string | null;
+  /**
+     * @maxLength 32
+     * @nullable
+     */
+  contactPhone?: string | null;
+  isPublished?: boolean;
+}
