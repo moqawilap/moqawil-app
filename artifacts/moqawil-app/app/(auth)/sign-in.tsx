@@ -117,7 +117,10 @@ export default function SignInScreen() {
       if (signIn.status !== 'complete') throw new Error('Password reset needs another verification step.');
       await finishSignIn();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'We could not update your password. Try again.';
+      const rawMessage = error instanceof Error ? error.message : '';
+      const message = /online data breach|compromised|password.*breach/i.test(rawMessage)
+        ? 'This password appeared in a data breach. Choose a different, unique password with at least 15 characters.'
+        : rawMessage || 'We could not update your password. Try again.';
       setErrorMessage(message);
       if (Platform.OS !== 'web') Alert.alert('Unable to change password', message);
     } finally {

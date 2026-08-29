@@ -57,9 +57,12 @@ export default function SignUpScreen() {
       }
     } catch (error) {
        const clerkCode = typeof error === 'object' && error !== null && 'errors' in error && Array.isArray((error as { errors?: Array<{ code?: string }> }).errors) ? (error as { errors: Array<{ code?: string }> }).errors[0]?.code : undefined;
-       const message = clerkCode === 'form_identifier_exists' || clerkCode === 'identifier_exists'
+       const rawMessage = error instanceof Error ? error.message : '';
+       const message = /online data breach|compromised|password.*breach/i.test(rawMessage)
+         ? 'هذه كلمة المرور ظهرت في تسريب بيانات. اختر كلمة مرور جديدة وفريدة من 15 حرفًا أو أكثر.'
+         : clerkCode === 'form_identifier_exists' || clerkCode === 'identifier_exists'
          ? 'This email already has an account. Use Sign in instead.'
-         : error instanceof Error ? error.message : 'Check your details and try again.';
+         : rawMessage || 'Check your details and try again.';
       setErrorMessage(message);
       if (Platform.OS !== 'web') Alert.alert('Unable to create account', message);
     } finally {
