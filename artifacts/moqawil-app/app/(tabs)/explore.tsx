@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
 import { images, listings, mergeMarketplaceListings, serviceItems } from '@/data/mockData';
@@ -10,7 +10,7 @@ import { designServices } from '@/data/designServices';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getListListingsQueryKey, useListContractors, useListListings } from '@workspace/api-client-react';
+import { getListAdsQueryKey, getListListingsQueryKey, useListAds, useListContractors, useListListings, useRecordAdEvent, type AdCampaign } from '@workspace/api-client-react';
 
 type SortOption = 'relevance' | 'rating_desc' | 'price_asc' | 'price_desc' | 'oldest' | 'newest';
 
@@ -33,12 +33,46 @@ function budgetFromInput(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
+function AdBanner({ campaign, isArabic, colors }: { campaign: AdCampaign; isArabic: boolean; colors: ReturnType<typeof useColors> }) {
+  const router = useRouter();
+  const actorKey = useRef(`customer-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const impressionSent = useRef(false);
+  const event = useRecordAdEvent();
+  useEffect(() => {
+    if (impressionSent.current) return;
+    impressionSent.current = true;
+    event.mutate({ id: campaign.id, data: { eventType: 'impression', eventKey: `imp-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: actorKey.current } });
+  }, [campaign.id]);
+  const openAd = () => {
+    event.mutate({ id: campaign.id, data: { eventType: 'click', eventKey: `clk-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: actorKey.current } });
+    if (campaign.ctaUrl) {
+      if (campaign.ctaUrl.startsWith('/')) router.push(campaign.ctaUrl as never);
+      else void Linking.openURL(campaign.ctaUrl);
+    }
+  };
+  return (
+    <View testID="sponsored-ad" style={[adStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={adStyles.header}>
+        <View style={[adStyles.sponsored, { backgroundColor: `${colors.primary}18` }]}><Text style={[adStyles.sponsoredText, { color: colors.primary }]}>{isArabic ? 'إعلان مدفوع' : 'Sponsored'}</Text></View>
+        <Text style={[adStyles.advertiser, { color: colors.mutedForeground }]} numberOfLines={1}>{isArabic ? campaign.advertiserNameArabic || campaign.advertiserName : campaign.advertiserName}</Text>
+      </View>
+      {campaign.mediaType === 'image' ? <Image source={{ uri: campaign.mediaUrl }} style={adStyles.media} resizeMode="cover" /> : <View style={[adStyles.videoPlaceholder, { backgroundColor: colors.surfaceMuted }]}><Feather name="play-circle" size={30} color={colors.primary} /><Text style={{ color: colors.mutedForeground }}>{isArabic ? 'فيديو إعلاني' : 'Video ad'}</Text></View>}
+      <View style={adStyles.copy}>
+        <Text style={[adStyles.title, { color: colors.foreground }]}>{campaign.title}</Text>
+        <Text style={[adStyles.description, { color: colors.mutedForeground }]} numberOfLines={2}>{campaign.description}</Text>
+        <Pressable onPress={openAd} style={[adStyles.cta, { backgroundColor: colors.primary }]}><Text style={{ color: colors.primaryForeground, fontWeight: '800' }}>{campaign.ctaLabel}</Text></Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
+  const ads = useListAds({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }, { query: { queryKey: getListAdsQueryKey({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }) } });
   const availableListings = useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('Providers');
@@ -150,6 +184,7 @@ export default function ExploreScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'اكتشف الخدمات' : 'Explore services'} subtitle={`${isArabic ? 'حول' : 'Around'} ${location.city}`} />
+          {ads.data?.[0] ? <AdBanner campaign={ads.data[0]} isArabic={isArabic} colors={colors} /> : null}
            {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'الخدمة غير متاحة مؤقتًا — نعرض الدليل المحفوظ.' : 'The live directory is unavailable — showing the saved directory.'}</Text> : null}
           <View style={[styles.searchInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="search" size={18} color={colors.mutedForeground} />
