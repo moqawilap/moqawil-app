@@ -33,6 +33,7 @@ export const serviceRequestStatusEnum = pgEnum("service_request_status", ["open"
 export const requestRecipientStatusEnum = pgEnum("request_recipient_status", ["invited", "viewed", "quoted", "declined"]);
 export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "accepted", "rejected", "withdrawn"]);
 export const listingEngagementActionEnum = pgEnum("listing_engagement_action", ["view", "like", "save", "contact"]);
+export const marketplaceListingTypeEnum = pgEnum("marketplace_listing_type", ["sale", "rent"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -220,6 +221,24 @@ export const listingEngagementActions = pgTable("listing_engagement_actions", {
   index("listing_engagement_actions_listing_idx").on(table.listingId, table.action),
 ]);
 
+export const marketplaceListings = pgTable("marketplace_listings", {
+  id: varchar("id", { length: 100 }).primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  titleArabic: varchar("title_arabic", { length: 200 }).notNull(),
+  type: marketplaceListingTypeEnum("type").notNull().default("sale"),
+  price: varchar("price", { length: 100 }).notNull(),
+  location: varchar("location", { length: 200 }).notNull(),
+  locationArabic: varchar("location_arabic", { length: 200 }).notNull(),
+  bedrooms: integer("bedrooms").notNull().default(0),
+  bathrooms: integer("bathrooms").notNull().default(0),
+  area: varchar("area", { length: 50 }).notNull(),
+  imageUrl: varchar("image_url", { length: 2048 }),
+  isPublished: boolean("is_published").notNull().default(false),
+  ...timestamps,
+}, (table) => [
+  index("marketplace_listings_published_idx").on(table.isPublished, table.createdAt),
+]);
+
 export const marketplaceSettings = pgTable("marketplace_settings", {
   key: varchar("key", { length: 100 }).primaryKey(),
   value: jsonb("value").notNull(),
@@ -249,5 +268,6 @@ export type ContractorProfile = typeof contractorProfiles.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type ListingEngagement = typeof listingEngagement.$inferSelect;
+export type MarketplaceListing = typeof marketplaceListings.$inferSelect;
 export type RankingWeights = { rating: number; reviews: number; projects: number; profile: number; verification: number; activity: number; engagement: number };
 export const rankingWeightsSchema = z.object({ rating: z.number().min(0), reviews: z.number().min(0), projects: z.number().min(0), profile: z.number().min(0), verification: z.number().min(0), activity: z.number().min(0), engagement: z.number().min(0) });

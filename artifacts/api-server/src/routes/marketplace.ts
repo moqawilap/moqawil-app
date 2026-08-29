@@ -2,7 +2,7 @@ import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import {
-  auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
@@ -72,6 +72,36 @@ function validListingId(value: unknown): value is string {
 function validActorKey(value: unknown): value is string {
   return typeof value === "string" && value.length >= 8 && value.length <= 128;
 }
+function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
+  return {
+    id: listing.id,
+    title: listing.title,
+    titleArabic: listing.titleArabic,
+    type: listing.type,
+    price: listing.price,
+    location: listing.location,
+    locationArabic: listing.locationArabic,
+    bedrooms: listing.bedrooms,
+    bathrooms: listing.bathrooms,
+    area: listing.area,
+    imageUrl: listing.imageUrl,
+    isPublished: listing.isPublished,
+    createdAt: listing.createdAt.toISOString(),
+    updatedAt: listing.updatedAt.toISOString(),
+  };
+}
+function validListingInput(input: Record<string, unknown>, partial = false) {
+  const textFields = ["title", "titleArabic", "price", "location", "locationArabic", "area"] as const;
+  if (!partial && textFields.some((field) => typeof input[field] !== "string" || String(input[field]).trim().length < 1)) return false;
+  if (textFields.some((field) => input[field] !== undefined && (typeof input[field] !== "string" || String(input[field]).trim().length > 200))) return false;
+  if (input.type !== undefined && input.type !== "sale" && input.type !== "rent") return false;
+  for (const field of ["bedrooms", "bathrooms"] as const) {
+    if (input[field] !== undefined && (!Number.isInteger(input[field]) || Number(input[field]) < 0 || Number(input[field]) > 100)) return false;
+  }
+  if (input.imageUrl !== undefined && input.imageUrl !== null && !validOptionalText(input.imageUrl, 2048)) return false;
+  if (input.isPublished !== undefined && typeof input.isPublished !== "boolean") return false;
+  return true;
+}
 function listingActionRow(row: typeof listingEngagement.$inferSelect, actions: Set<string>) {
   return {
     listingId: row.listingId,
@@ -122,6 +152,28 @@ router.get("/listings/engagement", async (req, res, next) => {
     }
     const rows = await Promise.all(ids.map((id) => getListingEngagement(id, actorKey as string | undefined)));
     res.json(Object.fromEntries(rows.map((row) => [row.listingId, row])));
+  } catch (error) { next(error); }
+});
+
+router.get("/listings", async (_req, res, next) => {
+  try {
+    const rows = await db.select().from(marketplaceListings).where(eq(marketplaceListings.isPublished, true)).orderBy(desc(marketplaceListings.createdAt));
+    res.json(rows.map(listingResponse));
+  } catch (error) { next(error); }
+});
+
+router.get("/listings/:listingId", async (req, res, next) => {
+  try {
+    if (!validListingId(req.params.listingId)) {
+      res.status(400).json({ error: "Invalid listing identifier" });
+      return;
+    }
+    const listing = await db.query.marketplaceListings.findFirst({ where: and(eq(marketplaceListings.id, req.params.listingId), eq(marketplaceListings.isPublished, true)) });
+    if (!listing) {
+      res.status(404).json({ error: "Listing not found" });
+      return;
+    }
+    res.json(listingResponse(listing));
   } catch (error) { next(error); }
 });
 
@@ -511,6 +563,74 @@ router.get("/admin/overview", requireUser, requireAdmin, async (_req, res, next)
 });
 router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, next) => {
   try { res.json(await Promise.all((await db.select().from(contractorProfiles).orderBy(asc(contractorProfiles.businessName))).map(adminContractorResponse))); } catch (error) { next(error); }
+});
+
+router.get("/admin/listings", requireUser, requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await db.select().from(marketplaceListings).orderBy(desc(marketplaceListings.createdAt));
+    res.json(rows.map(listingResponse));
+  } catch (error) { next(error); }
+});
+router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const input = req.body as Record<string, unknown>;
+    if (!validListingInput(input)) {
+      res.status(400).json({ error: "Invalid listing fields" });
+      return;
+    }
+    const baseId = String(input.title).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70) || "listing";
+    const id = `${baseId}-${Date.now().toString(36)}`;
+    const [created] = await db.insert(marketplaceListings).values({
+      id,
+      title: String(input.title).trim(),
+      titleArabic: String(input.titleArabic).trim(),
+      type: input.type === "rent" ? "rent" : "sale",
+      price: String(input.price).trim(),
+      location: String(input.location).trim(),
+      locationArabic: String(input.locationArabic).trim(),
+      bedrooms: Number(input.bedrooms ?? 0),
+      bathrooms: Number(input.bathrooms ?? 0),
+      area: String(input.area).trim(),
+      imageUrl: input.imageUrl ? String(input.imageUrl).trim() : null,
+      isPublished: input.isPublished === true,
+    }).returning();
+    res.status(201).json(listingResponse(created));
+  } catch (error) { next(error); }
+});
+router.patch("/admin/listings/:id", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    if (!validListingId(req.params.id) || !validListingInput(req.body as Record<string, unknown>, true) || !Object.keys(req.body ?? {}).length) {
+      res.status(400).json({ error: "Invalid listing update" });
+      return;
+    }
+    const input = req.body as Record<string, unknown>;
+    const updates: Record<string, unknown> = {};
+    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "isPublished", "bedrooms", "bathrooms", "type"]) {
+      if (input[field] !== undefined) updates[field === "titleArabic" ? "titleArabic" : field] = typeof input[field] === "string" ? String(input[field]).trim() : input[field];
+    }
+    if (input.type !== undefined) updates.type = input.type;
+    updates.updatedAt = new Date();
+    const [updated] = await db.update(marketplaceListings).set(updates as Partial<typeof marketplaceListings.$inferInsert>).where(eq(marketplaceListings.id, req.params.id)).returning();
+    if (!updated) {
+      res.status(404).json({ error: "Listing not found" });
+      return;
+    }
+    res.json(listingResponse(updated));
+  } catch (error) { next(error); }
+});
+router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    if (!validListingId(req.params.id || "")) {
+      res.status(400).json({ error: "Invalid listing identifier" });
+      return;
+    }
+    const [deleted] = await db.delete(marketplaceListings).where(eq(marketplaceListings.id, req.params.id)).returning({ id: marketplaceListings.id });
+    if (!deleted) {
+      res.status(404).json({ error: "Listing not found" });
+      return;
+    }
+    res.status(204).send();
+  } catch (error) { next(error); }
 });
 router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, next) => {
   try {

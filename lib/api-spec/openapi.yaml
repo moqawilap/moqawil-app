@@ -43,6 +43,20 @@ paths:
       responses:
         "200": { description: Listing engagement keyed by listing identifier, content: { application/json: { schema: { type: object, additionalProperties: { $ref: "#/components/schemas/ListingEngagement" } } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
+  /listings:
+    get:
+      operationId: listListings
+      tags: [listings]
+      responses:
+        "200": { description: Published property listings, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/MarketplaceListing" } } } } }
+  /listings/{listingId}:
+    get:
+      operationId: getListing
+      tags: [listings]
+      parameters: [ { $ref: "#/components/parameters/ListingId" } ]
+      responses:
+        "200": { description: Published property listing, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceListing" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
   /listings/{listingId}/engagement:
     get:
       operationId: getListingEngagement
@@ -194,6 +208,36 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminContractorInput" } } } }
       responses:
         "201": { description: Managed contractor created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminContractor" } } } }
+  /admin/listings:
+    get:
+      operationId: listAdminListings
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: All property listings, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/MarketplaceListing" } } } } }
+    post:
+      operationId: createAdminListing
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminListingInput" } } } }
+      responses:
+        "201": { description: Listing created, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceListing" } } } }
+  /admin/listings/{id}:
+    patch:
+      operationId: updateAdminListing
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminListingUpdate" } } } }
+      responses:
+        "200": { description: Updated listing, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceListing" } } } }
+    delete:
+      operationId: deleteAdminListing
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        "204": { description: Listing deleted }
   /admin/subscriptions:
     get:
       operationId: listAdminSubscriptions
@@ -347,3 +391,40 @@ components:
         clientId: { type: string, minLength: 8, maxLength: 128 }
         active: { type: boolean }
       required: [action, clientId]
+    MarketplaceListing:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        titleArabic: { type: string }
+        type: { type: string, enum: [sale, rent] }
+        price: { type: string }
+        location: { type: string }
+        locationArabic: { type: string }
+        bedrooms: { type: number, minimum: 0 }
+        bathrooms: { type: number, minimum: 0 }
+        area: { type: string }
+        imageUrl: { type: [string, "null"] }
+        isPublished: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, title, titleArabic, type, price, location, locationArabic, bedrooms, bathrooms, area, imageUrl, isPublished, createdAt, updatedAt]
+    AdminListingInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        titleArabic: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [sale, rent] }
+        price: { type: string, minLength: 1, maxLength: 100 }
+        location: { type: string, minLength: 1, maxLength: 200 }
+        locationArabic: { type: string, minLength: 1, maxLength: 200 }
+        bedrooms: { type: number, minimum: 0 }
+        bathrooms: { type: number, minimum: 0 }
+        area: { type: string, minLength: 1, maxLength: 50 }
+        imageUrl: { type: [string, "null"], maxLength: 2048 }
+        isPublished: { type: boolean }
+      required: [title, titleArabic, price, location, locationArabic, area]
+    AdminListingUpdate:
+      allOf:
+        - $ref: "#/components/schemas/AdminListingInput"
+      minProperties: 1

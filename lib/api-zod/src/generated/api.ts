@@ -81,6 +81,62 @@ export const GetListingsEngagementResponse = zod.record(zod.string(), zod.object
 }))
 
 
+export const listListingsResponseBedroomsMin = 0;
+
+export const listListingsResponseBathroomsMin = 0;
+
+
+
+export const ListListingsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "titleArabic": zod.string(),
+  "type": zod.enum(['sale', 'rent']),
+  "price": zod.string(),
+  "location": zod.string(),
+  "locationArabic": zod.string(),
+  "bedrooms": zod.number().min(listListingsResponseBedroomsMin),
+  "bathrooms": zod.number().min(listListingsResponseBathroomsMin),
+  "area": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListListingsResponse = zod.array(ListListingsResponseItem)
+
+
+export const getListingPathListingIdRegExp = new RegExp('^[a-zA-Z0-9_-]{1,100}$');
+
+
+export const GetListingParams = zod.object({
+  "listingId": zod.coerce.string().regex(getListingPathListingIdRegExp)
+})
+
+export const getListingResponseBedroomsMin = 0;
+
+export const getListingResponseBathroomsMin = 0;
+
+
+
+export const GetListingResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "titleArabic": zod.string(),
+  "type": zod.enum(['sale', 'rent']),
+  "price": zod.string(),
+  "location": zod.string(),
+  "locationArabic": zod.string(),
+  "bedrooms": zod.number().min(getListingResponseBedroomsMin),
+  "bathrooms": zod.number().min(getListingResponseBathroomsMin),
+  "area": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const getListingEngagementPathListingIdRegExp = new RegExp('^[a-zA-Z0-9_-]{1,100}$');
 
 
@@ -622,6 +678,158 @@ export const CreateAdminContractorResponse = zod.object({
   "agreedContractAmountOmaniRial": zod.number().nullish(),
   "accountLinkStatus": zod.enum(['linked_clerk', 'managed_unlinked'])
 }))
+
+
+export const listAdminListingsResponseBedroomsMin = 0;
+
+export const listAdminListingsResponseBathroomsMin = 0;
+
+
+
+export const ListAdminListingsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "titleArabic": zod.string(),
+  "type": zod.enum(['sale', 'rent']),
+  "price": zod.string(),
+  "location": zod.string(),
+  "locationArabic": zod.string(),
+  "bedrooms": zod.number().min(listAdminListingsResponseBedroomsMin),
+  "bathrooms": zod.number().min(listAdminListingsResponseBathroomsMin),
+  "area": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListAdminListingsResponse = zod.array(ListAdminListingsResponseItem)
+
+
+export const createAdminListingBodyTitleMax = 200;
+
+export const createAdminListingBodyTitleArabicMax = 200;
+
+export const createAdminListingBodyPriceMax = 100;
+
+export const createAdminListingBodyLocationMax = 200;
+
+export const createAdminListingBodyLocationArabicMax = 200;
+
+export const createAdminListingBodyBedroomsMin = 0;
+
+export const createAdminListingBodyBathroomsMin = 0;
+
+export const createAdminListingBodyAreaMax = 50;
+
+export const createAdminListingBodyImageUrlMax = 2048;
+
+
+
+export const CreateAdminListingBody = zod.object({
+  "title": zod.string().min(1).max(createAdminListingBodyTitleMax),
+  "titleArabic": zod.string().min(1).max(createAdminListingBodyTitleArabicMax),
+  "type": zod.enum(['sale', 'rent']).optional(),
+  "price": zod.string().min(1).max(createAdminListingBodyPriceMax),
+  "location": zod.string().min(1).max(createAdminListingBodyLocationMax),
+  "locationArabic": zod.string().min(1).max(createAdminListingBodyLocationArabicMax),
+  "bedrooms": zod.number().min(createAdminListingBodyBedroomsMin).optional(),
+  "bathrooms": zod.number().min(createAdminListingBodyBathroomsMin).optional(),
+  "area": zod.string().min(1).max(createAdminListingBodyAreaMax),
+  "imageUrl": zod.string().max(createAdminListingBodyImageUrlMax).nullish(),
+  "isPublished": zod.boolean().optional()
+})
+
+export const createAdminListingResponseBedroomsMin = 0;
+
+export const createAdminListingResponseBathroomsMin = 0;
+
+
+
+export const CreateAdminListingResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "titleArabic": zod.string(),
+  "type": zod.enum(['sale', 'rent']),
+  "price": zod.string(),
+  "location": zod.string(),
+  "locationArabic": zod.string(),
+  "bedrooms": zod.number().min(createAdminListingResponseBedroomsMin),
+  "bathrooms": zod.number().min(createAdminListingResponseBathroomsMin),
+  "area": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const UpdateAdminListingParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateAdminListingBodyOneTitleMax = 200;
+
+export const updateAdminListingBodyOneTitleArabicMax = 200;
+
+export const updateAdminListingBodyOnePriceMax = 100;
+
+export const updateAdminListingBodyOneLocationMax = 200;
+
+export const updateAdminListingBodyOneLocationArabicMax = 200;
+
+export const updateAdminListingBodyOneBedroomsMin = 0;
+
+export const updateAdminListingBodyOneBathroomsMin = 0;
+
+export const updateAdminListingBodyOneAreaMax = 50;
+
+export const updateAdminListingBodyOneImageUrlMax = 2048;
+
+
+
+export const UpdateAdminListingBody = zod.object({
+  "title": zod.string().min(1).max(updateAdminListingBodyOneTitleMax),
+  "titleArabic": zod.string().min(1).max(updateAdminListingBodyOneTitleArabicMax),
+  "type": zod.enum(['sale', 'rent']).optional(),
+  "price": zod.string().min(1).max(updateAdminListingBodyOnePriceMax),
+  "location": zod.string().min(1).max(updateAdminListingBodyOneLocationMax),
+  "locationArabic": zod.string().min(1).max(updateAdminListingBodyOneLocationArabicMax),
+  "bedrooms": zod.number().min(updateAdminListingBodyOneBedroomsMin).optional(),
+  "bathrooms": zod.number().min(updateAdminListingBodyOneBathroomsMin).optional(),
+  "area": zod.string().min(1).max(updateAdminListingBodyOneAreaMax),
+  "imageUrl": zod.string().max(updateAdminListingBodyOneImageUrlMax).nullish(),
+  "isPublished": zod.boolean().optional()
+})
+
+export const updateAdminListingResponseBedroomsMin = 0;
+
+export const updateAdminListingResponseBathroomsMin = 0;
+
+
+
+export const UpdateAdminListingResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "titleArabic": zod.string(),
+  "type": zod.enum(['sale', 'rent']),
+  "price": zod.string(),
+  "location": zod.string(),
+  "locationArabic": zod.string(),
+  "bedrooms": zod.number().min(updateAdminListingResponseBedroomsMin),
+  "bathrooms": zod.number().min(updateAdminListingResponseBathroomsMin),
+  "area": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const DeleteAdminListingParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminListingResponse = zod.void()
 
 
 export const ListAdminSubscriptionsResponseItem = zod.object({

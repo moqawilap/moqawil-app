@@ -526,6 +526,88 @@ export interface ListingEngagementInput {
   active?: boolean;
 }
 
+export type MarketplaceListingType = typeof MarketplaceListingType[keyof typeof MarketplaceListingType];
+
+
+export const MarketplaceListingType = {
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+export interface MarketplaceListing {
+  id: string;
+  title: string;
+  titleArabic: string;
+  type: MarketplaceListingType;
+  price: string;
+  location: string;
+  locationArabic: string;
+  /** @minimum 0 */
+  bedrooms: number;
+  /** @minimum 0 */
+  bathrooms: number;
+  area: string;
+  /** @nullable */
+  imageUrl: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminListingInputType = typeof AdminListingInputType[keyof typeof AdminListingInputType];
+
+
+export const AdminListingInputType = {
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+export interface AdminListingInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  titleArabic: string;
+  type?: AdminListingInputType;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  price: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  location: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  locationArabic: string;
+  /** @minimum 0 */
+  bedrooms?: number;
+  /** @minimum 0 */
+  bathrooms?: number;
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  area: string;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  imageUrl?: string | null;
+  isPublished?: boolean;
+}
+
+export type AdminListingUpdate = AdminListingInput;
+
 /**
  * Resource not found
  */
