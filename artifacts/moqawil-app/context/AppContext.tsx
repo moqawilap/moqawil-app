@@ -3,7 +3,8 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { images, providers as seedProviders, type Provider } from '@/data/mockData';
+import { recordListingEngagement } from '@workspace/api-client-react';
+import { images, listings, providers as seedProviders, type Provider } from '@/data/mockData';
 
 type Locale = 'en' | 'ar';
 type LocationState = {
@@ -22,6 +23,7 @@ type AppContextValue = {
   savedIds: string[];
   toggleSaved: (id: string) => void;
   isSaved: (id: string) => boolean;
+  engagementClientId: string | null;
   activeService: string | null;
   setActiveService: (service: string | null) => void;
   managedProviders: Provider[];
@@ -38,6 +40,9 @@ type AppContextValue = {
 
 const STORAGE_KEY = '@moqawil/preferences-v2';
 const defaultLocation: LocationState = { city: 'Muscat', area: 'Al Khuwair', source: 'default' };
+function createEngagementClientId() {
+  return `moqawil-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+}
 
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -46,6 +51,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<LocationState>(defaultLocation);
   const [locationLoading, setLocationLoading] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [engagementClientId, setEngagementClientId] = useState<string | null>(null);
   const [activeService, setActiveService] = useState<string | null>(null);
   const [managedProviders, setManagedProviders] = useState<Provider[]>(seedProviders);
 
@@ -53,18 +59,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
         if (!value) return;
-        const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; managedProviders?: Provider[] };
+         const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; managedProviders?: Provider[]; engagementClientId?: string };
         if (parsed.locale) setLocaleState(parsed.locale);
         if (parsed.location) setLocation(parsed.location);
         if (parsed.savedIds) setSavedIds(parsed.savedIds);
         if (parsed.managedProviders) setManagedProviders(parsed.managedProviders);
+         setEngagementClientId(parsed.engagementClientId ?? createEngagementClientId());
       })
-      .catch(() => undefined);
+       .catch(() => setEngagementClientId(createEngagementClientId()));
   }, []);
 
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ locale, location, savedIds, managedProviders })).catch(() => undefined);
-  }, [locale, location, savedIds, managedProviders]);
+     if (engagementClientId) {
+       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ locale, location, savedIds, managedProviders, engagementClientId })).catch(() => undefined);
+     }
+   }, [locale, location, savedIds, managedProviders, engagementClientId]);
 
   const setLocale = (nextLocale: Locale) => {
     setLocaleState(nextLocale);
@@ -72,7 +81,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleSaved = (id: string) => {
+    const willSave = !savedIds.includes(id);
     setSavedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    if (engagementClientId && listings.some((listing) => listing.id === id)) {
+      recordListingEngagement(id, { action: 'save', clientId: engagementClientId, active: willSave }).catch(() => undefined);
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
   };
 
@@ -180,6 +193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       savedIds,
       toggleSaved,
       isSaved: (id: string) => savedIds.includes(id),
+       engagementClientId,
       activeService,
       setActiveService,
       managedProviders,
@@ -187,7 +201,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateProvider,
       removeProvider,
     }),
-     [locale, location, locationLoading, savedIds, activeService, managedProviders],
+     [locale, location, locationLoading, savedIds, engagementClientId, activeService, managedProviders],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

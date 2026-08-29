@@ -3,18 +3,26 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, BrandMark, IconButton } from '@/components/MoqawilUI';
+import { ActionButton, BrandMark, IconButton, ListingEngagementMetrics } from '@/components/MoqawilUI';
 import { listings } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useRecordListingEngagement } from '@workspace/api-client-react';
 
 export default function ListingDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isArabic, isSaved, toggleSaved } = useApp();
+  const { isArabic, isSaved, toggleSaved, engagementClientId } = useApp();
   const listing = listings.find((item) => item.id === id) ?? listings[0];
+  const contact = useRecordListingEngagement();
+  const openContact = () => {
+    if (engagementClientId) {
+      contact.mutate({ listingId: listing.id, data: { action: 'contact', clientId: engagementClientId } });
+    }
+    Linking.openURL('tel:+96877224535');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -22,7 +30,7 @@ export default function ListingDetail() {
         <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
           <IconButton icon="arrow-left" onPress={() => router.back()} accessibilityLabel="Go back" />
           <BrandMark compact />
-          <IconButton icon="heart" active={isSaved(listing.id)} onPress={() => toggleSaved(listing.id)} accessibilityLabel="Save property" />
+          <IconButton icon="bookmark" active={isSaved(listing.id)} onPress={() => toggleSaved(listing.id)} accessibilityLabel={isArabic ? 'حفظ الإعلان' : 'Save property'} />
         </View>
         <View style={styles.heroWrap}>
           <Image source={listing.image} style={styles.heroImage} />
@@ -37,6 +45,7 @@ export default function ListingDetail() {
               <View key={label} style={styles.spec}><Text style={[styles.specValue, { color: colors.foreground }]}>{value}</Text><Text style={[styles.specLabel, { color: colors.mutedForeground }]}>{label}</Text></View>
             ))}
           </View>
+          <ListingEngagementMetrics listingId={listing.id} saved={isSaved(listing.id)} onSave={() => toggleSaved(listing.id)} />
           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>A home with room to grow</Text>
           <Text style={[styles.description, { color: colors.mutedForeground }]}>Explore the full property details, ask questions directly, and arrange a visit with the listing contact.</Text>
           <View style={[styles.tip, { backgroundColor: colors.primarySoft }]}>
@@ -46,7 +55,7 @@ export default function ListingDetail() {
         </View>
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
-        <ActionButton label="Contact agent" icon="phone" onPress={() => Linking.openURL('tel:+96877224535')} style={{ flex: 1 }} />
+        <ActionButton label={isArabic ? 'اتصل بالمعلن' : 'Contact agent'} icon="phone" onPress={openContact} style={{ flex: 1 }} />
         <ActionButton label="Arrange visit" icon="calendar" onPress={() => Linking.openURL('mailto:moqawil.om@gmail.com')} secondary style={{ flex: 1 }} />
       </View>
     </View>

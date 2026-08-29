@@ -11,6 +11,9 @@ import {
   ViewStyle,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
+import { useApp } from '@/context/AppContext';
+import { useGetListingEngagement, useRecordListingEngagement, getGetListingEngagementQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   const colors = useColors();
@@ -180,7 +183,7 @@ export function PropertyCard({
   onSave,
   featured = false,
 }: {
-  listing: { title: string; price: string; location: string; beds: number; baths: number; area: string; image: ImageSourcePropType; type: string };
+  listing: { id: string; title: string; price: string; location: string; beds: number; baths: number; area: string; image: ImageSourcePropType; type: string };
   saved?: boolean;
   onPress: () => void;
   onSave: () => void;
@@ -192,9 +195,6 @@ export function PropertyCard({
       <View style={styles.propertyImageWrap}>
         <Image source={listing.image} style={styles.propertyImage} />
         <View style={styles.propertyTypePill}><Text style={styles.propertyTypeText}>{listing.type}</Text></View>
-        <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved' : 'Save property'} onPress={onSave} style={({ pressed }) => [styles.propertyHeart, { backgroundColor: 'rgba(8,40,74,0.78)' }, pressed && styles.pressed]} hitSlop={6}>
-          <Feather name="heart" size={16} color={saved ? '#FF8E8E' : '#FFFFFF'} fill={saved ? '#FF8E8E' : 'transparent'} />
-        </Pressable>
       </View>
       <View style={styles.propertyInfo}>
         <Text numberOfLines={1} style={[styles.propertyTitle, { color: colors.foreground }]}>{listing.title}</Text>
@@ -210,8 +210,72 @@ export function PropertyCard({
           <Text style={[styles.propertyDot, { color: colors.border }]}>•</Text>
           <Text style={[styles.propertySpec, { color: colors.mutedForeground }]}>{listing.area}</Text>
         </View>
+          <ListingEngagementMetrics listingId={listing.id} saved={saved} onSave={onSave} compact />
       </View>
     </Pressable>
+  );
+}
+
+function EngagementStat({ icon, value, label, compact = false }: { icon: keyof typeof Feather.glyphMap; value: number; label: string; compact?: boolean }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.engagementStat, compact && styles.engagementStatCompact]}>
+      <Feather name={icon} size={compact ? 12 : 14} color={colors.mutedForeground} />
+      <Text style={[styles.engagementValue, { color: colors.foreground }, compact && styles.engagementValueCompact]}>{value}</Text>
+      {!compact ? <Text numberOfLines={1} style={[styles.engagementLabel, { color: colors.mutedForeground }]}>{label}</Text> : null}
+    </View>
+  );
+}
+
+export function ListingEngagementMetrics({ listingId, saved = false, onSave, compact = false }: { listingId: string; saved?: boolean; onSave?: () => void; compact?: boolean }) {
+  const colors = useColors();
+  const { isArabic, engagementClientId } = useApp();
+  const queryClient = useQueryClient();
+  const params = engagementClientId ? { clientId: engagementClientId } : undefined;
+  const query = useGetListingEngagement(listingId, params, { query: { enabled: Boolean(engagementClientId) } });
+  const record = useRecordListingEngagement({
+    mutation: {
+      onSuccess: (next) => {
+        queryClient.setQueryData(getGetListingEngagementQueryKey(listingId, params), next);
+        queryClient.invalidateQueries({ queryKey: ['/api/listings/engagement'] });
+      },
+    },
+  });
+  const viewed = React.useRef(false);
+  React.useEffect(() => {
+    if (!engagementClientId || viewed.current) return;
+    viewed.current = true;
+    record.mutate({ listingId, data: { action: 'view', clientId: engagementClientId } });
+  }, [engagementClientId, listingId]);
+
+  const data = query.data;
+  const submit = (action: 'like' | 'save', active: boolean) => {
+    if (!engagementClientId || record.isPending) return;
+    record.mutate({ listingId, data: { action, clientId: engagementClientId, active } });
+  };
+  const liked = data?.liked ?? false;
+
+  return (
+    <View style={[styles.engagementPanel, { borderTopColor: colors.border }, compact && styles.engagementPanelCompact]}>
+      <View style={[styles.engagementStats, compact && styles.engagementStatsCompact]}>
+        <EngagementStat icon="eye" value={data?.views ?? 0} label={isArabic ? 'مشاهدة' : 'Views'} compact={compact} />
+        <EngagementStat icon="heart" value={data?.likes ?? 0} label={isArabic ? 'إعجاب' : 'Likes'} compact={compact} />
+        <EngagementStat icon="bookmark" value={data?.saves ?? 0} label={isArabic ? 'حفظ' : 'Saves'} compact={compact} />
+        <EngagementStat icon="phone" value={data?.contacts ?? 0} label={isArabic ? 'تواصل' : 'Contacts'} compact={compact} />
+      </View>
+      <View style={[styles.engagementActions, compact && styles.engagementActionsCompact]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={liked ? (isArabic ? 'إلغاء الإعجاب' : 'Unlike listing') : (isArabic ? 'أعجبني الإعلان' : 'Like listing')} onPress={() => submit('like', !liked)} style={({ pressed }) => [styles.engagementAction, { backgroundColor: liked ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
+          <Feather name="heart" size={compact ? 13 : 15} color={liked ? colors.primary : colors.mutedForeground} fill={liked ? colors.primary : 'transparent'} />
+          <Text style={[styles.engagementActionText, { color: liked ? colors.primary : colors.mutedForeground }]}>{isArabic ? 'أعجبني' : 'Like'}</Text>
+        </Pressable>
+        {onSave ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={saved ? (isArabic ? 'إزالة الإعلان من المحفوظات' : 'Remove listing from saved') : (isArabic ? 'حفظ الإعلان' : 'Save listing')} onPress={() => { onSave(); submit('save', !saved); }} style={({ pressed }) => [styles.engagementAction, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
+            <Feather name="bookmark" size={compact ? 13 : 15} color={saved ? colors.primary : colors.mutedForeground} fill={saved ? colors.primary : 'transparent'} />
+            <Text style={[styles.engagementActionText, { color: saved ? colors.primary : colors.mutedForeground }]}>{isArabic ? 'حفظ' : 'Save'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
@@ -320,7 +384,6 @@ export const styles = StyleSheet.create({
   propertyImage: { width: '100%', height: '100%' },
   propertyTypePill: { position: 'absolute', left: 12, top: 12, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.93)' },
   propertyTypeText: { fontSize: 10, fontWeight: '800', color: '#153457' },
-  propertyHeart: { position: 'absolute', right: 11, top: 11, width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   propertyInfo: { padding: 14, gap: 6 },
   propertyTitle: { fontSize: 14, fontWeight: '800' },
   propertyPrice: { fontSize: 15, fontWeight: '800' },
@@ -329,6 +392,19 @@ export const styles = StyleSheet.create({
   propertySpecs: { flexDirection: 'row', gap: 7, alignItems: 'center', borderTopWidth: 1, paddingTop: 9, marginTop: 3 },
   propertySpec: { fontSize: 10 },
   propertyDot: { fontSize: 12 },
+  engagementPanel: { borderTopWidth: 1, paddingTop: 12, marginTop: 5, gap: 10 },
+  engagementPanelCompact: { paddingTop: 9, marginTop: 2, gap: 8 },
+  engagementStats: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
+  engagementStatsCompact: { gap: 2 },
+  engagementStat: { flex: 1, alignItems: 'center', gap: 3 },
+  engagementStatCompact: { gap: 2 },
+  engagementValue: { fontSize: 12, fontWeight: '800' },
+  engagementValueCompact: { fontSize: 11 },
+  engagementLabel: { fontSize: 9 },
+  engagementActions: { flexDirection: 'row', gap: 8 },
+  engagementActionsCompact: { gap: 6 },
+  engagementAction: { flex: 1, minHeight: 32, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  engagementActionText: { fontSize: 10, fontWeight: '800' },
   emptyState: { borderRadius: 22, borderWidth: 1, alignItems: 'center', padding: 30, gap: 8, marginTop: 16, shadowColor: '#08284A', shadowOpacity: 0.035, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 1 },
   emptyIcon: { width: 55, height: 55, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   emptyTitle: { fontSize: 16, fontWeight: '800' },
