@@ -440,6 +440,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
   const [form, setForm] = useState<SpecialistForm>(blankSpecialist());
   const [editing, setEditing] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [specialtyQuery, setSpecialtyQuery] = useState('');
   const designers = kind === 'designers';
   const options = specialistOptions(kind);
   const title = designers ? text(isArabic, 'Designers', 'المصممون') : text(isArabic, 'Maintenance providers', 'مقدمو خدمات الصيانة');
@@ -486,6 +487,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
       setEditing(null);
       setForm(blankSpecialist());
     }
+    setSpecialtyQuery('');
     setShowForm(true);
   };
   const save = () => {
@@ -565,8 +567,16 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
           </View>
           <View style={styles.formGroupFull}>
             <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, designers ? 'Design specialties' : 'Maintenance services', designers ? 'تخصصات التصميم' : 'خدمات الصيانة')}</Text>
+            <TextInput
+              testID={`${kind}-specialty-filter`}
+              value={specialtyQuery}
+              onChangeText={setSpecialtyQuery}
+              placeholder={text(isArabic, designers ? 'Filter: interior, facade, kitchen...' : 'Filter maintenance services...', designers ? 'فلترة: تصميم داخلي، واجهات، مطابخ...' : 'فلترة خدمات الصيانة...')}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background, marginBottom: 8 }]}
+            />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.buildingChips}>
-              {options.map((option) => {
+              {options.filter((option) => !specialtyQuery.trim() || `${option.name} ${option.nameAr}`.toLowerCase().includes(specialtyQuery.trim().toLowerCase())).map((option) => {
                 const selected = form.serviceNames.includes(option.name);
                 return <Pressable key={option.name} testID={`${kind}-service-${option.name}`} onPress={() => toggleSpecialty(option.name)} style={({ pressed }) => [styles.buildingChip, { backgroundColor: selected ? colors.primary : colors.surface, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}>
                   <Text style={{ color: selected ? colors.primaryForeground : colors.foreground }}>{isArabic ? option.nameAr : option.name}</Text>
