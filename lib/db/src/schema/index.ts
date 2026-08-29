@@ -34,6 +34,10 @@ export const requestRecipientStatusEnum = pgEnum("request_recipient_status", ["i
 export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "accepted", "rejected", "withdrawn"]);
 export const listingEngagementActionEnum = pgEnum("listing_engagement_action", ["view", "like", "save", "contact"]);
 export const marketplaceListingTypeEnum = pgEnum("marketplace_listing_type", ["sale", "rent"]);
+export const adCampaignStatusEnum = pgEnum("ad_campaign_status", ["draft", "active", "paused", "completed"]);
+export const adBillingModelEnum = pgEnum("ad_billing_model", ["cpm", "cpc", "cpa"]);
+export const adMediaTypeEnum = pgEnum("ad_media_type", ["image", "video"]);
+export const adEventTypeEnum = pgEnum("ad_event_type", ["impression", "click", "conversion"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -258,6 +262,56 @@ export const marketplaceRatings = pgTable("marketplace_ratings", {
   index("marketplace_ratings_subject_idx").on(table.subjectType, table.subjectId),
 ]);
 
+export type AdAudience = {
+  cities?: string[];
+  wilayats?: string[];
+  serviceCategories?: string[];
+};
+
+export const adCampaigns = pgTable("ad_campaigns", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  contractorId: uuid("contractor_id").notNull().references(() => contractorProfiles.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  ctaLabel: varchar("cta_label", { length: 50 }).notNull(),
+  ctaUrl: text("cta_url"),
+  mediaUrl: text("media_url").notNull(),
+  mediaType: adMediaTypeEnum("media_type").notNull().default("image"),
+  audience: jsonb("audience").$type<AdAudience>().notNull().default({}),
+  totalBudgetOmaniRial: numeric("total_budget_omani_rial", { precision: 14, scale: 6 }).notNull(),
+  dailyBudgetOmaniRial: numeric("daily_budget_omani_rial", { precision: 14, scale: 6 }).notNull(),
+  billingModel: adBillingModelEnum("billing_model").notNull(),
+  unitRateOmaniRial: numeric("unit_rate_omani_rial", { precision: 14, scale: 6 }).notNull(),
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+  status: adCampaignStatusEnum("status").notNull().default("draft"),
+  impressionCount: integer("impression_count").notNull().default(0),
+  clickCount: integer("click_count").notNull().default(0),
+  conversionCount: integer("conversion_count").notNull().default(0),
+  spentOmaniRial: numeric("spent_omani_rial", { precision: 14, scale: 6 }).notNull().default("0.000000"),
+  ...timestamps,
+}, (table) => [
+  index("ad_campaigns_contractor_idx").on(table.contractorId, table.createdAt),
+  index("ad_campaigns_delivery_idx").on(table.status, table.startAt, table.endAt),
+  check("ad_campaigns_total_budget_check", sql`${table.totalBudgetOmaniRial} > 0`),
+  check("ad_campaigns_daily_budget_check", sql`${table.dailyBudgetOmaniRial} > 0 and ${table.dailyBudgetOmaniRial} <= ${table.totalBudgetOmaniRial}`),
+  check("ad_campaigns_rate_check", sql`${table.unitRateOmaniRial} > 0`),
+  check("ad_campaigns_date_check", sql`${table.endAt} > ${table.startAt}`),
+]);
+
+export const adCampaignEvents = pgTable("ad_campaign_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  campaignId: uuid("campaign_id").notNull().references(() => adCampaigns.id, { onDelete: "cascade" }),
+  eventType: adEventTypeEnum("event_type").notNull(),
+  eventKey: varchar("event_key", { length: 128 }).notNull(),
+  costOmaniRial: numeric("cost_omani_rial", { precision: 14, scale: 6 }).notNull().default("0.000000"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ad_campaign_events_unique_idx").on(table.campaignId, table.eventType, table.eventKey),
+  index("ad_campaign_events_campaign_idx").on(table.campaignId, table.createdAt),
+  index("ad_campaign_events_type_idx").on(table.eventType, table.createdAt),
+]);
+
 // Kept for schema compatibility with installations that already created this table.
 export const listingReviews = pgTable("listing_reviews", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -290,7 +344,7 @@ export const auditEvents = pgTable("audit_events", {
 export const contractorRelations = relations(contractorProfiles, ({ one, many }) => ({
   user: one(users, { fields: [contractorProfiles.userId], references: [users.id] }),
   services: many(services), projects: many(projects), reviews: many(reviews), subscription: one(subscriptions),
-  requestRecipients: many(requestRecipients), quotes: many(quotes),
+  requestRecipients: many(requestRecipients), quotes: many(quotes), adCampaigns: many(adCampaigns),
 }));
 
 export const insertContractorProfileSchema = createInsertSchema(contractorProfiles).omit({ id: true, createdAt: true, updatedAt: true });
@@ -300,5 +354,7 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type ListingEngagement = typeof listingEngagement.$inferSelect;
 export type MarketplaceListing = typeof marketplaceListings.$inferSelect;
+export type AdCampaign = typeof adCampaigns.$inferSelect;
+export type AdCampaignEvent = typeof adCampaignEvents.$inferSelect;
 export type RankingWeights = { rating: number; reviews: number; projects: number; profile: number; verification: number; activity: number; engagement: number };
 export const rankingWeightsSchema = z.object({ rating: z.number().min(0), reviews: z.number().min(0), projects: z.number().min(0), profile: z.number().min(0), verification: z.number().min(0), activity: z.number().min(0), engagement: z.number().min(0) });
