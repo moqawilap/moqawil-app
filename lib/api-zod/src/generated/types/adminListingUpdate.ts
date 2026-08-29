@@ -53,5 +53,11 @@ export interface AdminListingUpdate {
      * @nullable
      */
   contactPhone?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     * @nullable
+     */
+  adminRating?: number | null;
   isPublished?: boolean;
 }

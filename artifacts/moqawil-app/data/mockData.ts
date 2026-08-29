@@ -44,6 +44,7 @@ export type Listing = {
   image: ImageSourcePropType;
   phone?: string;
   featured?: boolean;
+  rating?: number;
   createdAt?: string;
 };
 
@@ -62,6 +63,7 @@ export function marketplaceListingToLocal(listing: MarketplaceListing): Listing 
     area: listing.area,
     image: listing.imageUrl ? { uri: listing.imageUrl } : images.interior,
     phone: listing.contactPhone ?? undefined,
+    rating: listing.rating,
     createdAt: listing.createdAt,
   };
 }

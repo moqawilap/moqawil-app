@@ -398,13 +398,12 @@ components:
       type: object
       properties:
         listingId: { type: string }
-        views: { type: number, minimum: 0 }
         likes: { type: number, minimum: 0 }
         saves: { type: number, minimum: 0 }
         contacts: { type: number, minimum: 0 }
         liked: { type: boolean }
         saved: { type: boolean }
-      required: [listingId, views, likes, saves, contacts, liked, saved]
+      required: [listingId, likes, saves, contacts, liked, saved]
     ListingEngagementInput:
       type: object
       properties:
@@ -427,10 +426,15 @@ components:
         area: { type: string }
         imageUrl: { type: [string, "null"] }
         contactPhone: { type: [string, "null"] }
+        rating: { type: number, minimum: 0, maximum: 5 }
+        views: { type: number, minimum: 0, description: Admin-only metric; omitted from public listing responses. }
+        likes: { type: number, minimum: 0, description: Admin-only aggregate on listing management responses. }
+        saves: { type: number, minimum: 0, description: Admin-only aggregate on listing management responses. }
+        contacts: { type: number, minimum: 0, description: Admin-only aggregate on listing management responses. }
         isPublished: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, title, titleArabic, type, price, location, locationArabic, bedrooms, bathrooms, area, imageUrl, contactPhone, isPublished, createdAt, updatedAt]
+      required: [id, title, titleArabic, type, price, location, locationArabic, bedrooms, bathrooms, area, imageUrl, contactPhone, rating, isPublished, createdAt, updatedAt]
     AdminListingInput:
       type: object
       properties:
@@ -445,6 +449,7 @@ components:
         area: { type: string, minLength: 1, maxLength: 50 }
         imageUrl: { type: [string, "null"], maxLength: 2048 }
         contactPhone: { type: [string, "null"], maxLength: 32 }
+        adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }
         isPublished: { type: boolean }
       required: [title, titleArabic, price, location, locationArabic, area]
     AdminListingUpdate:
@@ -461,5 +466,6 @@ components:
         area: { type: string, minLength: 1, maxLength: 50 }
         imageUrl: { type: [string, "null"], maxLength: 2048 }
         contactPhone: { type: [string, "null"], maxLength: 32 }
+        adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }
         isPublished: { type: boolean }
       minProperties: 1

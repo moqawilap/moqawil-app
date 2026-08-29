@@ -9,8 +9,6 @@
 export interface ListingEngagement {
   listingId: string;
   /** @minimum 0 */
-  views: number;
-  /** @minimum 0 */
   likes: number;
   /** @minimum 0 */
   saves: number;

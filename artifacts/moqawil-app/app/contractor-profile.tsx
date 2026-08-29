@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, ScreenHeader } from '@/components/MoqawilUI';
+import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getGetMeQueryKey, getGetMyContractorProfileQueryKey, useGetMe, useGetMyContractorProfile, useUpsertMyContractorProfile } from '@workspace/api-client-react';
@@ -39,8 +39,7 @@ export default function ContractorProfileScreen() {
   } });
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   if (!isSignedIn) return <View style={[styles.page, styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول للانضمام كمقاول' : 'Sign in to join as a contractor'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
-  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }} keyboardShouldPersistTaps="handled"><View style={styles.content}>
-    <Pressable testID="contractor-profile-back" onPress={() => router.back()}><Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} /></Pressable>
+  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><FixedBackButton testID="contractor-profile-back" onPress={() => router.back()} /><ScrollView contentContainerStyle={{ paddingTop: insets.top + 72, paddingBottom: 45 }} keyboardShouldPersistTaps="handled"><View style={styles.content}>
     <ScreenHeader title={isArabic ? 'ملف المقاول' : 'Contractor profile'} subtitle={profile.data ? (isArabic ? 'حدّث بيانات ملفك' : 'Keep your listing details up to date') : (isArabic ? 'أنشئ ملفك وستظهر تفاصيل التجربة من الخادم' : 'Create your profile; plan details come from the server')} />
     {profile.isLoading ? <ActivityIndicator testID="contractor-profile-loading" color={colors.primary} /> : null}
     {([['businessName', isArabic ? 'اسم المنشأة' : 'Business name'], ['city', isArabic ? 'المحافظة' : 'Governorate'], ['wilayat', isArabic ? 'الولاية' : 'Wilayat'], ['serviceArea', isArabic ? 'منطقة الخدمة' : 'Service area'], ['phone', isArabic ? 'رقم الهاتف' : 'Phone'], ['bio', isArabic ? 'نبذة عن الأعمال والخدمات' : 'Business and services bio']] as const).map(([key, label]) => <View key={key}><Text style={[styles.label, { color: colors.foreground }]}>{label}</Text><TextInput testID={`contractor-${key}`} value={form[key]} onChangeText={(value) => update(key, value)} multiline={key === 'bio'} textAlign={isArabic ? 'right' : 'left'} placeholder={label} placeholderTextColor={colors.mutedForeground} style={[styles.input, key === 'bio' && styles.bio, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>)}

@@ -91,6 +91,7 @@ function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
     area: listing.area,
     imageUrl: listing.imageUrl,
     contactPhone: listing.contactPhone,
+    rating: listing.adminRating ?? 0,
     isPublished: listing.isPublished,
     createdAt: listing.createdAt.toISOString(),
     updatedAt: listing.updatedAt.toISOString(),
@@ -107,12 +108,12 @@ function validListingInput(input: Record<string, unknown>, partial = false) {
   if (input.imageUrl !== undefined && input.imageUrl !== null && !validOptionalText(input.imageUrl, 2048)) return false;
   if (input.contactPhone !== undefined && input.contactPhone !== null && !validOptionalText(input.contactPhone, 32)) return false;
   if (input.isPublished !== undefined && typeof input.isPublished !== "boolean") return false;
+  if (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || Number(input.adminRating) < 1 || Number(input.adminRating) > 5)) return false;
   return true;
 }
 function listingActionRow(row: typeof listingEngagement.$inferSelect, actions: Set<string>) {
   return {
     listingId: row.listingId,
-    views: row.viewCount,
     likes: row.likeCount,
     saves: row.saveCount,
     contacts: row.contactCount,
@@ -616,7 +617,12 @@ router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, ne
 router.get("/admin/listings", requireUser, requireAdmin, async (_req, res, next) => {
   try {
     const rows = await db.select().from(marketplaceListings).orderBy(desc(marketplaceListings.createdAt));
-    res.json(rows.map(listingResponse));
+    const metrics = await db.select().from(listingEngagement);
+    const byId = new Map(metrics.map((item) => [item.listingId, item]));
+    res.json(rows.map((item) => {
+      const engagement = byId.get(item.id);
+      return { ...listingResponse(item), views: engagement?.viewCount ?? 0, likes: engagement?.likeCount ?? 0, saves: engagement?.saveCount ?? 0, contacts: engagement?.contactCount ?? 0 };
+    }));
   } catch (error) { next(error); }
 });
 router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next) => {
@@ -641,6 +647,7 @@ router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next)
       area: String(input.area).trim(),
       imageUrl: input.imageUrl ? String(input.imageUrl).trim() : null,
       contactPhone: input.contactPhone ? String(input.contactPhone).trim() : null,
+      adminRating: input.adminRating === null || input.adminRating === undefined ? null : Number(input.adminRating),
       isPublished: input.isPublished === true,
     }).returning();
     res.status(201).json(listingResponse(created));
@@ -654,7 +661,7 @@ router.patch("/admin/listings/:id", requireUser, requireAdmin, async (req, res, 
     }
     const input = req.body as Record<string, unknown>;
     const updates: Record<string, unknown> = {};
-    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "contactPhone", "isPublished", "bedrooms", "bathrooms", "type"]) {
+    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "contactPhone", "adminRating", "isPublished", "bedrooms", "bathrooms", "type"]) {
       if (input[field] !== undefined) updates[field === "titleArabic" ? "titleArabic" : field] = typeof input[field] === "string" ? String(input[field]).trim() : input[field];
     }
     if (input.type !== undefined) updates.type = input.type;

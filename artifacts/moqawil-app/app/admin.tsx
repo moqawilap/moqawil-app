@@ -367,9 +367,10 @@ type ListingForm = {
   area: string;
   imageUrl: string;
   contactPhone: string;
+  adminRating: string;
   isPublished: boolean;
 };
-const blankListing = (): ListingForm => ({ title: '', titleArabic: '', type: 'sale', price: '', location: '', locationArabic: '', bedrooms: '0', bathrooms: '0', area: '', imageUrl: '', contactPhone: '', isPublished: false });
+const blankListing = (): ListingForm => ({ title: '', titleArabic: '', type: 'sale', price: '', location: '', locationArabic: '', bedrooms: '0', bathrooms: '0', area: '', imageUrl: '', contactPhone: '', adminRating: '', isPublished: false });
 
 function ListingsTab() {
   const colors = useColors();
@@ -389,7 +390,7 @@ function ListingsTab() {
     if (!listing) { setForm(blankListing()); setEditing(null); }
     else {
       setEditing(listing.id);
-      setForm({ title: listing.title, titleArabic: listing.titleArabic, type: listing.type, price: listing.price, location: listing.location, locationArabic: listing.locationArabic, bedrooms: String(listing.bedrooms), bathrooms: String(listing.bathrooms), area: listing.area, imageUrl: listing.imageUrl ?? '', contactPhone: listing.contactPhone ?? '', isPublished: listing.isPublished });
+      setForm({ title: listing.title, titleArabic: listing.titleArabic, type: listing.type, price: listing.price, location: listing.location, locationArabic: listing.locationArabic, bedrooms: String(listing.bedrooms), bathrooms: String(listing.bathrooms), area: listing.area, imageUrl: listing.imageUrl ?? '', contactPhone: listing.contactPhone ?? '', adminRating: listing.rating ? String(listing.rating) : '', isPublished: listing.isPublished });
     }
     setShowForm(true);
   };
@@ -402,7 +403,7 @@ function ListingsTab() {
       title: form.title.trim(), titleArabic: form.titleArabic.trim(), type: form.type,
       price: form.price.trim(), location: form.location.trim(), locationArabic: form.locationArabic.trim(),
       bedrooms: Math.max(0, Number(form.bedrooms) || 0), bathrooms: Math.max(0, Number(form.bathrooms) || 0),
-      area: form.area.trim(), imageUrl: form.imageUrl.trim() || null, contactPhone: form.contactPhone.trim() || null, isPublished: form.isPublished,
+      area: form.area.trim(), imageUrl: form.imageUrl.trim() || null, contactPhone: form.contactPhone.trim() || null, adminRating: form.adminRating === '' ? null : Number(form.adminRating), isPublished: form.isPublished,
     };
     editing ? update.mutate({ id: editing, data }) : create.mutate({ data });
   };
@@ -423,10 +424,10 @@ function ListingsTab() {
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? text(isArabic, 'Edit Listing', 'تعديل الإعلان') : text(isArabic, 'New Listing', 'إعلان جديد')}</Text>
           <View style={styles.formGrid}>
-            {([['title', 'Title', 'العنوان'], ['titleArabic', 'Arabic title', 'العنوان بالعربية'], ['price', 'Price', 'السعر'], ['location', 'Location', 'الموقع'], ['locationArabic', 'Arabic location', 'الموقع بالعربية'], ['area', 'Area', 'المساحة'], ['bedrooms', 'Bedrooms', 'غرف النوم'], ['bathrooms', 'Bathrooms', 'دورات المياه'], ['contactPhone', 'Contact phone', 'هاتف التواصل'], ['imageUrl', 'Image URL', 'رابط الصورة']] as const).map(([key, label, labelAr]) => (
+            {([['title', 'Title', 'العنوان'], ['titleArabic', 'Arabic title', 'العنوان بالعربية'], ['price', 'Price', 'السعر'], ['location', 'Location', 'الموقع'], ['locationArabic', 'Arabic location', 'الموقع بالعربية'], ['area', 'Area', 'المساحة'], ['bedrooms', 'Bedrooms', 'غرف النوم'], ['bathrooms', 'Bathrooms', 'دورات المياه'], ['adminRating', 'Rating (1-5)', 'التقييم (1-5)'], ['contactPhone', 'Contact phone', 'هاتف التواصل'], ['imageUrl', 'Image URL', 'رابط الصورة']] as const).map(([key, label, labelAr]) => (
               <View key={key} style={styles.formGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
-                <TextInput testID={`listing-field-${key}`} value={String(form[key])} onChangeText={(value) => set(key, value)} keyboardType={key === 'bedrooms' || key === 'bathrooms' ? 'number-pad' : 'default'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+                <TextInput testID={`listing-field-${key}`} value={String(form[key])} onChangeText={(value) => set(key, value)} keyboardType={key === 'bedrooms' || key === 'bathrooms' || key === 'adminRating' ? 'number-pad' : 'default'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
           </View>
@@ -462,6 +463,7 @@ function ListingsTab() {
             </View>
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{listing.location} • {listing.price} • {listing.type === 'sale' ? text(isArabic, 'For sale', 'للبيع') : text(isArabic, 'For rent', 'للإيجار')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{`★ ${listing.rating.toFixed(1)} • ${listing.likes ?? 0} ${text(isArabic, 'likes', 'إعجاب')} • ${listing.saves ?? 0} ${text(isArabic, 'saves', 'حفظ')} • ${listing.contacts ?? 0} ${text(isArabic, 'contacts', 'تواصل')} • ${listing.views ?? 0} ${text(isArabic, 'views', 'مشاهدة')}`}</Text>
           <View style={styles.cardActions}>
             <Pressable testID={`edit-listing-${listing.id}`} onPress={() => begin(listing)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
             <Pressable testID={`toggle-listing-${listing.id}`} onPress={() => update.mutate({ id: listing.id, data: { isPublished: !listing.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{listing.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text></Pressable>

@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, BrandMark, IconButton, ListingEngagementMetrics } from '@/components/MoqawilUI';
+import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagementMetrics, Rating } from '@/components/MoqawilUI';
 import { listings, marketplaceListingToLocal } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -28,9 +28,10 @@ export default function ListingDetail() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FixedBackButton testID="listing-back" onPress={() => router.back()} />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
-          <IconButton icon="arrow-left" onPress={() => router.back()} accessibilityLabel="Go back" />
+          <View style={{ width: 44 }} />
           <BrandMark compact />
           <IconButton icon="bookmark" active={isSaved(listing.id)} onPress={() => toggleSaved(listing.id, { listing: true })} accessibilityLabel={isArabic ? 'حفظ الإعلان' : 'Save property'} />
         </View>
@@ -41,6 +42,7 @@ export default function ListingDetail() {
         <View style={styles.content}>
           <Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? listing.titleAr : listing.title}</Text>
           <Text style={[styles.price, { color: colors.primary }]}>{listing.price}</Text>
+          {listing.rating !== undefined ? <Rating value={listing.rating} /> : null}
           <View style={styles.locationRow}><Feather name="map-pin" size={15} color={colors.mutedForeground} /><Text style={[styles.location, { color: colors.mutedForeground }]}>{isArabic ? listing.locationAr : listing.location}</Text></View>
           <View style={[styles.specs, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             {[[String(listing.beds), 'Bedrooms'], [String(listing.baths), 'Bathrooms'], [listing.area, 'Total area']].map(([value, label]) => (

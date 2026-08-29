@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, EmptyState, ScreenHeader } from '@/components/MoqawilUI';
+import { ActionButton, EmptyState, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getListMyServiceRequestsQueryKey, getListServiceRequestQuotesQueryKey, useAcceptQuote, useListMyServiceRequests, useListServiceRequestQuotes } from '@workspace/api-client-react';
@@ -20,8 +20,7 @@ export default function RequestsScreen() {
   const quotes = useListServiceRequestQuotes(selectedId ?? '', { query: { queryKey: getListServiceRequestQuotesQueryKey(selectedId ?? ''), enabled: !!selectedId } });
   const accept = useAcceptQuote({ mutation: { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyServiceRequestsQueryKey() }); if (selectedId) client.invalidateQueries({ queryKey: getListServiceRequestQuotesQueryKey(selectedId) }); Alert.alert(isArabic ? 'تم اختيار العرض' : 'Quote accepted', isArabic ? 'يمكنك الآن التواصل مع الورشة والبدء بالعمل.' : 'You can now contact the workshop and start the work.'); }, onError: () => Alert.alert(isArabic ? 'تعذر اختيار العرض' : 'Could not accept quote', isArabic ? 'حاول مرة أخرى.' : 'Please try again.') } });
   if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لعرض طلباتك' : 'Sign in to view your requests'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
-  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }}><View style={styles.content}>
-    <Pressable testID="my-requests-back" onPress={() => router.back()}><Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} /></Pressable>
+  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><FixedBackButton testID="my-requests-back" onPress={() => router.back()} /><ScrollView contentContainerStyle={{ paddingTop: insets.top + 72, paddingBottom: 45 }}><View style={styles.content}>
     <ScreenHeader title={isArabic ? 'طلباتي' : 'My requests'} subtitle={isArabic ? 'قارن عروض الورش واختر الأنسب' : 'Compare workshop quotes and choose the right one'} right={<Pressable onPress={() => router.push('/service-request' as never)} style={[styles.addButton, { backgroundColor: colors.primarySoft }]}><Feather name="plus" size={16} color={colors.primary} /></Pressable>} />
     {requests.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
     {requests.isError ? <Text style={{ color: colors.mutedForeground }}>{isArabic ? 'تعذر تحميل الطلبات.' : 'Requests are temporarily unavailable.'}</Text> : null}

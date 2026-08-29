@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth, useUser } from '@clerk/expo';
 import { router } from 'expo-router';
 import React from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
@@ -24,7 +24,9 @@ export default function ProfileScreen() {
      { icon: 'map-pin' as const, title: isArabic ? 'موقعك الحالي' : 'Current location', value: location.source === 'default' ? (isArabic ? 'اضغط للسماح بتحديد موقعك' : 'Tap to allow location access') : `${location.area}, ${location.city}`, onPress: refreshLocation },
     { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => router.push('/notifications' as never) },
      ...(isSignedIn ? [{ icon: 'edit-3' as const, title: isArabic ? 'أحتاج خدمة' : 'I need a service', value: isArabic ? 'أرسل طلبًا لعدة ورش' : 'Ask multiple workshops', onPress: () => router.push('/service-request' as never) }, { icon: 'clipboard' as const, title: isArabic ? 'طلباتي وعروضي' : 'My requests & quotes', value: isArabic ? 'قارن واختر العرض المناسب' : 'Compare and choose a quote', onPress: () => router.push('/requests' as never) }] : []),
-    { icon: 'help-circle' as const, title: isArabic ? 'مركز المساعدة' : 'Help center', value: '', onPress: () => Alert.alert('Moqawil Help', 'Call +968 7722 4535 or email moqawil.om@gmail.com.') },
+    { icon: 'message-circle' as const, title: isArabic ? 'واتساب' : 'WhatsApp', value: '+968 77224535', onPress: () => Linking.openURL('https://wa.me/96877224535') },
+    { icon: 'mail' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', value: 'moqawil.ap@gmail.com', onPress: () => Linking.openURL('mailto:moqawil.ap@gmail.com') },
+    { icon: 'instagram' as const, title: 'Instagram', value: '@moqawil.om', onPress: () => Linking.openURL('https://instagram.com/moqawil.om') },
     ...(isSignedIn && isAdmin ? [{ icon: 'shield' as const, title: isArabic ? 'لوحة الإدارة' : 'Admin console', value: isArabic ? 'المقاولون والتقييمات' : 'Contractors & evaluations', onPress: () => router.push('/admin') }] : []),
     ...(isContractor ? [{ icon: 'credit-card' as const, title: isArabic ? 'اشتراكي' : 'My subscription', value: subscription.data ? `${subscription.data.planName} · ${subscription.data.priceOmaniRial} OMR / ${subscription.data.billingMonths === 12 ? (isArabic ? 'سنة' : 'year') : `${subscription.data.billingMonths} ${isArabic ? 'أشهر' : 'months'}`}` : (isArabic ? 'جاري تحميل الخطة…' : 'Plan details loading…'), onPress: () => router.push('/subscription' as never) }] : []),
     ...(isSignedIn && !isAdmin ? [{ icon: 'briefcase' as const, title: isContractor ? (isArabic ? 'إدارة ملف المقاول' : 'Manage contractor profile') : (isArabic ? 'انضم كمقاول' : 'Join as contractor'), value: '', onPress: () => router.push('/contractor-profile' as never) }] : []),

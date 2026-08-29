@@ -24,6 +24,31 @@ export interface MarketplaceListing {
   imageUrl: string | null;
   /** @nullable */
   contactPhone: string | null;
+  /**
+     * @minimum 0
+     * @maximum 5
+     */
+  rating: number;
+  /**
+     * Admin-only metric; omitted from public listing responses.
+     * @minimum 0
+     */
+  views?: number;
+  /**
+     * Admin-only aggregate on listing management responses.
+     * @minimum 0
+     */
+  likes?: number;
+  /**
+     * Admin-only aggregate on listing management responses.
+     * @minimum 0
+     */
+  saves?: number;
+  /**
+     * Admin-only aggregate on listing management responses.
+     * @minimum 0
+     */
+  contacts?: number;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;

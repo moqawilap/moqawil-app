@@ -10,6 +10,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useGetListingEngagement, useRecordListingEngagement, getGetListingEngagementQueryKey } from '@workspace/api-client-react';
@@ -61,6 +62,23 @@ export function IconButton({
   );
 }
 
+export function FixedBackButton({ onPress, testID }: { onPress: () => void; testID?: string }) {
+  const colors = useColors();
+  const { isArabic } = useApp();
+  const insets = useSafeAreaInsets();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={isArabic ? 'رجوع' : 'Go back'}
+      onPress={onPress}
+      style={[styles.fixedBackButton, { top: insets.top + 10, backgroundColor: colors.surface, borderColor: colors.border }, isArabic ? { right: 18 } : { left: 18 }]}
+    >
+      <Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} />
+    </Pressable>
+  );
+}
+
 export function SearchBar({ placeholder, onPress }: { placeholder: string; onPress: () => void }) {
   const colors = useColors();
   return (
@@ -105,11 +123,11 @@ export function SectionHeading({
 
 export function Rating({ value, reviews, light = false }: { value: number; reviews?: number; light?: boolean }) {
   const colors = useColors();
+  const rounded = Math.round(value);
   return (
     <View style={styles.ratingRow}>
-      <Feather name="star" size={14} color={light ? '#FFD166' : colors.star} fill={light ? '#FFD166' : colors.star} />
+      {[1, 2, 3, 4, 5].map((star) => <Feather key={star} name="star" size={14} color={light ? '#FFD166' : colors.star} fill={star <= rounded ? (light ? '#FFD166' : colors.star) : 'transparent'} />)}
       <Text style={[styles.ratingValue, { color: light ? '#FFFFFF' : colors.foreground }]}>{value.toFixed(1)}</Text>
-      {reviews !== undefined ? <Text style={[styles.reviewCount, { color: light ? 'rgba(255,255,255,0.72)' : colors.mutedForeground }]}>({reviews})</Text> : null}
     </View>
   );
 }
@@ -170,7 +188,7 @@ export function ProviderCard({
         </View>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved' : 'Save provider'} onPress={onSave} hitSlop={8} style={({ pressed }) => [styles.providerSave, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
-        <Feather name="heart" size={16} color={saved ? colors.primary : colors.mutedForeground} fill={saved ? colors.primary : 'transparent'} />
+        <Feather name="heart" size={16} color={saved ? '#111111' : colors.mutedForeground} fill={saved ? '#111111' : 'transparent'} />
       </Pressable>
     </Pressable>
   );
@@ -183,7 +201,7 @@ export function PropertyCard({
   onSave,
   featured = false,
 }: {
-  listing: { id: string; title: string; price: string; location: string; beds: number; baths: number; area: string; image: ImageSourcePropType; type: string };
+  listing: { id: string; title: string; price: string; location: string; beds: number; baths: number; area: string; image: ImageSourcePropType; type: string; rating?: number };
   saved?: boolean;
   onPress: () => void;
   onSave: () => void;
@@ -203,6 +221,7 @@ export function PropertyCard({
           <Feather name="map-pin" size={12} color={colors.mutedForeground} />
           <Text numberOfLines={1} style={[styles.propertyLocationText, { color: colors.mutedForeground }]}>{listing.location}</Text>
         </View>
+        {listing.rating !== undefined ? <Rating value={listing.rating} /> : null}
         <View style={[styles.propertySpecs, { borderTopColor: colors.border }]}>
           <Text style={[styles.propertySpec, { color: colors.mutedForeground }]}>{listing.beds} beds</Text>
           <Text style={[styles.propertyDot, { color: colors.border }]}>•</Text>
@@ -258,15 +277,14 @@ export function ListingEngagementMetrics({ listingId, saved = false, onSave, com
   return (
     <View style={[styles.engagementPanel, { borderTopColor: colors.border }, compact && styles.engagementPanelCompact]}>
       <View style={[styles.engagementStats, compact && styles.engagementStatsCompact]}>
-        <EngagementStat icon="eye" value={data?.views ?? 0} label={isArabic ? 'مشاهدة' : 'Views'} compact={compact} />
         <EngagementStat icon="heart" value={data?.likes ?? 0} label={isArabic ? 'إعجاب' : 'Likes'} compact={compact} />
         <EngagementStat icon="bookmark" value={data?.saves ?? 0} label={isArabic ? 'حفظ' : 'Saves'} compact={compact} />
         <EngagementStat icon="phone" value={data?.contacts ?? 0} label={isArabic ? 'تواصل' : 'Contacts'} compact={compact} />
       </View>
       <View style={[styles.engagementActions, compact && styles.engagementActionsCompact]}>
         <Pressable accessibilityRole="button" accessibilityLabel={liked ? (isArabic ? 'إلغاء الإعجاب' : 'Unlike listing') : (isArabic ? 'أعجبني الإعلان' : 'Like listing')} onPress={() => submit('like', !liked)} style={({ pressed }) => [styles.engagementAction, { backgroundColor: liked ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
-          <Feather name="heart" size={compact ? 13 : 15} color={liked ? colors.primary : colors.mutedForeground} fill={liked ? colors.primary : 'transparent'} />
-          <Text style={[styles.engagementActionText, { color: liked ? colors.primary : colors.mutedForeground }]}>{isArabic ? 'أعجبني' : 'Like'}</Text>
+          <Feather name="heart" size={compact ? 13 : 15} color={liked ? '#111111' : colors.mutedForeground} fill={liked ? '#111111' : 'transparent'} />
+          <Text style={[styles.engagementActionText, { color: liked ? '#111111' : colors.mutedForeground }]}>{isArabic ? 'أعجبني' : 'Like'}</Text>
         </Pressable>
         {onSave ? (
           <Pressable accessibilityRole="button" accessibilityLabel={saved ? (isArabic ? 'إزالة الإعلان من المحفوظات' : 'Remove listing from saved') : (isArabic ? 'حفظ الإعلان' : 'Save listing')} onPress={() => { onSave(); submit('save', !saved); }} style={({ pressed }) => [styles.engagementAction, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
@@ -356,6 +374,7 @@ export const styles = StyleSheet.create({
   brandName: { fontSize: 15, fontWeight: '800', letterSpacing: 1.7 },
   brandArabic: { fontSize: 11, fontWeight: '700', marginTop: -1 },
   iconButton: { width: 44, height: 44, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  fixedBackButton: { position: 'absolute', zIndex: 30, width: 44, height: 44, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center', elevation: 8 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
   cardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   searchBar: { height: 56, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, gap: 11, shadowColor: '#08284A', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },

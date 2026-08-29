@@ -64,9 +64,7 @@ export default function ExploreScreen() {
     city: selectedGovernorate || undefined,
     wilayat: selectedWilayat || undefined,
     verified: verifiedOnly || undefined,
-    minBudget: budgetRangeValid ? minimumBudgetValue : undefined,
-    maxBudget: budgetRangeValid ? maximumBudgetValue : undefined,
-    sort,
+    sort: sort === 'price_asc' || sort === 'price_desc' ? 'relevance' : sort,
     limit: 50,
   });
 
@@ -99,22 +97,15 @@ export default function ExploreScreen() {
     const source = apiProviders?.length ? apiProviders : fallbackProviders;
     return source
       .filter((provider) => {
-        const price = amountFromText('priceOmaniRial' in provider ? provider.priceOmaniRial : provider.contractAmount || provider.startingPrice);
         return (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized))
-          && provider.rating >= minimumRating
-          && (minimumBudgetValue === undefined || (price !== null && price >= minimumBudgetValue))
-          && (maximumBudgetValue === undefined || (price !== null && price <= maximumBudgetValue));
+          && provider.rating >= minimumRating;
       })
       .sort((a, b) => {
-        const aPrice = amountFromText('priceOmaniRial' in a ? a.priceOmaniRial : a.contractAmount || a.startingPrice);
-        const bPrice = amountFromText('priceOmaniRial' in b ? b.priceOmaniRial : b.contractAmount || b.startingPrice);
-        if (sort === 'price_asc') return (aPrice ?? Number.MAX_SAFE_INTEGER) - (bPrice ?? Number.MAX_SAFE_INTEGER);
-        if (sort === 'price_desc') return (bPrice ?? -1) - (aPrice ?? -1);
         if (sort === 'oldest') return dateFromText(a.createdAt) - dateFromText(b.createdAt);
         if (sort === 'newest') return dateFromText(b.createdAt) - dateFromText(a.createdAt);
         return ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0);
       });
-  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService, minimumBudgetValue, maximumBudgetValue, sort]);
+  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService, sort]);
 
   const filteredListings = useMemo(() => availableListings
     .filter((listing) => {
@@ -133,8 +124,10 @@ export default function ExploreScreen() {
 
   const sortOptions: Array<{ value: SortOption; label: string; labelAr: string }> = [
     { value: 'relevance', label: 'Best match', labelAr: 'الأفضل تطابقًا' },
-    { value: 'price_asc', label: 'Lowest price', labelAr: 'السعر الأقل' },
-    { value: 'price_desc', label: 'Highest price', labelAr: 'السعر الأعلى' },
+    ...(visibleMode === 'Properties' ? [
+      { value: 'price_asc' as const, label: 'Lowest price', labelAr: 'السعر الأقل' },
+      { value: 'price_desc' as const, label: 'Highest price', labelAr: 'السعر الأعلى' },
+    ] : []),
     { value: 'newest', label: 'Newest', labelAr: 'الأحدث' },
     { value: 'oldest', label: 'Oldest', labelAr: 'الأقدم' },
   ];
@@ -172,7 +165,7 @@ export default function ExploreScreen() {
              {[0, 3, 4].map((rating) => <Pressable testID={`rating-filter-${rating}`} key={rating} onPress={() => setMinimumRating(rating)} style={({ pressed }) => [styles.filterChip, { borderColor: minimumRating === rating ? colors.primary : colors.border, backgroundColor: minimumRating === rating ? colors.primarySoft : colors.surface }, pressed && styles.filterPressed]}>{rating ? <><Feather name="star" size={12} color={colors.star} fill={colors.star} /><Text style={{ color: colors.foreground }}>{rating}+</Text></> : <Text style={{ color: colors.foreground }}>{isArabic ? 'كل التقييمات' : 'Any rating'}</Text>}</Pressable>)}
              <Pressable testID="verified-filter" onPress={() => setVerifiedOnly((value) => !value)} style={({ pressed }) => [styles.filterChip, { borderColor: verifiedOnly ? colors.primary : colors.border, backgroundColor: verifiedOnly ? colors.primarySoft : colors.surface }, pressed && styles.filterPressed]}><Feather name="check-circle" size={13} color={verifiedOnly ? colors.primary : colors.mutedForeground} /><Text style={{ color: colors.foreground }}>{isArabic ? 'موثّق' : 'Verified'}</Text></Pressable>
           </View>
-          <View style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {visibleMode === 'Properties' ? <View style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.budgetTitle, { color: colors.foreground }]}>{isArabic ? 'الميزانية (ر.ع.)' : 'Budget (OMR)'}</Text>
             <View style={styles.budgetInputs}>
               <TextInput testID="minimum-budget" value={minimumBudget} onChangeText={setMinimumBudget} keyboardType="decimal-pad" placeholder={isArabic ? 'الحد الأدنى' : 'Minimum'} placeholderTextColor={colors.mutedForeground} style={[styles.budgetInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
@@ -186,7 +179,7 @@ export default function ExploreScreen() {
                 return <Pressable key={option.value} testID={`sort-${option.value}`} onPress={() => setSort(option.value)} style={({ pressed }) => [styles.sortChip, { backgroundColor: selected ? colors.primary : colors.background, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}><Text style={[styles.sortChipText, { color: selected ? colors.primaryForeground : colors.foreground }]}>{isArabic ? option.labelAr : option.label}</Text></Pressable>;
               })}
             </ScrollView>
-          </View>
+          </View> : null}
            {locationMenu ? <View style={[styles.locationMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
              <ScrollView nestedScrollEnabled style={styles.locationMenuScroll}>
                <Pressable testID="location-all" onPress={() => { setSelectedGovernorate(''); setSelectedWilayat(''); setLocationMenu(null); }} style={styles.locationOption}><Text style={{ color: colors.foreground }}>{isArabic ? 'كل عُمان' : 'All Oman'}</Text></Pressable>

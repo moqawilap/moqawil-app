@@ -521,8 +521,6 @@ export interface AdminOverview {
 export interface ListingEngagement {
   listingId: string;
   /** @minimum 0 */
-  views: number;
-  /** @minimum 0 */
   likes: number;
   /** @minimum 0 */
   saves: number;
@@ -577,6 +575,31 @@ export interface MarketplaceListing {
   imageUrl: string | null;
   /** @nullable */
   contactPhone: string | null;
+  /**
+     * @minimum 0
+     * @maximum 5
+     */
+  rating: number;
+  /**
+     * Admin-only metric; omitted from public listing responses.
+     * @minimum 0
+     */
+  views?: number;
+  /**
+     * Admin-only aggregate on listing management responses.
+     * @minimum 0
+     */
+  likes?: number;
+  /**
+     * Admin-only aggregate on listing management responses.
+     * @minimum 0
+     */
+  saves?: number;
+  /**
+     * Admin-only aggregate on listing management responses.
+     * @minimum 0
+     */
+  contacts?: number;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
@@ -636,6 +659,12 @@ export interface AdminListingInput {
      * @nullable
      */
   contactPhone?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     * @nullable
+     */
+  adminRating?: number | null;
   isPublished?: boolean;
 }
 
@@ -693,6 +722,12 @@ export interface AdminListingUpdate {
      * @nullable
      */
   contactPhone?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     * @nullable
+     */
+  adminRating?: number | null;
   isPublished?: boolean;
 }
 

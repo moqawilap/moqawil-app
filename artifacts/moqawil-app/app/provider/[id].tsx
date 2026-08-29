@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, BrandMark, IconButton, Rating } from '@/components/MoqawilUI';
+import { ActionButton, BrandMark, FixedBackButton, IconButton, Rating } from '@/components/MoqawilUI';
 import { providers } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -31,9 +31,10 @@ export default function ProviderDetail() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FixedBackButton testID="provider-back" onPress={() => router.back()} />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
-          <IconButton icon="arrow-left" onPress={() => router.back()} accessibilityLabel="Go back" />
+          <View style={{ width: 44 }} />
           <BrandMark compact />
           <IconButton icon="heart" active={isSaved(provider.id)} onPress={() => toggleSaved(provider.id)} accessibilityLabel="Save provider" />
         </View>
@@ -60,7 +61,7 @@ export default function ProviderDetail() {
            {contractor.isLoading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 14 }} /> : null}
            {contractor.data?.services.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'الخدمات' : 'Services'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.services.map((service) => service.name).join(' • ')}</Text></> : null}
            {contractor.data?.projects.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المشاريع' : 'Projects'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.projects.map((project) => project.title).join(' • ')}</Text></> : null}
-           {contractor.data?.reviews.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المراجعات' : 'Reviews'}</Text>{contractor.data.reviews.slice(0, 3).map((review) => <Text key={review.id} style={[styles.description, { color: colors.mutedForeground }]}>★ {review.rating} {review.comment ?? ''}</Text>)}</> : null}
+           {contractor.data?.reviews.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المراجعات' : 'Reviews'}</Text>{contractor.data.reviews.slice(0, 3).map((review) => <Text key={review.id} style={[styles.description, { color: colors.mutedForeground }]}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)} {review.comment ?? ''}</Text>)}</> : null}
           <Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'لماذا تختاره' : 'Why customers choose them'}</Text>
           <View style={styles.benefitList}>
             {['Verified business profile', 'Clear project communication', 'Reviews from local customers'].map((item) => (

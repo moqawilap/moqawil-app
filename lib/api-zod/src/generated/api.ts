@@ -78,8 +78,6 @@ export const GetListingsEngagementQueryParams = zod.object({
   "clientId": zod.coerce.string().min(getListingsEngagementQueryClientIdMin).max(getListingsEngagementQueryClientIdMax).optional()
 })
 
-export const getListingsEngagementResponseViewsMin = 0;
-
 export const getListingsEngagementResponseLikesMin = 0;
 
 export const getListingsEngagementResponseSavesMin = 0;
@@ -90,7 +88,6 @@ export const getListingsEngagementResponseContactsMin = 0;
 
 export const GetListingsEngagementResponse = zod.record(zod.string(), zod.object({
   "listingId": zod.string(),
-  "views": zod.number().min(getListingsEngagementResponseViewsMin),
   "likes": zod.number().min(getListingsEngagementResponseLikesMin),
   "saves": zod.number().min(getListingsEngagementResponseSavesMin),
   "contacts": zod.number().min(getListingsEngagementResponseContactsMin),
@@ -102,6 +99,17 @@ export const GetListingsEngagementResponse = zod.record(zod.string(), zod.object
 export const listListingsResponseBedroomsMin = 0;
 
 export const listListingsResponseBathroomsMin = 0;
+
+export const listListingsResponseRatingMin = 0;
+export const listListingsResponseRatingMax = 5;
+
+export const listListingsResponseViewsMin = 0;
+
+export const listListingsResponseLikesMin = 0;
+
+export const listListingsResponseSavesMin = 0;
+
+export const listListingsResponseContactsMin = 0;
 
 
 
@@ -118,6 +126,11 @@ export const ListListingsResponseItem = zod.object({
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
   "contactPhone": zod.string().nullable(),
+  "rating": zod.number().min(listListingsResponseRatingMin).max(listListingsResponseRatingMax),
+  "views": zod.number().min(listListingsResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
+  "likes": zod.number().min(listListingsResponseLikesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "saves": zod.number().min(listListingsResponseSavesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "contacts": zod.number().min(listListingsResponseContactsMin).optional().describe('Admin-only aggregate on listing management responses.'),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -136,6 +149,17 @@ export const getListingResponseBedroomsMin = 0;
 
 export const getListingResponseBathroomsMin = 0;
 
+export const getListingResponseRatingMin = 0;
+export const getListingResponseRatingMax = 5;
+
+export const getListingResponseViewsMin = 0;
+
+export const getListingResponseLikesMin = 0;
+
+export const getListingResponseSavesMin = 0;
+
+export const getListingResponseContactsMin = 0;
+
 
 
 export const GetListingResponse = zod.object({
@@ -151,6 +175,11 @@ export const GetListingResponse = zod.object({
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
   "contactPhone": zod.string().nullable(),
+  "rating": zod.number().min(getListingResponseRatingMin).max(getListingResponseRatingMax),
+  "views": zod.number().min(getListingResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
+  "likes": zod.number().min(getListingResponseLikesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "saves": zod.number().min(getListingResponseSavesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "contacts": zod.number().min(getListingResponseContactsMin).optional().describe('Admin-only aggregate on listing management responses.'),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -173,8 +202,6 @@ export const GetListingEngagementQueryParams = zod.object({
   "clientId": zod.coerce.string().min(getListingEngagementQueryClientIdMin).max(getListingEngagementQueryClientIdMax).optional()
 })
 
-export const getListingEngagementResponseViewsMin = 0;
-
 export const getListingEngagementResponseLikesMin = 0;
 
 export const getListingEngagementResponseSavesMin = 0;
@@ -185,7 +212,6 @@ export const getListingEngagementResponseContactsMin = 0;
 
 export const GetListingEngagementResponse = zod.object({
   "listingId": zod.string(),
-  "views": zod.number().min(getListingEngagementResponseViewsMin),
   "likes": zod.number().min(getListingEngagementResponseLikesMin),
   "saves": zod.number().min(getListingEngagementResponseSavesMin),
   "contacts": zod.number().min(getListingEngagementResponseContactsMin),
@@ -212,8 +238,6 @@ export const RecordListingEngagementBody = zod.object({
   "active": zod.boolean().optional()
 })
 
-export const recordListingEngagementResponseViewsMin = 0;
-
 export const recordListingEngagementResponseLikesMin = 0;
 
 export const recordListingEngagementResponseSavesMin = 0;
@@ -224,7 +248,6 @@ export const recordListingEngagementResponseContactsMin = 0;
 
 export const RecordListingEngagementResponse = zod.object({
   "listingId": zod.string(),
-  "views": zod.number().min(recordListingEngagementResponseViewsMin),
   "likes": zod.number().min(recordListingEngagementResponseLikesMin),
   "saves": zod.number().min(recordListingEngagementResponseSavesMin),
   "contacts": zod.number().min(recordListingEngagementResponseContactsMin),
@@ -721,6 +744,17 @@ export const listAdminListingsResponseBedroomsMin = 0;
 
 export const listAdminListingsResponseBathroomsMin = 0;
 
+export const listAdminListingsResponseRatingMin = 0;
+export const listAdminListingsResponseRatingMax = 5;
+
+export const listAdminListingsResponseViewsMin = 0;
+
+export const listAdminListingsResponseLikesMin = 0;
+
+export const listAdminListingsResponseSavesMin = 0;
+
+export const listAdminListingsResponseContactsMin = 0;
+
 
 
 export const ListAdminListingsResponseItem = zod.object({
@@ -736,6 +770,11 @@ export const ListAdminListingsResponseItem = zod.object({
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
   "contactPhone": zod.string().nullable(),
+  "rating": zod.number().min(listAdminListingsResponseRatingMin).max(listAdminListingsResponseRatingMax),
+  "views": zod.number().min(listAdminListingsResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
+  "likes": zod.number().min(listAdminListingsResponseLikesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "saves": zod.number().min(listAdminListingsResponseSavesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "contacts": zod.number().min(listAdminListingsResponseContactsMin).optional().describe('Admin-only aggregate on listing management responses.'),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -763,6 +802,8 @@ export const createAdminListingBodyImageUrlMax = 2048;
 
 export const createAdminListingBodyContactPhoneMax = 32;
 
+export const createAdminListingBodyAdminRatingMax = 5;
+
 
 
 export const CreateAdminListingBody = zod.object({
@@ -777,12 +818,24 @@ export const CreateAdminListingBody = zod.object({
   "area": zod.string().min(1).max(createAdminListingBodyAreaMax),
   "imageUrl": zod.string().max(createAdminListingBodyImageUrlMax).nullish(),
   "contactPhone": zod.string().max(createAdminListingBodyContactPhoneMax).nullish(),
+  "adminRating": zod.number().min(1).max(createAdminListingBodyAdminRatingMax).nullish(),
   "isPublished": zod.boolean().optional()
 })
 
 export const createAdminListingResponseBedroomsMin = 0;
 
 export const createAdminListingResponseBathroomsMin = 0;
+
+export const createAdminListingResponseRatingMin = 0;
+export const createAdminListingResponseRatingMax = 5;
+
+export const createAdminListingResponseViewsMin = 0;
+
+export const createAdminListingResponseLikesMin = 0;
+
+export const createAdminListingResponseSavesMin = 0;
+
+export const createAdminListingResponseContactsMin = 0;
 
 
 
@@ -799,6 +852,11 @@ export const CreateAdminListingResponse = zod.object({
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
   "contactPhone": zod.string().nullable(),
+  "rating": zod.number().min(createAdminListingResponseRatingMin).max(createAdminListingResponseRatingMax),
+  "views": zod.number().min(createAdminListingResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
+  "likes": zod.number().min(createAdminListingResponseLikesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "saves": zod.number().min(createAdminListingResponseSavesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "contacts": zod.number().min(createAdminListingResponseContactsMin).optional().describe('Admin-only aggregate on listing management responses.'),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -829,6 +887,8 @@ export const updateAdminListingBodyImageUrlMax = 2048;
 
 export const updateAdminListingBodyContactPhoneMax = 32;
 
+export const updateAdminListingBodyAdminRatingMax = 5;
+
 
 
 export const UpdateAdminListingBody = zod.object({
@@ -843,12 +903,24 @@ export const UpdateAdminListingBody = zod.object({
   "area": zod.string().min(1).max(updateAdminListingBodyAreaMax).optional(),
   "imageUrl": zod.string().max(updateAdminListingBodyImageUrlMax).nullish(),
   "contactPhone": zod.string().max(updateAdminListingBodyContactPhoneMax).nullish(),
+  "adminRating": zod.number().min(1).max(updateAdminListingBodyAdminRatingMax).nullish(),
   "isPublished": zod.boolean().optional()
 })
 
 export const updateAdminListingResponseBedroomsMin = 0;
 
 export const updateAdminListingResponseBathroomsMin = 0;
+
+export const updateAdminListingResponseRatingMin = 0;
+export const updateAdminListingResponseRatingMax = 5;
+
+export const updateAdminListingResponseViewsMin = 0;
+
+export const updateAdminListingResponseLikesMin = 0;
+
+export const updateAdminListingResponseSavesMin = 0;
+
+export const updateAdminListingResponseContactsMin = 0;
 
 
 
@@ -865,6 +937,11 @@ export const UpdateAdminListingResponse = zod.object({
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
   "contactPhone": zod.string().nullable(),
+  "rating": zod.number().min(updateAdminListingResponseRatingMin).max(updateAdminListingResponseRatingMax),
+  "views": zod.number().min(updateAdminListingResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
+  "likes": zod.number().min(updateAdminListingResponseLikesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "saves": zod.number().min(updateAdminListingResponseSavesMin).optional().describe('Admin-only aggregate on listing management responses.'),
+  "contacts": zod.number().min(updateAdminListingResponseContactsMin).optional().describe('Admin-only aggregate on listing management responses.'),
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
