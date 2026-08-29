@@ -57,9 +57,10 @@ export default function ExploreScreen() {
   const selectedService = activeService ?? 'contractors';
   const selectedServiceInfo = serviceItems.find((service) => service.id === selectedService) ?? serviceItems[0];
   const visibleMode = selectedService === 'real-estate' ? 'Properties' : mode;
+  const directoryCategory = selectedService === 'design' ? 'consultants' : selectedService;
   const directory = useListContractors({
     search: query.trim() || undefined,
-    category: selectedService === 'contractors' ? undefined : selectedService,
+    category: directoryCategory === 'contractors' ? undefined : directoryCategory,
     service: selectedService === 'building' ? selectedBuildingService || undefined : undefined,
     city: selectedGovernorate || undefined,
     wilayat: selectedWilayat || undefined,
@@ -83,12 +84,13 @@ export default function ExploreScreen() {
       id: contractor.id, name: contractor.businessName, nameAr: contractor.businessName, specialty: contractor.bio || 'Contractor',
       specialtyAr: contractor.bio || 'مقاول', rating: contractor.rating, reviews: contractor.reviewCount, distance: contractor.city,
       city: contractor.city, wilayat: contractor.wilayat ?? undefined, verified: contractor.isVerified,
-      image: contractor.avatarUrl ? { uri: contractor.avatarUrl } : selectedService === 'consultants' ? images.interior : selectedService === 'maintenance' ? images.villa : images.contractor,
+      image: contractor.avatarUrl ? { uri: contractor.avatarUrl } : selectedService === 'consultants' || selectedService === 'design' ? images.interior : selectedService === 'maintenance' ? images.villa : images.contractor,
       rankingScore: contractor.rankingScore, priceOmaniRial: contractor.priceOmaniRial, createdAt: contractor.createdAt,
     }));
     const fallbackProviders = managedProviders.filter((provider) =>
       selectedService === 'contractors' ? provider.role === 'contractor' :
       selectedService === 'consultants' ? provider.role === 'consultant' :
+      selectedService === 'design' ? provider.role === 'consultant' :
       selectedService === 'building' ? provider.role === 'contractor' :
       selectedService === 'maintenance' ? provider.role === 'maintenance' : true,
     ).filter((provider) => !selectedGovernorate || provider.city === selectedGovernorate)

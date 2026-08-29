@@ -1,7 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 import type { MarketplaceListing } from '@workspace/api-client-react';
 
-export type ServiceId = 'contractors' | 'consultants' | 'building' | 'real-estate' | 'maintenance';
+export type ServiceId = 'contractors' | 'consultants' | 'design' | 'building' | 'real-estate' | 'maintenance';
 
 export type Provider = {
   id: string;
@@ -80,7 +80,7 @@ export const serviceItems: Array<{
   labelAr: string;
   subtitle: string;
   subtitleAr: string;
-  icon: 'hard-hat' | 'compass' | 'home' | 'tool';
+  icon: 'hard-hat' | 'compass' | 'home' | 'tool' | 'sparkles';
   color: string;
 }> = [
   {
@@ -100,6 +100,15 @@ export const serviceItems: Array<{
     subtitleAr: 'خطّط بشكل صحيح',
     icon: 'compass',
     color: '#2B7774',
+  },
+  {
+    id: 'design',
+    label: 'Design',
+    labelAr: 'التصميم',
+    subtitle: 'Shape your vision',
+    subtitleAr: 'حوّل فكرتك إلى تصميم',
+    icon: 'sparkles',
+    color: '#8A5A83',
   },
   {
     id: 'building',
