@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, IconButton, PropertyCard, ProviderCard, SearchBar, SectionHeading, ServiceIcon } from '@/components/MoqawilUI';
 import { listings, maintenanceItems, serviceItems } from '@/data/mockData';
@@ -32,9 +32,13 @@ export default function HomeScreen() {
             <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{locationLoading ? (isArabic ? 'جارٍ تحديد موقعك…' : 'Detecting your location…') : location.source === 'default' ? (isArabic ? 'اضغط لتحديد موقعك الحالي' : 'Tap to detect your location') : (isArabic ? 'تبحث في موقعك الحالي' : 'You are browsing in your location')}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
             <View style={[styles.locationAction, { backgroundColor: colors.primarySoft }]}><Feather name={locationLoading ? 'loader' : 'navigation'} size={13} color={colors.primary} /><Text style={[styles.locationActionText, { color: colors.primary }]}>{locationLoading ? (isArabic ? 'انتظر' : 'Wait') : location.source === 'default' ? (isArabic ? 'حدد موقعي' : 'Detect') : (isArabic ? 'تحديث' : 'Update')}</Text></View>
           </Pressable>
-          <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.heroRule, { backgroundColor: colors.accentForeground }]} />
-            <View style={styles.greeting}><Text style={[styles.eyebrow, { color: colors.primary }]}>{isArabic ? 'كل ما يخص العقار' : 'EVERYTHING PROPERTY'}</Text><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'ابنِ، اعثر، واعتنِ بمكانك.' : 'Build, find, and care for your place.'}</Text><Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{isArabic ? 'خدمات موثوقة في عمان، بالقرب منك.' : 'Trusted services in Oman, right around you.'}</Text></View>
+          <View style={[styles.heroCard, { backgroundColor: colors.navy, borderColor: '#C8A66A' }]}>
+            <View style={[styles.heroRule, { backgroundColor: '#C8A66A' }]} />
+            <View style={styles.greeting}>
+              <Text style={[styles.eyebrow, { color: '#E0BD7A' }]}>{isArabic ? 'منظومة متكاملة للخدمات العقارية' : 'INTEGRATED PROPERTY SERVICES'}</Text>
+              <Text style={[styles.title, isArabic && styles.arabicTitle, { color: '#FFFFFF' }]}>{isArabic ? 'حلول متكاملة لبناء وإدارة عقارك.' : 'Complete solutions to build and manage your property.'}</Text>
+              <Text style={[styles.subtitle, isArabic && styles.arabicSubtitle, { color: '#D9E3EC' }]}>{isArabic ? 'نصل بك إلى نخبة المقاولين والاستشاريين ومقدمي الخدمات الموثوقين في سلطنة عُمان.' : 'Connect with trusted contractors, consultants, and service providers across Oman.'}</Text>
+            </View>
             <SearchBar placeholder={isArabic ? 'ماذا تحتاج اليوم؟' : 'What do you need today?'} onPress={() => router.push('/explore')} />
           </View>
           <View style={styles.sectionBlock}>
@@ -100,7 +104,9 @@ const styles = StyleSheet.create({
    greeting: { gap: 7, marginBottom: 18 },
   eyebrow: { fontSize: 10, letterSpacing: 1.2, fontWeight: '800' },
   title: { fontSize: 28, lineHeight: 33, fontWeight: '800', letterSpacing: -0.8, maxWidth: 345 },
+  arabicTitle: { fontFamily: Platform.select({ android: 'sans-serif', ios: 'System', default: 'sans-serif' }), fontWeight: '700', letterSpacing: 0, lineHeight: 37, textAlign: 'right' },
   subtitle: { fontSize: 13, lineHeight: 19 },
+  arabicSubtitle: { fontFamily: Platform.select({ android: 'sans-serif', ios: 'System', default: 'sans-serif' }), fontWeight: '500', lineHeight: 22, textAlign: 'right' },
   serviceRow: { gap: 11, paddingBottom: 5 },
   serviceCard: { width: 152, height: 150, borderRadius: 22, padding: 15, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   serviceIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
