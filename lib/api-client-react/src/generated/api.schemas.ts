@@ -550,6 +550,22 @@ export interface ListingEngagementInput {
   active?: boolean;
 }
 
+export interface RatingInput {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  rating: number;
+}
+
+export interface RatingSummary {
+  /**
+     * @minimum 0
+     * @maximum 5
+     */
+  rating: number;
+}
+
 export type MarketplaceListingType = typeof MarketplaceListingType[keyof typeof MarketplaceListingType];
 
 
@@ -650,7 +666,7 @@ export interface AdminListingInput {
      */
   area: string;
   /**
-     * @maxLength 2048
+     * @maxLength 2000000
      * @nullable
      */
   imageUrl?: string | null;
@@ -713,7 +729,7 @@ export interface AdminListingUpdate {
      */
   area?: string;
   /**
-     * @maxLength 2048
+     * @maxLength 2000000
      * @nullable
      */
   imageUrl?: string | null;
@@ -773,6 +789,7 @@ export type ListContractorsSort = typeof ListContractorsSort[keyof typeof ListCo
 
 export const ListContractorsSort = {
   relevance: 'relevance',
+  rating_desc: 'rating_desc',
   price_asc: 'price_asc',
   price_desc: 'price_desc',
   oldest: 'oldest',

@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth, useUser } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/MoqawilUI';
 import { useColors } from '@/hooks/useColors';
@@ -386,6 +387,22 @@ function ListingsTab() {
   const update = useUpdateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const remove = useDeleteAdminListing({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)) } });
   const set = <Key extends keyof ListingForm>(key: Key, value: ListingForm[Key]) => setForm((current) => ({ ...current, [key]: value }));
+  const pickListingImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(text(isArabic, 'Photo access needed', 'نحتاج إذن الصور'), text(isArabic, 'Allow access to choose a listing photo.', 'اسمح بالوصول للصور لاختيار صورة الإعلان.'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.45, base64: true });
+    const asset = result.canceled ? undefined : result.assets[0];
+    if (!asset) return;
+    const image = asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri;
+    if (image.length > 2_000_000) {
+      Alert.alert(text(isArabic, 'Image is too large', 'الصورة كبيرة جدًا'), text(isArabic, 'Choose a smaller image and try again.', 'اختر صورة أصغر ثم حاول مرة أخرى.'));
+      return;
+    }
+    set('imageUrl', image);
+  };
   const begin = (listing?: MarketplaceListing) => {
     if (!listing) { setForm(blankListing()); setEditing(null); }
     else {
@@ -424,12 +441,20 @@ function ListingsTab() {
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? text(isArabic, 'Edit Listing', 'تعديل الإعلان') : text(isArabic, 'New Listing', 'إعلان جديد')}</Text>
           <View style={styles.formGrid}>
-            {([['title', 'Title', 'العنوان'], ['titleArabic', 'Arabic title', 'العنوان بالعربية'], ['price', 'Price', 'السعر'], ['location', 'Location', 'الموقع'], ['locationArabic', 'Arabic location', 'الموقع بالعربية'], ['area', 'Area', 'المساحة'], ['bedrooms', 'Bedrooms', 'غرف النوم'], ['bathrooms', 'Bathrooms', 'دورات المياه'], ['adminRating', 'Rating (1-5)', 'التقييم (1-5)'], ['contactPhone', 'Contact phone', 'هاتف التواصل'], ['imageUrl', 'Image URL', 'رابط الصورة']] as const).map(([key, label, labelAr]) => (
+            {([['title', 'Title', 'العنوان'], ['titleArabic', 'Arabic title', 'العنوان بالعربية'], ['price', 'Price', 'السعر'], ['location', 'Location', 'الموقع'], ['locationArabic', 'Arabic location', 'الموقع بالعربية'], ['area', 'Area', 'المساحة'], ['bedrooms', 'Bedrooms', 'غرف النوم'], ['bathrooms', 'Bathrooms', 'دورات المياه'], ['adminRating', 'Rating (1-5)', 'التقييم (1-5)'], ['contactPhone', 'Contact phone', 'هاتف التواصل']] as const).map(([key, label, labelAr]) => (
               <View key={key} style={styles.formGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
                 <TextInput testID={`listing-field-${key}`} value={String(form[key])} onChangeText={(value) => set(key, value)} keyboardType={key === 'bedrooms' || key === 'bathrooms' || key === 'adminRating' ? 'number-pad' : 'default'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Listing photo', 'صورة الإعلان')}</Text>
+            {form.imageUrl ? <Image source={{ uri: form.imageUrl }} style={styles.listingImagePreview} /> : null}
+            <Pressable testID="pick-listing-image" onPress={pickListingImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
+              <Feather name="image" size={16} color={colors.primary} />
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.imageUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
+            </Pressable>
           </View>
           <View style={styles.toggles}>
             {(['sale', 'rent'] as const).map((type) => (
@@ -810,6 +835,7 @@ const styles = StyleSheet.create({
   denseButtonPrimary: { height: 44, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 16 },
   denseButton: { height: 44, borderRadius: 8, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 16 },
   denseButtonText: { fontSize: 14, fontWeight: '700' },
+  listingImagePreview: { width: '100%', height: 190, borderRadius: 12, marginBottom: 10, resizeMode: 'cover' },
 
   inlineForm: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8 },
   statusPill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },

@@ -44,7 +44,7 @@ export interface AdminListingUpdate {
      */
   area?: string;
   /**
-     * @maxLength 2048
+     * @maxLength 2000000
      * @nullable
      */
   imageUrl?: string | null;

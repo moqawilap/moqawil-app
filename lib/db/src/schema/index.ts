@@ -104,7 +104,11 @@ export const reviews = pgTable("reviews", {
   comment: text("comment"),
   isPublished: boolean("is_published").notNull().default(true),
   ...timestamps,
-}, (table) => [index("reviews_contractor_idx").on(table.contractorId, table.isPublished), index("reviews_rating_idx").on(table.rating)]);
+}, (table) => [
+  uniqueIndex("reviews_contractor_reviewer_unique_idx").on(table.contractorId, table.reviewerId),
+  index("reviews_contractor_idx").on(table.contractorId, table.isPublished),
+  index("reviews_rating_idx").on(table.rating),
+]);
 
 export const subscriptionPlans = pgTable("subscription_plans", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -233,13 +237,37 @@ export const marketplaceListings = pgTable("marketplace_listings", {
   bedrooms: integer("bedrooms").notNull().default(0),
   bathrooms: integer("bathrooms").notNull().default(0),
   area: varchar("area", { length: 50 }).notNull(),
-  imageUrl: varchar("image_url", { length: 2048 }),
+  imageUrl: text("image_url"),
   contactPhone: varchar("contact_phone", { length: 32 }),
   adminRating: integer("admin_rating"),
   isPublished: boolean("is_published").notNull().default(false),
   ...timestamps,
 }, (table) => [
   index("marketplace_listings_published_idx").on(table.isPublished, table.createdAt),
+]);
+
+export const marketplaceRatings = pgTable("marketplace_ratings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  subjectType: varchar("subject_type", { length: 20 }).notNull(),
+  subjectId: varchar("subject_id", { length: 100 }).notNull(),
+  reviewerId: uuid("reviewer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("marketplace_ratings_subject_reviewer_unique_idx").on(table.subjectType, table.subjectId, table.reviewerId),
+  index("marketplace_ratings_subject_idx").on(table.subjectType, table.subjectId),
+]);
+
+// Kept for schema compatibility with installations that already created this table.
+export const listingReviews = pgTable("listing_reviews", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  listingId: varchar("listing_id", { length: 100 }).notNull().references(() => marketplaceListings.id, { onDelete: "cascade" }),
+  reviewerId: uuid("reviewer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("listing_reviews_listing_reviewer_unique_idx").on(table.listingId, table.reviewerId),
+  index("listing_reviews_listing_idx").on(table.listingId),
 ]);
 
 export const marketplaceSettings = pgTable("marketplace_settings", {

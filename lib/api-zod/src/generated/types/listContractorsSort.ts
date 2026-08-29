@@ -11,6 +11,7 @@ export type ListContractorsSort = typeof ListContractorsSort[keyof typeof ListCo
 
 export const ListContractorsSort = {
   relevance: 'relevance',
+  rating_desc: 'rating_desc',
   price_asc: 'price_asc',
   price_desc: 'price_desc',
   oldest: 'oldest',

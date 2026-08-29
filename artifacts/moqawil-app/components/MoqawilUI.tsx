@@ -132,6 +132,23 @@ export function Rating({ value, reviews, light = false }: { value: number; revie
   );
 }
 
+export function StarRatingInput({ value, onChange, disabled = false, label }: { value: number; onChange: (value: number) => void; disabled?: boolean; label: string }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.starInputPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.starInputLabel, { color: colors.foreground }]}>{label}</Text>
+      <View style={styles.starInputRow}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Pressable key={star} testID={`rating-star-${star}`} accessibilityRole="button" accessibilityLabel={`${star} of 5`} disabled={disabled} onPress={() => onChange(star)} hitSlop={6}>
+            <Text style={{ color: star <= value ? colors.star : colors.mutedForeground, fontSize: 31, lineHeight: 34 }}>{star <= value ? '★' : '☆'}</Text>
+          </Pressable>
+        ))}
+        {value ? <Text style={[styles.starInputValue, { color: colors.primary }]}>{value}/5</Text> : null}
+      </View>
+    </View>
+  );
+}
+
 export function ServiceIcon({ icon, color, size = 22 }: { icon: 'hard-hat' | 'compass' | 'home' | 'tool' | 'zap' | 'droplet' | 'wind' | 'sparkles'; color: string; size?: number }) {
   const names = {
     'hard-hat': 'hard-hat',
@@ -387,6 +404,10 @@ export const styles = StyleSheet.create({
   sectionSubtitle: { fontSize: 12 },
   sectionAction: { fontSize: 13, fontWeight: '700' },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  starInputPanel: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10, marginTop: 18 },
+  starInputLabel: { fontSize: 13, fontWeight: '800' },
+  starInputRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  starInputValue: { fontSize: 13, fontWeight: '900', marginStart: 2 },
   ratingValue: { fontSize: 12, fontWeight: '700' },
   reviewCount: { fontSize: 11 },
   providerCard: { minHeight: 102, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', padding: 11, marginBottom: 10, shadowColor: '#08284A', shadowOpacity: 0.045, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 1 },

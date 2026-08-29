@@ -34,7 +34,7 @@ export const ListContractorsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "minBudget": zod.coerce.number().min(listContractorsQueryMinBudgetMin).optional(),
   "maxBudget": zod.coerce.number().min(listContractorsQueryMaxBudgetMin).optional(),
-  "sort": zod.enum(['relevance', 'price_asc', 'price_desc', 'oldest', 'newest']).default(listContractorsQuerySortDefault),
+  "sort": zod.enum(['relevance', 'rating_desc', 'price_asc', 'price_desc', 'oldest', 'newest']).default(listContractorsQuerySortDefault),
   "page": zod.coerce.number().min(1).default(listContractorsQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(listContractorsQueryLimitMax).default(listContractorsQueryLimitDefault)
 })
@@ -256,6 +256,48 @@ export const RecordListingEngagementResponse = zod.object({
 })
 
 
+export const getListingRatingPathListingIdRegExp = new RegExp('^[a-zA-Z0-9_-]{1,100}$');
+
+
+export const GetListingRatingParams = zod.object({
+  "listingId": zod.coerce.string().regex(getListingRatingPathListingIdRegExp)
+})
+
+export const getListingRatingResponseRatingMin = 0;
+export const getListingRatingResponseRatingMax = 5;
+
+
+
+export const GetListingRatingResponse = zod.object({
+  "rating": zod.number().min(getListingRatingResponseRatingMin).max(getListingRatingResponseRatingMax)
+})
+
+
+export const rateListingPathListingIdRegExp = new RegExp('^[a-zA-Z0-9_-]{1,100}$');
+
+
+export const RateListingParams = zod.object({
+  "listingId": zod.coerce.string().regex(rateListingPathListingIdRegExp)
+})
+
+export const rateListingBodyRatingMax = 5;
+
+
+
+export const RateListingBody = zod.object({
+  "rating": zod.number().min(1).max(rateListingBodyRatingMax)
+})
+
+export const rateListingResponseRatingMin = 0;
+export const rateListingResponseRatingMax = 5;
+
+
+
+export const RateListingResponse = zod.object({
+  "rating": zod.number().min(rateListingResponseRatingMin).max(rateListingResponseRatingMax)
+})
+
+
 export const GetContractorParams = zod.object({
   "id": zod.coerce.string()
 })
@@ -300,6 +342,42 @@ export const GetContractorResponse = zod.object({
   "createdAt": zod.coerce.date()
 }))
 }))
+
+
+export const GetContractorRatingParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const getContractorRatingResponseRatingMin = 0;
+export const getContractorRatingResponseRatingMax = 5;
+
+
+
+export const GetContractorRatingResponse = zod.object({
+  "rating": zod.number().min(getContractorRatingResponseRatingMin).max(getContractorRatingResponseRatingMax)
+})
+
+
+export const RateContractorParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const rateContractorBodyRatingMax = 5;
+
+
+
+export const RateContractorBody = zod.object({
+  "rating": zod.number().min(1).max(rateContractorBodyRatingMax)
+})
+
+export const rateContractorResponseRatingMin = 0;
+export const rateContractorResponseRatingMax = 5;
+
+
+
+export const RateContractorResponse = zod.object({
+  "rating": zod.number().min(rateContractorResponseRatingMin).max(rateContractorResponseRatingMax)
+})
 
 
 export const GetMySubscriptionResponse = zod.object({
@@ -798,7 +876,7 @@ export const createAdminListingBodyBathroomsMin = 0;
 
 export const createAdminListingBodyAreaMax = 50;
 
-export const createAdminListingBodyImageUrlMax = 2048;
+export const createAdminListingBodyImageUrlMax = 2000000;
 
 export const createAdminListingBodyContactPhoneMax = 32;
 
@@ -883,7 +961,7 @@ export const updateAdminListingBodyBathroomsMin = 0;
 
 export const updateAdminListingBodyAreaMax = 50;
 
-export const updateAdminListingBodyImageUrlMax = 2048;
+export const updateAdminListingBodyImageUrlMax = 2000000;
 
 export const updateAdminListingBodyContactPhoneMax = 32;
 

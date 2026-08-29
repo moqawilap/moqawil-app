@@ -2,7 +2,7 @@ import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import {
-  auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
@@ -77,7 +77,11 @@ function validListingId(value: unknown): value is string {
 function validActorKey(value: unknown): value is string {
   return typeof value === "string" && value.length >= 8 && value.length <= 128;
 }
-function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
+async function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
+  const [summary] = await db.select({
+    rating: sql<number>`coalesce(avg(${marketplaceRatings.rating}), 0)`,
+    count: sql<number>`count(*)`,
+  }).from(marketplaceRatings).where(and(eq(marketplaceRatings.subjectType, "listing"), eq(marketplaceRatings.subjectId, listing.id)));
   return {
     id: listing.id,
     title: listing.title,
@@ -91,7 +95,7 @@ function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
     area: listing.area,
     imageUrl: listing.imageUrl,
     contactPhone: listing.contactPhone,
-    rating: listing.adminRating ?? 0,
+    rating: Number(summary.count) > 0 ? Number(summary.rating) : listing.adminRating ?? 0,
     isPublished: listing.isPublished,
     createdAt: listing.createdAt.toISOString(),
     updatedAt: listing.updatedAt.toISOString(),
@@ -105,7 +109,7 @@ function validListingInput(input: Record<string, unknown>, partial = false) {
   for (const field of ["bedrooms", "bathrooms"] as const) {
     if (input[field] !== undefined && (!Number.isInteger(input[field]) || Number(input[field]) < 0 || Number(input[field]) > 100)) return false;
   }
-  if (input.imageUrl !== undefined && input.imageUrl !== null && !validOptionalText(input.imageUrl, 2048)) return false;
+  if (input.imageUrl !== undefined && input.imageUrl !== null && !validOptionalText(input.imageUrl, 2_000_000)) return false;
   if (input.contactPhone !== undefined && input.contactPhone !== null && !validOptionalText(input.contactPhone, 32)) return false;
   if (input.isPublished !== undefined && typeof input.isPublished !== "boolean") return false;
   if (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || Number(input.adminRating) < 1 || Number(input.adminRating) > 5)) return false;
@@ -168,7 +172,7 @@ router.get("/listings/engagement", async (req, res, next) => {
 router.get("/listings", async (_req, res, next) => {
   try {
     const rows = await db.select().from(marketplaceListings).where(eq(marketplaceListings.isPublished, true)).orderBy(desc(marketplaceListings.createdAt));
-    res.json(rows.map(listingResponse));
+    res.json(await Promise.all(rows.map(listingResponse)));
   } catch (error) { next(error); }
 });
 
@@ -183,7 +187,7 @@ router.get("/listings/:listingId", async (req, res, next) => {
       res.status(404).json({ error: "Listing not found" });
       return;
     }
-    res.json(listingResponse(listing));
+    res.json(await listingResponse(listing));
   } catch (error) { next(error); }
 });
 
@@ -242,6 +246,34 @@ router.post("/listings/:listingId/engagement", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get("/listings/:listingId/rating", async (req, res, next) => {
+  try {
+    const listingId = req.params.listingId;
+    if (!validListingId(listingId)) { res.status(400).json({ error: "Invalid listing identifier" }); return; }
+    const [summary] = await db.select({ rating: sql<number>`coalesce(avg(${marketplaceRatings.rating}), 0)` }).from(marketplaceRatings).where(and(eq(marketplaceRatings.subjectType, "listing"), eq(marketplaceRatings.subjectId, listingId)));
+    res.json({ rating: Number(summary.rating) });
+  } catch (error) { next(error); }
+});
+
+router.post("/listings/:listingId/rating", requireUser, async (req, res, next) => {
+  try {
+    const listingId = req.params.listingId;
+    const rating = Number(req.body?.rating);
+    if (!validListingId(listingId) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      res.status(400).json({ error: "A rating from 1 to 5 is required" });
+      return;
+    }
+    const listing = await db.query.marketplaceListings.findFirst({ where: and(eq(marketplaceListings.id, listingId), eq(marketplaceListings.isPublished, true)) });
+    const reviewerId = (req as AuthenticatedRequest).marketplaceUser.id;
+    await db.insert(marketplaceRatings).values({ subjectType: "listing", subjectId: listingId, reviewerId, rating }).onConflictDoUpdate({
+      target: [marketplaceRatings.subjectType, marketplaceRatings.subjectId, marketplaceRatings.reviewerId],
+      set: { rating, updatedAt: new Date() },
+    });
+    const [summary] = await db.select({ rating: sql<number>`coalesce(avg(${marketplaceRatings.rating}), 0)` }).from(marketplaceRatings).where(and(eq(marketplaceRatings.subjectType, "listing"), eq(marketplaceRatings.subjectId, listingId)));
+    res.json({ rating: Number(summary.rating) });
+  } catch (error) { next(error); }
+});
+
 router.get("/contractors", async (req, res, next) => {
   try {
     const now = new Date();
@@ -264,7 +296,7 @@ router.get("/contractors", async (req, res, next) => {
     if (minBudget !== null) filters.push(sql`${contractorProfiles.agreedContractAmountOmaniRial} is not null and ${contractorProfiles.agreedContractAmountOmaniRial} >= ${minBudget.toFixed(3)}`);
     if (maxBudget !== null) filters.push(sql`${contractorProfiles.agreedContractAmountOmaniRial} is not null and ${contractorProfiles.agreedContractAmountOmaniRial} <= ${maxBudget.toFixed(3)}`);
     const sort = typeof req.query.sort === "string" ? req.query.sort : "relevance";
-    if (!["relevance", "price_asc", "price_desc", "oldest", "newest"].includes(sort)) {
+    if (!["relevance", "rating_desc", "price_asc", "price_desc", "oldest", "newest"].includes(sort)) {
       res.status(400).json({ error: "Unsupported contractor sort" });
       return;
     }
@@ -294,6 +326,7 @@ router.get("/contractors", async (req, res, next) => {
         .orderBy(
           sort === "price_asc" ? asc(sql`coalesce(${contractorProfiles.agreedContractAmountOmaniRial}, '999999999')`) :
           sort === "price_desc" ? desc(sql`coalesce(${contractorProfiles.agreedContractAmountOmaniRial}, '0')`) :
+          sort === "rating_desc" ? desc(rating) :
           sort === "oldest" ? asc(contractorProfiles.createdAt) :
           sort === "newest" ? desc(contractorProfiles.createdAt) : desc(score),
           asc(contractorProfiles.businessName), asc(contractorProfiles.id),
@@ -307,7 +340,12 @@ router.get("/contractors", async (req, res, next) => {
 
 router.get("/contractors/:id", async (req, res, next) => {
   try {
-    const profile = await db.query.contractorProfiles.findFirst({ where: and(eq(contractorProfiles.id, req.params.id), eq(contractorProfiles.isPublished, true), isNull(contractorProfiles.archivedAt)) });
+    const contractorId = String(req.params.id);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contractorId)) {
+      res.status(404).json({ error: "Contractor not found" });
+      return;
+    }
+    const profile = await db.query.contractorProfiles.findFirst({ where: and(eq(contractorProfiles.id, contractorId), eq(contractorProfiles.isPublished, true), isNull(contractorProfiles.archivedAt)) });
     if (!profile) {
       res.status(404).json({ error: "Contractor not found" });
       return;
@@ -343,6 +381,48 @@ router.get("/contractors/:id", async (req, res, next) => {
         createdAt: item.createdAt,
       })),
     });
+  } catch (error) { next(error); }
+});
+
+router.get("/contractors/:id/rating", async (req, res, next) => {
+  try {
+    const contractorId = String(req.params.id);
+    if (!validListingId(contractorId)) { res.status(400).json({ error: "Invalid contractor identifier" }); return; }
+    const [summary] = await db.select({ rating: sql<number>`coalesce(avg(${marketplaceRatings.rating}), 0)` }).from(marketplaceRatings).where(and(eq(marketplaceRatings.subjectType, "contractor"), eq(marketplaceRatings.subjectId, contractorId)));
+    res.json({ rating: Number(summary.rating) });
+  } catch (error) { next(error); }
+});
+
+router.post("/contractors/:id/rating", requireUser, async (req, res, next) => {
+  try {
+    const contractorId = String(req.params.id);
+    const rating = Number(req.body?.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      res.status(400).json({ error: "A rating from 1 to 5 is required" });
+      return;
+    }
+    const reviewerId = (req as AuthenticatedRequest).marketplaceUser.id;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contractorId);
+    const profile = isUuid ? await db.query.contractorProfiles.findFirst({ where: and(eq(contractorProfiles.id, contractorId), eq(contractorProfiles.isPublished, true), isNull(contractorProfiles.archivedAt)) }) : undefined;
+    if (profile) {
+      await db.insert(reviews).values({ contractorId, reviewerId, rating, isPublished: true }).onConflictDoUpdate({
+        target: [reviews.contractorId, reviews.reviewerId],
+        set: { rating, isPublished: true, updatedAt: new Date() },
+      });
+      const summary = await contractorSummary(profile);
+      res.json({ rating: summary.rating });
+      return;
+    }
+    if (!validListingId(contractorId)) {
+      res.status(404).json({ error: "Contractor not found" });
+      return;
+    }
+    await db.insert(marketplaceRatings).values({ subjectType: "contractor", subjectId: contractorId, reviewerId, rating }).onConflictDoUpdate({
+      target: [marketplaceRatings.subjectType, marketplaceRatings.subjectId, marketplaceRatings.reviewerId],
+      set: { rating, updatedAt: new Date() },
+    });
+    const [summary] = await db.select({ rating: sql<number>`coalesce(avg(${marketplaceRatings.rating}), 0)` }).from(marketplaceRatings).where(and(eq(marketplaceRatings.subjectType, "contractor"), eq(marketplaceRatings.subjectId, contractorId)));
+    res.json({ rating: Number(summary.rating) });
   } catch (error) { next(error); }
 });
 
@@ -619,10 +699,10 @@ router.get("/admin/listings", requireUser, requireAdmin, async (_req, res, next)
     const rows = await db.select().from(marketplaceListings).orderBy(desc(marketplaceListings.createdAt));
     const metrics = await db.select().from(listingEngagement);
     const byId = new Map(metrics.map((item) => [item.listingId, item]));
-    res.json(rows.map((item) => {
+    res.json(await Promise.all(rows.map(async (item) => {
       const engagement = byId.get(item.id);
-      return { ...listingResponse(item), views: engagement?.viewCount ?? 0, likes: engagement?.likeCount ?? 0, saves: engagement?.saveCount ?? 0, contacts: engagement?.contactCount ?? 0 };
-    }));
+      return { ...(await listingResponse(item)), views: engagement?.viewCount ?? 0, likes: engagement?.likeCount ?? 0, saves: engagement?.saveCount ?? 0, contacts: engagement?.contactCount ?? 0 };
+    })));
   } catch (error) { next(error); }
 });
 router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next) => {
@@ -650,7 +730,7 @@ router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next)
       adminRating: input.adminRating === null || input.adminRating === undefined ? null : Number(input.adminRating),
       isPublished: input.isPublished === true,
     }).returning();
-    res.status(201).json(listingResponse(created));
+    res.status(201).json(await listingResponse(created));
   } catch (error) { next(error); }
 });
 router.patch("/admin/listings/:id", requireUser, requireAdmin, async (req, res, next) => {
@@ -671,7 +751,7 @@ router.patch("/admin/listings/:id", requireUser, requireAdmin, async (req, res, 
       res.status(404).json({ error: "Listing not found" });
       return;
     }
-    res.json(listingResponse(updated));
+    res.json(await listingResponse(updated));
   } catch (error) { next(error); }
 });
 router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res, next) => {

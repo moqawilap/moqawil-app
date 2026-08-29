@@ -31,7 +31,7 @@ paths:
         - { name: search, in: query, schema: { type: string } }
         - { name: minBudget, in: query, schema: { type: number, minimum: 0 } }
         - { name: maxBudget, in: query, schema: { type: number, minimum: 0 } }
-        - { name: sort, in: query, schema: { type: string, enum: [relevance, price_asc, price_desc, oldest, newest], default: relevance } }
+        - { name: sort, in: query, schema: { type: string, enum: [relevance, rating_desc, price_asc, price_desc, oldest, newest], default: relevance } }
         - { name: page, in: query, schema: { type: number, minimum: 1, default: 1 } }
         - { name: limit, in: query, schema: { type: number, minimum: 1, maximum: 50, default: 20 } }
       responses:
@@ -86,6 +86,23 @@ paths:
       responses:
         "200": { description: Updated listing engagement, content: { application/json: { schema: { $ref: "#/components/schemas/ListingEngagement" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
+  /listings/{listingId}/rating:
+    get:
+      operationId: getListingRating
+      tags: [listings]
+      parameters: [ { $ref: "#/components/parameters/ListingId" } ]
+      responses:
+        "200": { description: Listing aggregate rating, content: { application/json: { schema: { $ref: "#/components/schemas/RatingSummary" } } } }
+    post:
+      operationId: rateListing
+      tags: [listings]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/ListingId" } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RatingInput" } } } }
+      responses:
+        "200": { description: Updated listing aggregate rating, content: { application/json: { schema: { $ref: "#/components/schemas/RatingSummary" } } } }
+        "401": { description: Authentication required }
+        "404": { $ref: "#/components/responses/NotFound" }
   /contractors/{id}:
     get:
       operationId: getContractor
@@ -93,6 +110,23 @@ paths:
       parameters: [ { $ref: "#/components/parameters/ContractorId" } ]
       responses:
         "200": { description: Contractor detail, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /contractors/{id}/rating:
+    get:
+      operationId: getContractorRating
+      tags: [contractors]
+      parameters: [ { $ref: "#/components/parameters/ContractorId" } ]
+      responses:
+        "200": { description: Contractor aggregate rating, content: { application/json: { schema: { $ref: "#/components/schemas/RatingSummary" } } } }
+    post:
+      operationId: rateContractor
+      tags: [contractors]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/ContractorId" } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RatingInput" } } } }
+      responses:
+        "200": { description: Updated contractor aggregate rating, content: { application/json: { schema: { $ref: "#/components/schemas/RatingSummary" } } } }
+        "401": { description: Authentication required }
         "404": { $ref: "#/components/responses/NotFound" }
   /me/subscription:
     get:
@@ -411,6 +445,16 @@ components:
         clientId: { type: string, minLength: 8, maxLength: 128 }
         active: { type: boolean }
       required: [action, clientId]
+    RatingInput:
+      type: object
+      properties:
+        rating: { type: number, minimum: 1, maximum: 5 }
+      required: [rating]
+    RatingSummary:
+      type: object
+      properties:
+        rating: { type: number, minimum: 0, maximum: 5 }
+      required: [rating]
     MarketplaceListing:
       type: object
       properties:
@@ -447,7 +491,7 @@ components:
         bedrooms: { type: number, minimum: 0 }
         bathrooms: { type: number, minimum: 0 }
         area: { type: string, minLength: 1, maxLength: 50 }
-        imageUrl: { type: [string, "null"], maxLength: 2048 }
+        imageUrl: { type: [string, "null"], maxLength: 2000000 }
         contactPhone: { type: [string, "null"], maxLength: 32 }
         adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }
         isPublished: { type: boolean }
@@ -464,7 +508,7 @@ components:
         bedrooms: { type: number, minimum: 0 }
         bathrooms: { type: number, minimum: 0 }
         area: { type: string, minLength: 1, maxLength: 50 }
-        imageUrl: { type: [string, "null"], maxLength: 2048 }
+        imageUrl: { type: [string, "null"], maxLength: 2000000 }
         contactPhone: { type: [string, "null"], maxLength: 32 }
         adminRating: { type: [number, "null"], minimum: 1, maximum: 5 }
         isPublished: { type: boolean }

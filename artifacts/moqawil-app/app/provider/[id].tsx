@@ -1,21 +1,30 @@
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, BrandMark, FixedBackButton, IconButton, Rating } from '@/components/MoqawilUI';
+import { ActionButton, BrandMark, FixedBackButton, IconButton, Rating, StarRatingInput } from '@/components/MoqawilUI';
 import { providers } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { useGetContractor } from '@workspace/api-client-react';
+import { getGetContractorQueryKey, getGetContractorRatingQueryKey, getListContractorsQueryKey, useGetContractor, useGetContractorRating, useRateContractor } from '@workspace/api-client-react';
 
 export default function ProviderDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isArabic, isSaved, toggleSaved, managedProviders } = useApp();
   const contractor = useGetContractor(id);
+  const persistedRating = useGetContractorRating(id, { query: { queryKey: getGetContractorRatingQueryKey(id), enabled: Boolean(id) } });
+  const [selectedRating, setSelectedRating] = React.useState(0);
+  const rate = useRateContractor({ mutation: { onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: getGetContractorQueryKey(id) });
+    queryClient.invalidateQueries({ queryKey: getGetContractorRatingQueryKey(id) });
+    queryClient.invalidateQueries({ queryKey: getListContractorsQueryKey() });
+  } } });
   const fallback = managedProviders.find((item) => item.id === id);
   const provider = contractor.data ? {
     id: contractor.data.id, name: contractor.data.businessName, nameAr: contractor.data.businessName,
@@ -50,12 +59,13 @@ export default function ProviderDetail() {
             </View>
           </View>
           <View style={[styles.statsRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <View><Rating value={provider.rating} reviews={provider.reviews} /><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Customer rating</Text></View>
+            <View><Rating value={rate.data?.rating ?? (persistedRating.data?.rating ? persistedRating.data.rating : provider.rating)} reviews={provider.reviews} /><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Customer rating</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View><Text style={[styles.statValue, { color: colors.foreground }]}>{provider.projects}</Text><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Projects</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View><Text style={[styles.statValue, { color: colors.foreground }]}>{provider.distance}</Text><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Away</Text></View>
           </View>
+          <StarRatingInput value={selectedRating} onChange={(value) => { setSelectedRating(value); rate.mutate({ id, data: { rating: value } }); }} disabled={rate.isPending} label={isArabic ? 'قيّم مقدم الخدمة من نجمة إلى خمس' : 'Rate this provider from one to five stars'} />
           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>{isArabic ? 'عن مقدم الخدمة' : 'About this provider'}</Text>
           <Text style={[styles.description, { color: colors.mutedForeground }]}>{isArabic ? provider.descriptionAr : provider.description}</Text>
            {contractor.isLoading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 14 }} /> : null}

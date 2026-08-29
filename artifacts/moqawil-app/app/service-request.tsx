@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
-import { ActionButton, ScreenHeader } from '@/components/MoqawilUI';
+import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { buildingServices } from '@/data/buildingServices';
@@ -50,8 +50,7 @@ export default function ServiceRequestScreen() {
   const valid = requirements.trim().length >= 8;
   const validBudget = !budget.trim() || (Number.isFinite(Number(budget)) && Number(budget) >= 0);
   if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لإرسال طلب خدمة' : 'Sign in to request a service'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
-  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 50 }} keyboardShouldPersistTaps="handled"><View style={styles.content}>
-    <Pressable testID="service-request-back" onPress={() => router.back()}><Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} /></Pressable>
+  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><FixedBackButton testID="service-request-back" onPress={() => router.back()} /><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 50 }} keyboardShouldPersistTaps="handled"><View style={styles.content}>
     <ScreenHeader title={isArabic ? 'أحتاج خدمة' : 'I need a service'} subtitle={isArabic ? 'أرسل طلبًا واحدًا لعدة ورش قريبة' : 'Send one request to matching workshops nearby'} />
     <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نوع الخدمة' : 'Service type'}</Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>{buildingServices.slice(0, 12).map((item) => <Pressable key={item.name} onPress={() => setService(item)} style={[styles.chip, { borderColor: colors.border, backgroundColor: service.name === item.name ? colors.primarySoft : colors.surface }]}><Text style={{ color: service.name === item.name ? colors.primary : colors.foreground, fontSize: 12 }}>{isArabic ? item.nameAr : item.name}</Text></Pressable>)}</ScrollView>

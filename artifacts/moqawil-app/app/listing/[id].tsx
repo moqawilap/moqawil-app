@@ -1,24 +1,37 @@
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagementMetrics, Rating } from '@/components/MoqawilUI';
+import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagementMetrics, Rating, StarRatingInput } from '@/components/MoqawilUI';
 import { listings, marketplaceListingToLocal } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getGetListingQueryKey, useGetListing, useRecordListingEngagement } from '@workspace/api-client-react';
+import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useRateListing, useRecordListingEngagement } from '@workspace/api-client-react';
 
 export default function ListingDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isArabic, isSaved, toggleSaved, engagementClientId } = useApp();
   const localListing = listings.find((item) => item.id === id);
   const liveListing = useGetListing(id ?? '', { query: { queryKey: getGetListingQueryKey(id ?? ''), enabled: Boolean(id && !localListing) } });
+  const persistedRating = useGetListingRating(id ?? '', { query: { queryKey: getGetListingRatingQueryKey(id ?? ''), enabled: Boolean(id) } });
   const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : (localListing ?? listings[0]);
   const contact = useRecordListingEngagement();
+  const [selectedRating, setSelectedRating] = React.useState(0);
+  const rate = useRateListing({ mutation: { onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: getGetListingQueryKey(listing.id) });
+    queryClient.invalidateQueries({ queryKey: getGetListingRatingQueryKey(listing.id) });
+    queryClient.invalidateQueries({ queryKey: getListListingsQueryKey() });
+  } } });
+  const submitRating = (value: number) => {
+    setSelectedRating(value);
+    rate.mutate({ listingId: listing.id, data: { rating: value } });
+  };
   const openContact = () => {
     if (engagementClientId) {
       contact.mutate({ listingId: listing.id, data: { action: 'contact', clientId: engagementClientId } });
@@ -42,7 +55,8 @@ export default function ListingDetail() {
         <View style={styles.content}>
           <Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? listing.titleAr : listing.title}</Text>
           <Text style={[styles.price, { color: colors.primary }]}>{listing.price}</Text>
-          {listing.rating !== undefined ? <Rating value={listing.rating} /> : null}
+          <Rating value={rate.data?.rating ?? (persistedRating.data?.rating ? persistedRating.data.rating : listing.rating ?? 0)} />
+          <StarRatingInput value={selectedRating} onChange={submitRating} disabled={rate.isPending} label={isArabic ? 'قيّم هذا العقار من نجمة إلى خمس' : 'Rate this property from one to five stars'} />
           <View style={styles.locationRow}><Feather name="map-pin" size={15} color={colors.mutedForeground} /><Text style={[styles.location, { color: colors.mutedForeground }]}>{isArabic ? listing.locationAr : listing.location}</Text></View>
           <View style={[styles.specs, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             {[[String(listing.beds), 'Bedrooms'], [String(listing.baths), 'Bathrooms'], [listing.area, 'Total area']].map(([value, label]) => (

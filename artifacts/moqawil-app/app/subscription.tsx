@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, ScreenHeader } from '@/components/MoqawilUI';
+import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getGetMySubscriptionQueryKey, getListMyPaymentsQueryKey, useCancelMySubscription, useGetMySubscription, useListMyPayments, useStartDevelopmentPayment } from '@workspace/api-client-react';
@@ -29,8 +29,7 @@ export default function SubscriptionScreen() {
     }
     Alert.alert(title, message, [{ text: isArabic ? 'رجوع' : 'Keep plan', style: 'cancel' }, { text: isArabic ? 'إلغاء الاشتراك' : 'Cancel subscription', style: 'destructive', onPress: () => cancel.mutate() }]);
   };
-  return <View style={[styles.page, { backgroundColor: colors.background }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }}><View style={styles.content}>
-    <Pressable testID="subscription-back" onPress={() => router.back()}><Feather name="arrow-left" size={20} color={colors.foreground} /></Pressable>
+  return <View style={[styles.page, { backgroundColor: colors.background }]}><FixedBackButton testID="subscription-back" onPress={() => router.back()} /><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45 }}><View style={styles.content}>
     <ScreenHeader title={isArabic ? 'اشتراك المقاول' : 'Contractor subscription'} subtitle={isArabic ? 'إدارة خطتك وفواتيرك' : 'Manage your plan and billing'} />
     {!isSignedIn ? <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.note, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لعرض اشتراكك ومدفوعاتك.' : 'Sign in to view your subscription and payments.'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View> : null}
     {isSignedIn ? <React.Fragment>

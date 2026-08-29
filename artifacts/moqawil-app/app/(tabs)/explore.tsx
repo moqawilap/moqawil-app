@@ -11,7 +11,7 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getListListingsQueryKey, useListContractors, useListListings } from '@workspace/api-client-react';
 
-type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'oldest' | 'newest';
+type SortOption = 'relevance' | 'rating_desc' | 'price_asc' | 'price_desc' | 'oldest' | 'newest';
 
 function amountFromText(value?: string | number | null) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -82,7 +82,7 @@ export default function ExploreScreen() {
     const apiProviders = directory.data?.items.map((contractor) => ({
       id: contractor.id, name: contractor.businessName, nameAr: contractor.businessName, specialty: contractor.bio || 'Contractor',
       specialtyAr: contractor.bio || 'مقاول', rating: contractor.rating, reviews: contractor.reviewCount, distance: contractor.city,
-      city: contractor.city, verified: contractor.isVerified,
+      city: contractor.city, wilayat: contractor.wilayat ?? undefined, verified: contractor.isVerified,
       image: contractor.avatarUrl ? { uri: contractor.avatarUrl } : selectedService === 'consultants' ? images.interior : selectedService === 'maintenance' ? images.villa : images.contractor,
       rankingScore: contractor.rankingScore, priceOmaniRial: contractor.priceOmaniRial, createdAt: contractor.createdAt,
     }));
@@ -110,7 +110,12 @@ export default function ExploreScreen() {
   const filteredListings = useMemo(() => availableListings
     .filter((listing) => {
       const price = amountFromText(listing.price);
-      return (minimumBudgetValue === undefined || (price !== null && price >= minimumBudgetValue))
+      const haystack = `${listing.title} ${listing.titleAr} ${listing.location} ${listing.locationAr}`.toLowerCase();
+      return (!query.trim() || haystack.includes(query.trim().toLowerCase()))
+        && (!selectedGovernorate || haystack.includes(selectedGovernorate.toLowerCase()))
+        && (!selectedWilayat || haystack.includes(selectedWilayat.toLowerCase()))
+        && (listing.rating ?? 0) >= minimumRating
+        && (minimumBudgetValue === undefined || (price !== null && price >= minimumBudgetValue))
         && (maximumBudgetValue === undefined || (price !== null && price <= maximumBudgetValue));
     })
     .sort((a, b) => {
@@ -118,12 +123,14 @@ export default function ExploreScreen() {
       const bPrice = amountFromText(b.price);
       if (sort === 'price_asc') return (aPrice ?? Number.MAX_SAFE_INTEGER) - (bPrice ?? Number.MAX_SAFE_INTEGER);
       if (sort === 'price_desc') return (bPrice ?? -1) - (aPrice ?? -1);
+      if (sort === 'rating_desc') return (b.rating ?? 0) - (a.rating ?? 0);
       if (sort === 'oldest') return dateFromText(a.createdAt) - dateFromText(b.createdAt);
       return dateFromText(b.createdAt) - dateFromText(a.createdAt);
-    }), [availableListings, minimumBudgetValue, maximumBudgetValue, sort]);
+    }), [availableListings, maximumBudgetValue, minimumBudgetValue, minimumRating, query, selectedGovernorate, selectedWilayat, sort]);
 
   const sortOptions: Array<{ value: SortOption; label: string; labelAr: string }> = [
     { value: 'relevance', label: 'Best match', labelAr: 'الأفضل تطابقًا' },
+    { value: 'rating_desc', label: 'Highest rated', labelAr: 'الأعلى تقييمًا' },
     ...(visibleMode === 'Properties' ? [
       { value: 'price_asc' as const, label: 'Lowest price', labelAr: 'السعر الأقل' },
       { value: 'price_desc' as const, label: 'Highest price', labelAr: 'السعر الأعلى' },
@@ -173,6 +180,15 @@ export default function ExploreScreen() {
               <TextInput testID="maximum-budget" value={maximumBudget} onChangeText={setMaximumBudget} keyboardType="decimal-pad" placeholder={isArabic ? 'الحد الأعلى' : 'Maximum'} placeholderTextColor={colors.mutedForeground} style={[styles.budgetInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
             </View>
             {!budgetRangeValid ? <Text style={styles.budgetError}>{isArabic ? 'يجب أن يكون الحد الأدنى أقل من الحد الأعلى.' : 'Minimum budget must not exceed maximum budget.'}</Text> : null}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortOptions}>
+              {sortOptions.map((option) => {
+                const selected = sort === option.value;
+                return <Pressable key={option.value} testID={`sort-${option.value}`} onPress={() => setSort(option.value)} style={({ pressed }) => [styles.sortChip, { backgroundColor: selected ? colors.primary : colors.background, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}><Text style={[styles.sortChipText, { color: selected ? colors.primaryForeground : colors.foreground }]}>{isArabic ? option.labelAr : option.label}</Text></Pressable>;
+              })}
+            </ScrollView>
+          </View> : null}
+          {visibleMode !== 'Properties' ? <View style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.budgetTitle, { color: colors.foreground }]}>{isArabic ? 'الترتيب' : 'Sort results'}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortOptions}>
               {sortOptions.map((option) => {
                 const selected = sort === option.value;

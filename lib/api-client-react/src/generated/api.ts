@@ -49,6 +49,8 @@ import type {
   Payment,
   Quote,
   QuoteCreate,
+  RatingInput,
+  RatingSummary,
   ServiceRequest,
   ServiceRequestCreate,
   Subscription,
@@ -672,6 +674,143 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getRecordListingEngagementMutationOptions(options));
     }
 
+export const getGetListingRatingUrl = (listingId: string,) => {
+
+
+
+
+  return `/api/listings/${listingId}/rating`
+}
+
+export const getListingRating = async (listingId: string, options?: Parameters<typeof customFetch>[1]): Promise<RatingSummary> => {
+
+  return customFetch<RatingSummary>(getGetListingRatingUrl(listingId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetListingRatingQueryKey = (listingId: string,) => {
+    return [
+    `/api/listings/${listingId}/rating`
+    ] as const;
+    }
+
+
+export const getGetListingRatingQueryOptions = <TData = Awaited<ReturnType<typeof getListingRating>>, TError = ErrorType<unknown>>(listingId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetListingRatingQueryKey(listingId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getListingRating>>> = ({ signal }) => getListingRating(listingId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: listingId !== null && listingId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getListingRating>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetListingRatingQueryResult = NonNullable<Awaited<ReturnType<typeof getListingRating>>>
+export type GetListingRatingQueryError = ErrorType<unknown>
+
+
+
+export function useGetListingRating<TData = Awaited<ReturnType<typeof getListingRating>>, TError = ErrorType<unknown>>(
+ listingId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetListingRatingQueryOptions(listingId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRateListingUrl = (listingId: string,) => {
+
+
+
+
+  return `/api/listings/${listingId}/rating`
+}
+
+export const rateListing = async (listingId: string,
+    ratingInput: RatingInput, options?: Parameters<typeof customFetch>[1]): Promise<RatingSummary> => {
+
+  return customFetch<RatingSummary>(getRateListingUrl(listingId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ratingInput)
+  }
+);}
+
+
+
+
+
+export const getRateListingMutationOptions = <TError = ErrorType<void | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateListing>>, TError,{listingId: string;data: BodyType<RatingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rateListing>>, TError,{listingId: string;data: BodyType<RatingInput>}, TContext> => {
+
+const mutationKey = ['rateListing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rateListing>>, {listingId: string;data: BodyType<RatingInput>}> = (props) => {
+          const {listingId,data} = props ?? {};
+
+          return  rateListing(listingId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RateListingMutationResult = NonNullable<Awaited<ReturnType<typeof rateListing>>>
+    export type RateListingMutationBody = BodyType<RatingInput>
+    export type RateListingMutationError = ErrorType<void | NotFoundResponse>
+
+    export const useRateListing = <TError = ErrorType<void | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateListing>>, TError,{listingId: string;data: BodyType<RatingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rateListing>>,
+        TError,
+        {listingId: string;data: BodyType<RatingInput>},
+        TContext
+      > => {
+      return useMutation(getRateListingMutationOptions(options));
+    }
+
 export const getGetContractorUrl = (id: string,) => {
 
 
@@ -742,6 +881,143 @@ export function useGetContractor<TData = Awaited<ReturnType<typeof getContractor
 
 
 
+
+export const getGetContractorRatingUrl = (id: string,) => {
+
+
+
+
+  return `/api/contractors/${id}/rating`
+}
+
+export const getContractorRating = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RatingSummary> => {
+
+  return customFetch<RatingSummary>(getGetContractorRatingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetContractorRatingQueryKey = (id: string,) => {
+    return [
+    `/api/contractors/${id}/rating`
+    ] as const;
+    }
+
+
+export const getGetContractorRatingQueryOptions = <TData = Awaited<ReturnType<typeof getContractorRating>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContractorRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetContractorRatingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContractorRating>>> = ({ signal }) => getContractorRating(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getContractorRating>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetContractorRatingQueryResult = NonNullable<Awaited<ReturnType<typeof getContractorRating>>>
+export type GetContractorRatingQueryError = ErrorType<unknown>
+
+
+
+export function useGetContractorRating<TData = Awaited<ReturnType<typeof getContractorRating>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContractorRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetContractorRatingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRateContractorUrl = (id: string,) => {
+
+
+
+
+  return `/api/contractors/${id}/rating`
+}
+
+export const rateContractor = async (id: string,
+    ratingInput: RatingInput, options?: Parameters<typeof customFetch>[1]): Promise<RatingSummary> => {
+
+  return customFetch<RatingSummary>(getRateContractorUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ratingInput)
+  }
+);}
+
+
+
+
+
+export const getRateContractorMutationOptions = <TError = ErrorType<void | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateContractor>>, TError,{id: string;data: BodyType<RatingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rateContractor>>, TError,{id: string;data: BodyType<RatingInput>}, TContext> => {
+
+const mutationKey = ['rateContractor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rateContractor>>, {id: string;data: BodyType<RatingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rateContractor(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RateContractorMutationResult = NonNullable<Awaited<ReturnType<typeof rateContractor>>>
+    export type RateContractorMutationBody = BodyType<RatingInput>
+    export type RateContractorMutationError = ErrorType<void | NotFoundResponse>
+
+    export const useRateContractor = <TError = ErrorType<void | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateContractor>>, TError,{id: string;data: BodyType<RatingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rateContractor>>,
+        TError,
+        {id: string;data: BodyType<RatingInput>},
+        TContext
+      > => {
+      return useMutation(getRateContractorMutationOptions(options));
+    }
 
 export const getGetMySubscriptionUrl = () => {
 

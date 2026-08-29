@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { ActionButton, EmptyState, ScreenHeader } from '@/components/MoqawilUI';
+import { ActionButton, EmptyState, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getListWorkshopRequestsQueryKey, useCreateWorkshopQuote, useListWorkshopRequests } from '@workspace/api-client-react';
@@ -22,7 +22,7 @@ export default function WorkshopRequestsScreen() {
   const requests = useListWorkshopRequests({ query: { queryKey: getListWorkshopRequestsQueryKey(), enabled: !!isSignedIn } });
   const quote = useCreateWorkshopQuote({ mutation: { onSuccess: () => { setSelectedId(null); setAmount(''); setDays('3'); setDetails(''); client.invalidateQueries({ queryKey: getListWorkshopRequestsQueryKey() }); Alert.alert(isArabic ? 'تم إرسال العرض' : 'Quote sent', isArabic ? 'سيصل العرض للعميل الآن.' : 'The customer can now compare your quote.'); }, onError: () => Alert.alert(isArabic ? 'تعذر إرسال العرض' : 'Could not send quote', isArabic ? 'أنشئ ملف الورشة وتأكد من بيانات العرض.' : 'Create your workshop profile and check the quote details.') } });
   if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لإدارة طلبات الورشة' : 'Sign in to manage workshop requests'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
-  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45, paddingHorizontal: 20 }}><Pressable testID="workshop-requests-back" onPress={() => router.back()}><Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} /></Pressable><ScreenHeader title={isArabic ? 'طلبات الورشة' : 'Workshop requests'} subtitle={isArabic ? 'راجع الطلبات وأرسل عروضك' : 'Review requests and send your quote'} />
+  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><FixedBackButton testID="workshop-requests-back" onPress={() => router.back()} /><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 45, paddingHorizontal: 20 }}><ScreenHeader title={isArabic ? 'طلبات الورشة' : 'Workshop requests'} subtitle={isArabic ? 'راجع الطلبات وأرسل عروضك' : 'Review requests and send your quote'} />
     {requests.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
     {requests.isError ? <Text style={{ color: colors.mutedForeground }}>{isArabic ? 'هذه الصفحة متاحة لأصحاب الورش بعد إنشاء الملف.' : 'This page is available to workshop owners with a profile.'}</Text> : null}
     {!requests.isLoading && !requests.isError && !requests.data?.length ? <EmptyState icon="inbox" title={isArabic ? 'لا توجد طلبات جديدة' : 'No incoming requests'} description={isArabic ? 'ستظهر هنا طلبات الخدمات المطابقة لموقع ورشتك.' : 'Matching service requests will appear here.'} /> : null}

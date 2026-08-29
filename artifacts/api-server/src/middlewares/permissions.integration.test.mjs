@@ -48,6 +48,30 @@ test("signed-out requests never reach protected handlers", async () => {
     assert.equal(result.response.status, 401);
     assert.deepEqual(result.body, { error: "Authentication required" });
   }
+  for (const path of ["/contractors/not-a-real-id/rating", "/listings/not-a-real-id/rating"]) {
+    const result = await request(undefined, path, { method: "POST", body: JSON.stringify({ rating: 5 }) });
+    assert.equal(result.response.status, 401);
+    assert.deepEqual(result.body, { error: "Authentication required" });
+  }
+});
+
+test("customers can rate providers and properties from one to five stars", async () => {
+  const directory = await request("customer", "/contractors?limit=50");
+  const contractor = directory.body.items.find((item) => /^Permission Test Contractor /.test(item.businessName));
+  assert.ok(contractor);
+  const providerRating = await request("customer", `/contractors/${contractor.id}/rating`, { method: "POST", body: JSON.stringify({ rating: 5 }) });
+  assert.equal(providerRating.response.status, 200);
+  assert.equal(providerRating.body.rating, 5);
+
+  const listings = await request("customer", "/listings");
+  const listing = listings.body.find((item) => /^Permission Test Listing /.test(item.title));
+  assert.ok(listing);
+  const propertyRating = await request("customer", `/listings/${listing.id}/rating`, { method: "POST", body: JSON.stringify({ rating: 4 }) });
+  assert.equal(propertyRating.response.status, 200);
+  assert.equal(propertyRating.body.rating, 4);
+
+  const invalid = await request("customer", `/listings/${listing.id}/rating`, { method: "POST", body: JSON.stringify({ rating: 6 }) });
+  assert.equal(invalid.response.status, 400);
 });
 
 test("customer cannot access contractor lifecycle data", async () => {

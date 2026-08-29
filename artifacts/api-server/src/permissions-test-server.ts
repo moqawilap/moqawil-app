@@ -1,6 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { eq, inArray } from "drizzle-orm";
-import { contractorProfiles, db, requestRecipients, serviceRequests, subscriptionPlans, subscriptions, users, type User } from "@workspace/db";
+import { contractorProfiles, db, marketplaceListings, requestRecipients, serviceRequests, subscriptionPlans, subscriptions, users, type User } from "@workspace/db";
 import { requireAdmin, requireContractor, type AuthenticatedRequest } from "./middlewares/auth";
 import { createMarketplaceRouter } from "./routes/marketplace";
 import { ensureMarketplaceDefaults } from "./lib/marketplace";
@@ -38,6 +38,16 @@ await db.insert(subscriptions).values({
   planId: plan.id,
   trialEndsAt: new Date(Date.now() + 30 * 86400000),
 });
+const [fixtureListing] = await db.insert(marketplaceListings).values({
+  id: `permission-listing-${tag}`,
+  title: `Permission Test Listing ${tag}`,
+  titleArabic: `عقار اختبار ${tag}`,
+  price: "100000 OMR",
+  location: "Bawshar, Muscat",
+  locationArabic: "بوشر، مسقط",
+  area: "200 m²",
+  isPublished: true,
+}).returning();
 await db.insert(subscriptions).values({
   contractorId: secondProfile.id,
   planId: plan.id,
@@ -106,6 +116,7 @@ const port = Number(process.env.PORT);
 const server = app.listen(port);
 const cleanup = async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await db.delete(marketplaceListings).where(eq(marketplaceListings.id, fixtureListing.id));
   await db.delete(users).where(inArray(users.id, fixtureUsers.map((user) => user.id)));
   process.exit(0);
 };

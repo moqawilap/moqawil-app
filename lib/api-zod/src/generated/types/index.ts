@@ -50,6 +50,8 @@ export * from './project';
 export * from './quote';
 export * from './quoteCreate';
 export * from './rankingWeights';
+export * from './ratingInput';
+export * from './ratingSummary';
 export * from './review';
 export * from './service';
 export * from './serviceRequest';

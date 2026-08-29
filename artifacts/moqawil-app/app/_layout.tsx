@@ -1,6 +1,6 @@
-import React, { type ReactNode, useEffect, useState } from 'react';
+import React, { type ReactNode, useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ActivityIndicator, View } from 'react-native';
+import { Animated, Easing, Image, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -42,6 +42,25 @@ function AuthUserSync() {
   return null;
 }
 
+function LoadingLogo() {
+  const pulse = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 650, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.55, duration: 650, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+  return (
+    <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFC', zIndex: 100 }}>
+      <Animated.View style={{ opacity: pulse }}>
+        <Image source={require('@/assets/images/moqawil-logo.png')} style={{ width: 128, height: 128, resizeMode: 'contain' }} />
+      </Animated.View>
+    </View>
+  );
+}
+
 function RootLayoutNav() {
   const { isLoaded, isSignedIn } = useAuth();
   const { preferencesLoaded } = useApp();
@@ -67,7 +86,7 @@ function RootLayoutNav() {
         <Stack.Screen name="requests" options={{ presentation: 'modal' }} />
         <Stack.Screen name="workshop-requests" options={{ presentation: 'modal' }} />
       </Stack>
-      {(!isLoaded || !preferencesLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFC' }}><ActivityIndicator color="#0E5A70" /></View> : null}
+      {(!isLoaded || !preferencesLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <LoadingLogo /> : null}
     </View>
   );
 }
