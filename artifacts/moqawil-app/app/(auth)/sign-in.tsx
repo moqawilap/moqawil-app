@@ -99,8 +99,8 @@ export default function SignInScreen() {
   const saveNewPassword = async () => {
     if (busy) return;
     setErrorMessage(null);
-    if (newPassword.length < 8) {
-      setErrorMessage('Password must be at least 8 characters.');
+    if (newPassword.length < 15) {
+      setErrorMessage('Password must be at least 15 characters.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -154,7 +154,7 @@ export default function SignInScreen() {
           <Text style={[styles.label, { color: colors.foreground }]}>Verification code</Text>
           <TextInput keyboardType="number-pad" value={resetCode} onChangeText={setResetCode} placeholder="Enter the code" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         </> : <>
-          <Text style={[styles.resetHint, { color: colors.mutedForeground }]}>Choose a new password with at least 8 characters.</Text>
+          <Text style={[styles.resetHint, { color: colors.mutedForeground }]}>Choose a new password with at least 15 characters.</Text>
           <Text style={[styles.label, { color: colors.foreground }]}>New password</Text>
           <TextInput secureTextEntry value={newPassword} onChangeText={setNewPassword} placeholder="Enter a new password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
           <Text style={[styles.label, { color: colors.foreground }]}>Confirm new password</Text>
