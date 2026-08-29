@@ -765,6 +765,8 @@ export const createAdminContractorBodyServiceAreaMax = 255;
 
 export const createAdminContractorBodyPhoneMax = 32;
 
+export const createAdminContractorBodyAvatarUrlMax = 2000000;
+
 export const createAdminContractorBodyEvaluationNotesMax = 5000;
 
 export const createAdminContractorBodyAdminRatingMax = 5;
@@ -782,7 +784,7 @@ export const CreateAdminContractorBody = zod.object({
   "bioArabic": zod.string().max(createAdminContractorBodyBioArabicMax).nullish(),
   "serviceArea": zod.string().max(createAdminContractorBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(createAdminContractorBodyPhoneMax).nullish(),
-  "avatarUrl": zod.string().nullish(),
+  "avatarUrl": zod.string().max(createAdminContractorBodyAvatarUrlMax).nullish(),
   "evaluationNotes": zod.string().max(createAdminContractorBodyEvaluationNotesMax).nullish(),
   "adminRating": zod.number().min(1).max(createAdminContractorBodyAdminRatingMax).nullish(),
   "agreedContractAmountOmaniRial": zod.number().min(createAdminContractorBodyAgreedContractAmountOmaniRialMin).nullish(),
@@ -1073,6 +1075,8 @@ export const updateAdminContractorBodyServiceAreaMax = 255;
 
 export const updateAdminContractorBodyPhoneMax = 32;
 
+export const updateAdminContractorBodyAvatarUrlMax = 2000000;
+
 export const updateAdminContractorBodyEvaluationNotesMax = 5000;
 
 export const updateAdminContractorBodyAdminRatingMax = 5;
@@ -1090,7 +1094,7 @@ export const UpdateAdminContractorBody = zod.object({
   "bioArabic": zod.string().max(updateAdminContractorBodyBioArabicMax).nullish(),
   "serviceArea": zod.string().max(updateAdminContractorBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(updateAdminContractorBodyPhoneMax).nullish(),
-  "avatarUrl": zod.string().nullish(),
+  "avatarUrl": zod.string().max(updateAdminContractorBodyAvatarUrlMax).nullish(),
   "evaluationNotes": zod.string().max(updateAdminContractorBodyEvaluationNotesMax).nullish(),
   "adminRating": zod.number().min(1).max(updateAdminContractorBodyAdminRatingMax).nullish(),
   "agreedContractAmountOmaniRial": zod.number().min(updateAdminContractorBodyAgreedContractAmountOmaniRialMin).nullish(),

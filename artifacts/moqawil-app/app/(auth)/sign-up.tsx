@@ -11,6 +11,7 @@ export default function SignUpScreen() {
   const { signUp, fetchStatus } = useSignUp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [verificationStarted, setVerificationStarted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -80,7 +81,12 @@ export default function SignUpScreen() {
         <Text style={[styles.label, { color: colors.foreground }]}>Email address</Text>
         <TextInput editable={!verificationStarted} autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
          <Text style={[styles.label, { color: colors.foreground }]}>Password <Text style={{ color: colors.mutedForeground, fontWeight: '500' }}>(15 characters minimum)</Text></Text>
-        <TextInput editable={!verificationStarted} secureTextEntry value={password} onChangeText={setPassword} placeholder="Create a password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+        <View style={styles.passwordWrap}>
+          <TextInput testID="sign-up-password" editable={!verificationStarted} secureTextEntry={!showPassword} value={password} onChangeText={setPassword} placeholder="Create a password" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.passwordInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+          <Pressable testID="toggle-sign-up-password" accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} onPress={() => setShowPassword((visible) => !visible)} style={styles.passwordToggle} hitSlop={8}>
+            <Feather name={showPassword ? 'eye-off' : 'eye'} size={19} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
         {verificationStarted ? <><Text style={[styles.label, { color: colors.foreground }]}>Verification code</Text><TextInput keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Enter the code from your email" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} /></> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         <Pressable onPress={submit} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
@@ -102,6 +108,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 10, marginBottom: 30, maxWidth: 330 },
   label: { fontSize: 12, fontWeight: '800', marginBottom: 8, marginTop: 15 },
   input: { minHeight: 52, borderWidth: 1, borderRadius: 15, paddingHorizontal: 15, fontSize: 14 },
+  passwordWrap: { position: 'relative', justifyContent: 'center' },
+  passwordInput: { paddingRight: 52 },
+  passwordToggle: { position: 'absolute', right: 16, padding: 6 },
   submit: { minHeight: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 28 },
   submitText: { fontSize: 14, fontWeight: '800' },
   footerRow: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 25 },

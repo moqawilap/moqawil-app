@@ -43,6 +43,22 @@ const confirmAction = (title: string, message: string, action: () => void, cance
   }
   Alert.alert(title, message, [{ text: cancelLabel, style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
 };
+const pickAdminImage = async (isArabic: boolean) => {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert(text(isArabic, 'Photo access needed', 'نحتاج إذن الصور'), text(isArabic, 'Allow access to choose an image.', 'اسمح بالوصول للصور لاختيار صورة.'));
+    return null;
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.45, base64: true });
+  const asset = result.canceled ? undefined : result.assets[0];
+  if (!asset) return null;
+  const image = asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri;
+  if (image.length > 2_000_000) {
+    Alert.alert(text(isArabic, 'Image is too large', 'الصورة كبيرة جدًا'), text(isArabic, 'Choose a smaller image and try again.', 'اختر صورة أصغر ثم حاول مرة أخرى.'));
+    return null;
+  }
+  return image;
+};
 
 export default function AdminScreen() {
   const colors = useColors();
@@ -131,7 +147,7 @@ function OverviewTab() {
   );
 }
 
-const blankContractor = () => ({ businessName: '', city: '', businessNameArabic: '', wilayat: '', bio: '', bioArabic: '', serviceArea: '', phone: '', evaluationNotes: '', adminRating: '', agreedContractAmountOmaniRial: '', isVerified: false, isPublished: false });
+const blankContractor = () => ({ businessName: '', city: '', businessNameArabic: '', wilayat: '', bio: '', bioArabic: '', serviceArea: '', phone: '', avatarUrl: '', evaluationNotes: '', adminRating: '', agreedContractAmountOmaniRial: '', isVerified: false, isPublished: false });
 
 function ContractorsTab() {
   const colors = useColors();
@@ -155,7 +171,7 @@ function ContractorsTab() {
       setForm({
         businessName: c.businessName, businessNameArabic: c.businessNameArabic ?? '',
         city: c.city, wilayat: c.wilayat ?? '', bio: c.bio ?? '', bioArabic: c.bioArabic ?? '',
-        serviceArea: c.serviceArea ?? '', phone: c.phone ?? '', evaluationNotes: c.evaluationNotes ?? '',
+        serviceArea: c.serviceArea ?? '', phone: c.phone ?? '', avatarUrl: c.avatarUrl ?? '', evaluationNotes: c.evaluationNotes ?? '',
         adminRating: c.adminRating ? String(c.adminRating) : '',
         agreedContractAmountOmaniRial: c.agreedContractAmountOmaniRial ? String(c.agreedContractAmountOmaniRial) : '',
         isVerified: c.isVerified, isPublished: c.isPublished
@@ -181,6 +197,10 @@ function ContractorsTab() {
     };
     editing ? update.mutate({ id: editing, data }) : create.mutate({ data });
   };
+  const chooseContractorImage = async () => {
+    const image = await pickAdminImage(isArabic);
+    if (image) set('avatarUrl', image);
+  };
 
   return (
     <View testID="admin-contractors" style={styles.tabContainer}>
@@ -202,6 +222,14 @@ function ContractorsTab() {
                 <TextInput testID={`contractor-field-${key}`} value={String(form[key] ?? '')} onChangeText={v => set(key, v)} keyboardType={kType as any} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Contractor photo', 'صورة المقاول')}</Text>
+            {form.avatarUrl ? <Image source={{ uri: form.avatarUrl }} style={styles.listingImagePreview} /> : null}
+            <Pressable testID="pick-contractor-image" onPress={chooseContractorImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
+              <Feather name="image" size={16} color={colors.primary} />
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.avatarUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
+            </Pressable>
           </View>
           <View style={styles.formGroupFull}>
             <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Bio', 'النبذة')}</Text>
@@ -240,6 +268,7 @@ function ContractorsTab() {
       {contractors.isError && <Text style={{ color: colors.destructive }}>{text(isArabic, 'Unable to load contractors.', 'تعذر تحميل المقاولين.')}</Text>}
       {contractors.data?.map(c => (
         <View key={c.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {c.avatarUrl ? <Image source={{ uri: c.avatarUrl }} style={styles.adminCardImage} /> : null}
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{c.businessName}</Text>
             <View style={styles.badges}>
@@ -268,7 +297,7 @@ function ContractorsTab() {
   );
 }
 
-const blankWorkshop = () => ({ name: '', nameArabic: '', specialty: '', city: '', wilayat: '', phone: '', isPublished: false });
+const blankWorkshop = () => ({ name: '', nameArabic: '', specialty: '', city: '', wilayat: '', phone: '', avatarUrl: '', isPublished: false });
 
 function WorkshopsTab() {
   const colors = useColors();
@@ -297,11 +326,16 @@ function WorkshopsTab() {
       bio: form.specialty.trim() || 'Building workshop',
       bioArabic: form.specialty.trim() || 'ورشة بناء',
       phone: form.phone.trim() || null,
+      avatarUrl: form.avatarUrl.trim() || null,
       isPublished: form.isPublished,
       isVerified: false,
       isWorkshop: true,
     };
     create.mutate({ data });
+  };
+  const chooseWorkshopImage = async () => {
+    const image = await pickAdminImage(isArabic);
+    if (image) set('avatarUrl', image);
   };
   return (
     <View testID="admin-workshops" style={styles.tabContainer}>
@@ -326,6 +360,14 @@ function WorkshopsTab() {
               </View>
             ))}
           </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Workshop photo', 'صورة الورشة')}</Text>
+            {form.avatarUrl ? <Image source={{ uri: form.avatarUrl }} style={styles.listingImagePreview} /> : null}
+            <Pressable testID="pick-workshop-image" onPress={chooseWorkshopImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
+              <Feather name="image" size={16} color={colors.primary} />
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.avatarUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
+            </Pressable>
+          </View>
           <Pressable style={styles.toggleRow} onPress={() => set('isPublished', !form.isPublished)}>
             <Feather name={form.isPublished ? 'check-square' : 'square'} size={18} color={form.isPublished ? colors.primary : colors.mutedForeground} />
             <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Publish immediately', 'نشر فورًا')}</Text>
@@ -343,6 +385,7 @@ function WorkshopsTab() {
       {workshops.isLoading && <ActivityIndicator color={colors.primary} style={styles.loader} />}
       {workshops.data?.map((workshop) => (
         <View key={workshop.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {workshop.avatarUrl ? <Image source={{ uri: workshop.avatarUrl }} style={styles.adminCardImage} /> : null}
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>{workshop.businessName}</Text>
             <View style={[styles.badge, { backgroundColor: workshop.isPublished ? '#D9F8F2' : colors.muted }]}>
@@ -836,6 +879,7 @@ const styles = StyleSheet.create({
   denseButton: { height: 44, borderRadius: 8, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 16 },
   denseButtonText: { fontSize: 14, fontWeight: '700' },
   listingImagePreview: { width: '100%', height: 190, borderRadius: 12, marginBottom: 10, resizeMode: 'cover' },
+  adminCardImage: { width: 72, height: 72, borderRadius: 10, marginBottom: 10, resizeMode: 'cover' },
 
   inlineForm: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8 },
   statusPill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },

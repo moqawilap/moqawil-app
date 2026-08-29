@@ -323,7 +323,10 @@ export interface AdminContractorInput {
      * @nullable
      */
   phone?: string | null;
-  /** @nullable */
+  /**
+     * @maxLength 2000000
+     * @nullable
+     */
   avatarUrl?: string | null;
   /**
      * @maxLength 5000
@@ -387,7 +390,10 @@ export interface AdminContractorUpdate {
      * @nullable
      */
   phone?: string | null;
-  /** @nullable */
+  /**
+     * @maxLength 2000000
+     * @nullable
+     */
   avatarUrl?: string | null;
   /**
      * @maxLength 5000

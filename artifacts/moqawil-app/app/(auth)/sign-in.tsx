@@ -14,6 +14,9 @@ export default function SignInScreen() {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetStep, setResetStep] = useState<'idle' | 'code' | 'newPassword'>('idle');
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -148,7 +151,12 @@ export default function SignInScreen() {
         <TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         {resetStep === 'idle' ? <>
           <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
-          <TextInput secureTextEntry value={password} onChangeText={setPassword} placeholder="Enter your password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+          <View style={styles.passwordWrap}>
+            <TextInput testID="sign-in-password" secureTextEntry={!showPassword} value={password} onChangeText={setPassword} placeholder="Enter your password" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.passwordInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+            <Pressable testID="toggle-sign-in-password" accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} onPress={() => setShowPassword((visible) => !visible)} style={styles.passwordToggle} hitSlop={8}>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} size={19} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
           <Pressable onPress={sendResetCode} disabled={busy} style={styles.secondaryAction}>
             <Text style={[styles.link, { color: colors.primary }]}>Forgot password?</Text>
           </Pressable>
@@ -159,9 +167,19 @@ export default function SignInScreen() {
         </> : <>
           <Text style={[styles.resetHint, { color: colors.mutedForeground }]}>Choose a new password with at least 15 characters.</Text>
           <Text style={[styles.label, { color: colors.foreground }]}>New password</Text>
-          <TextInput secureTextEntry value={newPassword} onChangeText={setNewPassword} placeholder="Enter a new password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+          <View style={styles.passwordWrap}>
+            <TextInput testID="new-password" secureTextEntry={!showNewPassword} value={newPassword} onChangeText={setNewPassword} placeholder="Enter a new password" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.passwordInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+            <Pressable testID="toggle-new-password" accessibilityRole="button" accessibilityLabel={showNewPassword ? 'Hide new password' : 'Show new password'} onPress={() => setShowNewPassword((visible) => !visible)} style={styles.passwordToggle} hitSlop={8}>
+              <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={19} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
           <Text style={[styles.label, { color: colors.foreground }]}>Confirm new password</Text>
-          <TextInput secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat the new password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+          <View style={styles.passwordWrap}>
+            <TextInput testID="confirm-password" secureTextEntry={!showConfirmPassword} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat the new password" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.passwordInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
+            <Pressable testID="toggle-confirm-password" accessibilityRole="button" accessibilityLabel={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} onPress={() => setShowConfirmPassword((visible) => !visible)} style={styles.passwordToggle} hitSlop={8}>
+              <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={19} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
         </>}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         <Pressable onPress={resetStep === 'idle' ? submit : resetStep === 'code' ? verifyResetCode : saveNewPassword} disabled={busy} style={({ pressed }) => [styles.submit, { backgroundColor: colors.primary }, pressed && { opacity: 0.86 }]}>
@@ -186,6 +204,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 10, marginBottom: 30, maxWidth: 330 },
   label: { fontSize: 12, fontWeight: '800', marginBottom: 8, marginTop: 15 },
   input: { minHeight: 52, borderWidth: 1, borderRadius: 15, paddingHorizontal: 15, fontSize: 14 },
+  passwordWrap: { position: 'relative', justifyContent: 'center' },
+  passwordInput: { paddingRight: 52 },
+  passwordToggle: { position: 'absolute', right: 16, padding: 6 },
   submit: { minHeight: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 28 },
   submitText: { fontSize: 14, fontWeight: '800' },
   secondaryAction: { alignSelf: 'flex-end', paddingVertical: 10 },
