@@ -4,18 +4,20 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, PropertyCard, ProviderCard, ScreenHeader, SegmentedControl } from '@/components/MoqawilUI';
-import { listings, providers } from '@/data/mockData';
+import { mergeMarketplaceListings } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getListListingsQueryKey, useListListings } from '@workspace/api-client-react';
 
 export default function SavedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isArabic, savedIds, toggleSaved, managedProviders } = useApp();
+  const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
   const [mode, setMode] = React.useState('All');
   const savedProviders = managedProviders.filter((provider) => savedIds.includes(provider.id));
-  const savedListings = listings.filter((listing) => savedIds.includes(listing.id));
+  const savedListings = mergeMarketplaceListings(remoteListings.data).filter((listing) => savedIds.includes(listing.id));
   const hasSaved = savedProviders.length > 0 || savedListings.length > 0;
 
   return (

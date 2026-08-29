@@ -4,15 +4,18 @@ import React from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, IconButton, PropertyCard, ProviderCard, SearchBar, SectionHeading, ServiceIcon } from '@/components/MoqawilUI';
-import { listings, maintenanceItems, serviceItems } from '@/data/mockData';
+import { listings, maintenanceItems, mergeMarketplaceListings, serviceItems } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getListListingsQueryKey, useListListings } from '@workspace/api-client-react';
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isArabic, location, locationLoading, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders } = useApp();
+  const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
+  const availableListings = React.useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
 
   const openService = (id: string) => {
     setActiveService(id);
@@ -75,7 +78,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'عقارات مختارة' : 'Featured properties'} subtitle={isArabic ? 'أماكن تستحق الزيارة' : 'Places worth seeing'} action={isArabic ? 'كل العقارات' : 'See all'} onAction={() => openService('real-estate')} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyRow}>{listings.slice(0, 2).map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} featured={listing.featured} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id)} />)}</ScrollView>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyRow}>{availableListings.slice(0, 2).map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} featured={listing.featured} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id)} />)}</ScrollView>
           </View>
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'صيانة سريعة' : 'Quick maintenance'} subtitle={isArabic ? 'حل المشكلة قبل أن تكبر' : 'Fix the small things before they grow'} />

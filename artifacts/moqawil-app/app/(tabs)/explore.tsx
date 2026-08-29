@@ -4,18 +4,20 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
-import { images, listings, serviceItems } from '@/data/mockData';
+import { images, listings, mergeMarketplaceListings, serviceItems } from '@/data/mockData';
 import { buildingServices } from '@/data/buildingServices';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { useListContractors } from '@workspace/api-client-react';
+import { getListListingsQueryKey, useListContractors, useListListings } from '@workspace/api-client-react';
 
 export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
+  const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
+  const availableListings = useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('Providers');
   const [selectedGovernorate, setSelectedGovernorate] = useState('');
@@ -151,7 +153,7 @@ export default function ExploreScreen() {
           ) : (
             <View>
                <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? 'عقارات قريبة' : 'Properties nearby'}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? 'الأحدث' : 'Newest'}</Text></View></View>
-              <View style={styles.propertyGrid}>{listings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id)} />)}</View>
+               <View style={styles.propertyGrid}>{availableListings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id)} />)}</View>
             </View>
           )}
         </View>

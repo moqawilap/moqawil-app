@@ -4,10 +4,10 @@ import React from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, IconButton, ListingEngagementMetrics } from '@/components/MoqawilUI';
-import { listings } from '@/data/mockData';
+import { listings, marketplaceListingToLocal } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { useRecordListingEngagement } from '@workspace/api-client-react';
+import { getGetListingQueryKey, useGetListing, useRecordListingEngagement } from '@workspace/api-client-react';
 
 export default function ListingDetail() {
   const colors = useColors();
@@ -15,7 +15,8 @@ export default function ListingDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isArabic, isSaved, toggleSaved, engagementClientId } = useApp();
-  const listing = listings.find((item) => item.id === id) ?? listings[0];
+  const liveListing = useGetListing(id ?? '', { query: { queryKey: getGetListingQueryKey(id ?? ''), enabled: Boolean(id) } });
+  const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : (listings.find((item) => item.id === id) ?? listings[0]);
   const contact = useRecordListingEngagement();
   const openContact = () => {
     if (engagementClientId) {

@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { MarketplaceListing } from '@workspace/api-client-react';
 
 export type ServiceId = 'contractors' | 'consultants' | 'building' | 'real-estate' | 'maintenance';
 
@@ -41,6 +42,23 @@ export type Listing = {
   image: ImageSourcePropType;
   featured?: boolean;
 };
+
+export function marketplaceListingToLocal(listing: MarketplaceListing): Listing {
+  return {
+    id: listing.id,
+    title: listing.title,
+    titleAr: listing.titleArabic,
+    type: listing.type === 'rent' ? 'For rent' : 'For sale',
+    typeAr: listing.type === 'rent' ? 'للإيجار' : 'للبيع',
+    price: listing.price,
+    location: listing.location,
+    locationAr: listing.locationArabic,
+    beds: listing.bedrooms,
+    baths: listing.bathrooms,
+    area: listing.area,
+    image: listing.imageUrl ? { uri: listing.imageUrl } : images.interior,
+  };
+}
 
 export const images = {
   villa: require('@/assets/images/muscat-villa.jpg'),
@@ -219,6 +237,12 @@ export const listings: Listing[] = [
     image: images.interior,
   },
 ];
+
+export function mergeMarketplaceListings(remote?: MarketplaceListing[]) {
+  const remoteListings = (remote ?? []).map(marketplaceListingToLocal);
+  const remoteIds = new Set(remoteListings.map((listing) => listing.id));
+  return [...remoteListings, ...listings.filter((listing) => !remoteIds.has(listing.id))];
+}
 
 export const maintenanceItems = [
   { id: 'electrical', label: 'Electrical', labelAr: 'كهرباء', icon: 'zap' as const, color: '#E79A4B' },

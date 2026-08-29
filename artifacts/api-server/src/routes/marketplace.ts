@@ -624,7 +624,7 @@ router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res,
       res.status(400).json({ error: "Invalid listing identifier" });
       return;
     }
-    const [deleted] = await db.delete(marketplaceListings).where(eq(marketplaceListings.id, req.params.id)).returning({ id: marketplaceListings.id });
+    const [deleted] = await db.delete(marketplaceListings).where(eq(marketplaceListings.id, String(req.params.id))).returning({ id: marketplaceListings.id });
     if (!deleted) {
       res.status(404).json({ error: "Listing not found" });
       return;
