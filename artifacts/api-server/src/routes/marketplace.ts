@@ -1,9 +1,10 @@
 import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
-import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import {
-  auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
+  type AdAudience,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
@@ -79,6 +80,95 @@ function validServiceNames(value: unknown, allowEmpty = false) {
   return Array.isArray(value) && value.length <= 26 && (allowEmpty || value.length >= 1)
     && new Set(value).size === value.length
     && value.every((item) => typeof item === "string" && item.trim().length >= 2 && item.trim().length <= 160);
+}
+
+const adStatuses = ["draft", "active", "paused", "completed"] as const;
+const adEditableStatuses = ["draft", "active", "paused"] as const;
+const adBillingModels = ["cpm", "cpc", "cpa"] as const;
+const adEventTypes = ["impression", "click", "conversion"] as const;
+type AdStatus = typeof adStatuses[number];
+type AdBillingModel = typeof adBillingModels[number];
+type AdEventType = typeof adEventTypes[number];
+
+function validAdAudience(value: unknown): value is AdAudience {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const audience = value as Record<string, unknown>;
+  return ["cities", "wilayats", "serviceCategories"].every((key) => audience[key] === undefined || (
+    Array.isArray(audience[key]) && (audience[key] as unknown[]).length <= 30
+      && (audience[key] as unknown[]).every((item) => typeof item === "string" && item.trim().length >= 2 && item.trim().length <= 100)
+  ));
+}
+
+function validAdMedia(value: unknown) {
+  return typeof value === "string" && value.length >= 20 && value.length <= 2_000_000
+    && (/^(data:(image|video)\/[a-z0-9.+-]+;base64,)/i.test(value) || /^https?:\/\//i.test(value));
+}
+
+function validAdUrl(value: unknown) {
+  return value === undefined || value === null || (typeof value === "string" && value.length <= 2_000);
+}
+
+function validAdCampaignInput(input: Record<string, unknown>, partial = false) {
+  const requiredText = ["title", "description", "ctaLabel", "mediaUrl", "mediaType", "billingModel", "startAt", "endAt"] as const;
+  if (!partial && requiredText.some((field) => typeof input[field] !== "string" || String(input[field]).trim().length < 1)) return false;
+  if (input.title !== undefined && (typeof input.title !== "string" || input.title.trim().length < 2 || input.title.length > 200)) return false;
+  if (input.description !== undefined && (typeof input.description !== "string" || input.description.trim().length < 2 || input.description.length > 5_000)) return false;
+  if (input.ctaLabel !== undefined && (typeof input.ctaLabel !== "string" || input.ctaLabel.trim().length < 1 || input.ctaLabel.length > 50)) return false;
+  if (input.ctaUrl !== undefined && !validAdUrl(input.ctaUrl)) return false;
+  if (input.mediaUrl !== undefined && !validAdMedia(input.mediaUrl)) return false;
+  if (input.mediaType !== undefined && input.mediaType !== "image" && input.mediaType !== "video") return false;
+  if (input.audience !== undefined && !validAdAudience(input.audience)) return false;
+  for (const field of ["totalBudgetOmaniRial", "dailyBudgetOmaniRial", "unitRateOmaniRial"] as const) {
+    if (input[field] !== undefined && (!Number.isFinite(input[field]) || Number(input[field]) <= 0)) return false;
+  }
+  if (input.totalBudgetOmaniRial !== undefined && input.dailyBudgetOmaniRial !== undefined && Number(input.dailyBudgetOmaniRial) > Number(input.totalBudgetOmaniRial)) return false;
+  if (input.billingModel !== undefined && !adBillingModels.includes(input.billingModel as AdBillingModel)) return false;
+  if (input.status !== undefined && !adEditableStatuses.includes(input.status as typeof adEditableStatuses[number])) return false;
+  for (const field of ["startAt", "endAt"] as const) {
+    if (input[field] !== undefined && (typeof input[field] !== "string" || !Number.isFinite(Date.parse(input[field])))) return false;
+  }
+  if (input.startAt !== undefined && input.endAt !== undefined && Date.parse(input.endAt as string) <= Date.parse(input.startAt as string)) return false;
+  return true;
+}
+
+function adCostForEvent(campaign: typeof adCampaigns.$inferSelect, eventType: AdEventType) {
+  if ((campaign.billingModel === "cpm" && eventType !== "impression")
+    || (campaign.billingModel === "cpc" && eventType !== "click")
+    || (campaign.billingModel === "cpa" && eventType !== "conversion")) return 0;
+  return Number(campaign.unitRateOmaniRial) / (campaign.billingModel === "cpm" ? 1000 : 1);
+}
+
+function adResponse(campaign: typeof adCampaigns.$inferSelect, owner?: { businessName: string; businessNameArabic: string | null }, dailySpent = 0) {
+  const total = Number(campaign.totalBudgetOmaniRial);
+  const spent = Number(campaign.spentOmaniRial);
+  return {
+    id: campaign.id,
+    contractorId: campaign.contractorId,
+    advertiserName: owner?.businessName ?? null,
+    advertiserNameArabic: owner?.businessNameArabic ?? null,
+    title: campaign.title,
+    description: campaign.description,
+    ctaLabel: campaign.ctaLabel,
+    ctaUrl: campaign.ctaUrl,
+    mediaUrl: campaign.mediaUrl,
+    mediaType: campaign.mediaType,
+    audience: campaign.audience,
+    totalBudgetOmaniRial: total,
+    dailyBudgetOmaniRial: Number(campaign.dailyBudgetOmaniRial),
+    billingModel: campaign.billingModel,
+    unitRateOmaniRial: Number(campaign.unitRateOmaniRial),
+    startAt: campaign.startAt.toISOString(),
+    endAt: campaign.endAt.toISOString(),
+    status: campaign.status,
+    impressionCount: campaign.impressionCount,
+    clickCount: campaign.clickCount,
+    conversionCount: campaign.conversionCount,
+    spentOmaniRial: Number(spent.toFixed(6)),
+    remainingOmaniRial: Number(Math.max(0, total - spent).toFixed(6)),
+    dailySpentOmaniRial: Number(dailySpent.toFixed(6)),
+    createdAt: campaign.createdAt.toISOString(),
+    updatedAt: campaign.updatedAt.toISOString(),
+  };
 }
 
 const listingActions = ["view", "like", "save", "contact"] as const;
@@ -910,6 +1000,217 @@ router.post("/admin/payments", requireUser, requireAdmin, async (req, res, next)
       return created;
     });
     res.status(201).json(await paymentResponse(payment));
+  } catch (error) { next(error); }
+});
+router.get("/ads", async (req, res, next) => {
+  try {
+    const now = new Date();
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const city = typeof req.query.city === "string" ? req.query.city.trim() : "";
+    const wilayat = typeof req.query.wilayat === "string" ? req.query.wilayat.trim() : "";
+    const service = typeof req.query.service === "string" ? req.query.service.trim() : "";
+    const requestedLimit = Number(req.query.limit);
+    const limit = Math.min(5, Math.max(1, Number.isInteger(requestedLimit) ? requestedLimit : 2));
+    const rows = await db.select({ campaign: adCampaigns, owner: contractorProfiles })
+      .from(adCampaigns)
+      .innerJoin(contractorProfiles, eq(contractorProfiles.id, adCampaigns.contractorId))
+      .where(and(eq(adCampaigns.status, "active"), lte(adCampaigns.startAt, now), gt(adCampaigns.endAt, now)))
+      .orderBy(desc(adCampaigns.createdAt));
+    const dailyRows = await db.select({
+      campaignId: adCampaignEvents.campaignId,
+      spent: sql<string>`coalesce(sum(${adCampaignEvents.costOmaniRial}), 0)`,
+    }).from(adCampaignEvents).where(gte(adCampaignEvents.createdAt, dayStart)).groupBy(adCampaignEvents.campaignId);
+    const dailyByCampaign = new Map(dailyRows.map((row) => [row.campaignId, Number(row.spent)]));
+    const eligible = rows.filter(({ campaign }) => {
+      const audience = campaign.audience ?? {};
+      const matches = (values: string[] | undefined, selected: string) => !values?.length || (selected && values.includes(selected));
+      return matches(audience.cities, city)
+        && matches(audience.wilayats, wilayat)
+        && matches(audience.serviceCategories, service)
+        && Number(campaign.spentOmaniRial) < Number(campaign.totalBudgetOmaniRial)
+        && (dailyByCampaign.get(campaign.id) ?? 0) < Number(campaign.dailyBudgetOmaniRial);
+    }).slice(0, limit);
+    await Promise.all(rows.filter(({ campaign }) => campaign.endAt <= now || Number(campaign.spentOmaniRial) >= Number(campaign.totalBudgetOmaniRial))
+      .map(({ campaign }) => db.update(adCampaigns).set({ status: "completed", updatedAt: now }).where(eq(adCampaigns.id, campaign.id))));
+    res.json(eligible.map(({ campaign, owner }) => adResponse(campaign, owner, dailyByCampaign.get(campaign.id) ?? 0)));
+  } catch (error) { next(error); }
+});
+router.post("/ads/:id/event", async (req, res, next) => {
+  try {
+    const eventType = req.body?.eventType as AdEventType;
+    const eventKey = req.body?.eventKey;
+    if (!adEventTypes.includes(eventType) || typeof eventKey !== "string" || eventKey.length < 8 || eventKey.length > 128) {
+      res.status(400).json({ error: "eventType and a unique eventKey are required" });
+      return;
+    }
+    const result = await db.transaction(async (tx) => {
+      const campaign = await tx.query.adCampaigns.findFirst({ where: eq(adCampaigns.id, String(req.params.id)) });
+      if (!campaign) return { accepted: false, reason: "not_found" as const };
+      const existing = await tx.query.adCampaignEvents.findFirst({
+        where: and(eq(adCampaignEvents.campaignId, campaign.id), eq(adCampaignEvents.eventType, eventType), eq(adCampaignEvents.eventKey, eventKey)),
+      });
+      if (existing) return { accepted: false, reason: "duplicate" as const, campaign: adResponse(campaign) };
+      const now = new Date();
+      if (campaign.status !== "active" || campaign.startAt > now || campaign.endAt <= now) {
+        return { accepted: false, reason: "campaign_unavailable" as const, campaign: adResponse(campaign) };
+      }
+      const dayStart = new Date(now);
+      dayStart.setHours(0, 0, 0, 0);
+      const [daily] = await tx.select({ spent: sql<string>`coalesce(sum(${adCampaignEvents.costOmaniRial}), 0)` })
+        .from(adCampaignEvents).where(and(eq(adCampaignEvents.campaignId, campaign.id), gte(adCampaignEvents.createdAt, dayStart)));
+      const cost = adCostForEvent(campaign, eventType);
+      const totalSpent = Number(campaign.spentOmaniRial);
+      const dailySpent = Number(daily?.spent ?? 0);
+      if (totalSpent + cost > Number(campaign.totalBudgetOmaniRial)) {
+        await tx.update(adCampaigns).set({ status: "completed", updatedAt: now }).where(eq(adCampaigns.id, campaign.id));
+        return { accepted: false, reason: "total_budget_reached" as const, campaign: adResponse({ ...campaign, status: "completed" }) };
+      }
+      if (dailySpent + cost > Number(campaign.dailyBudgetOmaniRial)) {
+        return { accepted: false, reason: "daily_budget_reached" as const, campaign: adResponse(campaign, undefined, dailySpent) };
+      }
+      const [event] = await tx.insert(adCampaignEvents).values({
+        campaignId: campaign.id,
+        eventType,
+        eventKey,
+        costOmaniRial: cost.toFixed(6),
+      }).returning();
+      if (!event) return { accepted: false, reason: "event_not_recorded" as const, campaign: adResponse(campaign) };
+      const nextSpent = totalSpent + cost;
+      const updates: Record<string, unknown> = {
+        spentOmaniRial: nextSpent.toFixed(6),
+        updatedAt: now,
+      };
+      if (eventType === "impression") updates.impressionCount = sql`${adCampaigns.impressionCount} + 1`;
+      if (eventType === "click") updates.clickCount = sql`${adCampaigns.clickCount} + 1`;
+      if (eventType === "conversion") updates.conversionCount = sql`${adCampaigns.conversionCount} + 1`;
+      if (nextSpent >= Number(campaign.totalBudgetOmaniRial)) updates.status = "completed";
+      await tx.update(adCampaigns).set(updates as Partial<typeof adCampaigns.$inferInsert>).where(eq(adCampaigns.id, campaign.id));
+      return {
+        accepted: true,
+        eventType,
+        costOmaniRial: Number(cost.toFixed(6)),
+        campaign: adResponse({ ...campaign, spentOmaniRial: nextSpent.toFixed(6), impressionCount: campaign.impressionCount + (eventType === "impression" ? 1 : 0), clickCount: campaign.clickCount + (eventType === "click" ? 1 : 0), conversionCount: campaign.conversionCount + (eventType === "conversion" ? 1 : 0), status: nextSpent >= Number(campaign.totalBudgetOmaniRial) ? "completed" : campaign.status }, undefined, dailySpent + cost),
+      };
+    });
+    if (result.reason === "not_found") {
+      res.status(404).json({ error: "Ad campaign not found" });
+      return;
+    }
+    res.json(result);
+  } catch (error) { next(error); }
+});
+router.get("/admin/ad-campaigns", requireUser, requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await db.select({ campaign: adCampaigns, owner: contractorProfiles })
+      .from(adCampaigns).innerJoin(contractorProfiles, eq(contractorProfiles.id, adCampaigns.contractorId))
+      .orderBy(desc(adCampaigns.createdAt));
+    const now = new Date();
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const dailyRows = await db.select({
+      campaignId: adCampaignEvents.campaignId,
+      spent: sql<string>`coalesce(sum(${adCampaignEvents.costOmaniRial}), 0)`,
+    }).from(adCampaignEvents).where(gte(adCampaignEvents.createdAt, dayStart)).groupBy(adCampaignEvents.campaignId);
+    const dailyByCampaign = new Map(dailyRows.map((row) => [row.campaignId, Number(row.spent)]));
+    res.json(rows.map(({ campaign, owner }) => adResponse(campaign, owner, dailyByCampaign.get(campaign.id) ?? 0)));
+  } catch (error) { next(error); }
+});
+router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const input = req.body as Record<string, unknown>;
+    const contractorId = input.contractorId;
+    if (typeof contractorId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contractorId) || !validAdCampaignInput(input)) {
+      res.status(400).json({ error: "Invalid ad campaign fields" });
+      return;
+    }
+    const owner = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, contractorId) });
+    if (!owner) { res.status(404).json({ error: "Advertiser profile not found" }); return; }
+    const [created] = await db.insert(adCampaigns).values({
+      contractorId,
+      title: String(input.title).trim(),
+      description: String(input.description).trim(),
+      ctaLabel: String(input.ctaLabel).trim(),
+      ctaUrl: input.ctaUrl ? String(input.ctaUrl).trim() : null,
+      mediaUrl: String(input.mediaUrl),
+      mediaType: input.mediaType as "image" | "video",
+      audience: input.audience as AdAudience,
+      totalBudgetOmaniRial: Number(input.totalBudgetOmaniRial).toFixed(6),
+      dailyBudgetOmaniRial: Number(input.dailyBudgetOmaniRial).toFixed(6),
+      billingModel: input.billingModel as AdBillingModel,
+      unitRateOmaniRial: Number(input.unitRateOmaniRial).toFixed(6),
+      startAt: new Date(String(input.startAt)),
+      endAt: new Date(String(input.endAt)),
+      status: (input.status as AdStatus | undefined) ?? "draft",
+    }).returning();
+    res.status(201).json(adResponse(created, owner));
+  } catch (error) { next(error); }
+});
+router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const existing = await db.query.adCampaigns.findFirst({ where: eq(adCampaigns.id, String(req.params.id)) });
+    if (!existing) { res.status(404).json({ error: "Ad campaign not found" }); return; }
+    const input = req.body as Record<string, unknown>;
+    const merged: Record<string, unknown> = {
+      contractorId: existing.contractorId,
+      title: existing.title,
+      description: existing.description,
+      ctaLabel: existing.ctaLabel,
+      ctaUrl: existing.ctaUrl,
+      mediaUrl: existing.mediaUrl,
+      mediaType: existing.mediaType,
+      audience: existing.audience,
+      totalBudgetOmaniRial: Number(existing.totalBudgetOmaniRial),
+      dailyBudgetOmaniRial: Number(existing.dailyBudgetOmaniRial),
+      billingModel: existing.billingModel,
+      unitRateOmaniRial: Number(existing.unitRateOmaniRial),
+      startAt: existing.startAt.toISOString(),
+      endAt: existing.endAt.toISOString(),
+      status: existing.status,
+      ...input,
+    };
+    if (!Object.keys(input).length || !validAdCampaignInput(merged, true)) {
+      res.status(400).json({ error: "Invalid ad campaign update" });
+      return;
+    }
+    const contractorId = merged.contractorId;
+    if (typeof contractorId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contractorId)) {
+      res.status(400).json({ error: "Invalid advertiser profile" });
+      return;
+    }
+    const owner = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, contractorId) });
+    if (!owner) { res.status(404).json({ error: "Advertiser profile not found" }); return; }
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    for (const field of ["contractorId", "title", "description", "ctaLabel", "ctaUrl", "mediaUrl", "mediaType", "audience", "billingModel", "status"] as const) {
+      if (input[field] !== undefined) updates[field] = field === "title" || field === "description" || field === "ctaLabel" ? String(input[field]).trim() : input[field];
+    }
+    for (const field of ["totalBudgetOmaniRial", "dailyBudgetOmaniRial", "unitRateOmaniRial"] as const) {
+      if (input[field] !== undefined) updates[field] = Number(input[field]).toFixed(6);
+    }
+    for (const field of ["startAt", "endAt"] as const) {
+      if (input[field] !== undefined) updates[field] = new Date(String(input[field]));
+    }
+    const [updated] = await db.update(adCampaigns).set(updates as Partial<typeof adCampaigns.$inferInsert>).where(eq(adCampaigns.id, existing.id)).returning();
+    res.json(adResponse(updated, owner));
+  } catch (error) { next(error); }
+});
+router.get("/admin/ad-campaigns/:id/report", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const campaign = await db.query.adCampaigns.findFirst({ where: eq(adCampaigns.id, String(req.params.id)) });
+    if (!campaign) { res.status(404).json({ error: "Ad campaign not found" }); return; }
+    const owner = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, campaign.contractorId) });
+    const events = await db.select().from(adCampaignEvents).where(eq(adCampaignEvents.campaignId, campaign.id)).orderBy(desc(adCampaignEvents.createdAt));
+    const days = new Map<string, { date: string; impressions: number; clicks: number; conversions: number; spentOmaniRial: number }>();
+    for (const event of events) {
+      const date = event.createdAt.toISOString().slice(0, 10);
+      const current = days.get(date) ?? { date, impressions: 0, clicks: 0, conversions: 0, spentOmaniRial: 0 };
+      if (event.eventType === "impression") current.impressions += 1;
+      if (event.eventType === "click") current.clicks += 1;
+      if (event.eventType === "conversion") current.conversions += 1;
+      current.spentOmaniRial += Number(event.costOmaniRial);
+      days.set(date, current);
+    }
+    res.json({ campaign: adResponse(campaign, owner ?? undefined), days: [...days.values()].map((day) => ({ ...day, spentOmaniRial: Number(day.spentOmaniRial.toFixed(6)) })) });
   } catch (error) { next(error); }
 });
 router.get("/admin/settings", requireUser, requireAdmin, async (_req, res, next) => { try { res.json(await getSettings()); } catch (error) { next(error); } });

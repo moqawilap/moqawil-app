@@ -11,6 +11,7 @@ tags:
   - name: account
   - name: admin
   - name: listings
+  - name: ads
 paths:
   /healthz:
     get:
@@ -78,6 +79,27 @@ paths:
       responses:
         "200": { description: Listing engagement, content: { application/json: { schema: { $ref: "#/components/schemas/ListingEngagement" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
+  /ads:
+    get:
+      operationId: listAds
+      tags: [ads]
+      parameters:
+        - { name: city, in: query, schema: { type: string } }
+        - { name: wilayat, in: query, schema: { type: string } }
+        - { name: service, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: number, minimum: 1, maximum: 5, default: 2 } }
+      responses:
+        "200": { description: Active advertisements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdCampaign" } } } } }
+  /ads/{id}/event:
+    post:
+      operationId: recordAdEvent
+      tags: [ads]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdEventInput" } } } }
+      responses:
+        "200": { description: Ad event result, content: { application/json: { schema: { $ref: "#/components/schemas/AdEventResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       operationId: recordListingEngagement
       tags: [listings]
@@ -345,6 +367,37 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceSettings" } } } }
       responses:
         "200": { description: Saved settings, content: { application/json: { schema: { $ref: "#/components/schemas/MarketplaceSettings" } } } }
+  /admin/ad-campaigns:
+    get:
+      operationId: listAdminAdCampaigns
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: All ad campaigns, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdCampaign" } } } } }
+    post:
+      operationId: createAdminAdCampaign
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAdCampaignInput" } } } }
+      responses:
+        "201": { description: Ad campaign created, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+  /admin/ad-campaigns/{id}:
+    patch:
+      operationId: updateAdminAdCampaign
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAdCampaignUpdate" } } } }
+      responses:
+        "200": { description: Updated ad campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+  /admin/ad-campaigns/{id}/report:
+    get:
+      operationId: getAdminAdCampaignReport
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        "200": { description: Ad campaign report, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaignReport" } } } }
 components:
   securitySchemes: { clerkAuth: { type: http, scheme: bearer, bearerFormat: JWT } }
   parameters:
