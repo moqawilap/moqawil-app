@@ -28,8 +28,8 @@ export default function SignUpScreen() {
       if (!verificationStarted) {
         const result = await signUp.password({ emailAddress: email.trim(), password });
         if (result.error) throw result.error;
-        if (signUp.status === 'complete') {
-          const finalized = await signUp.finalize();
+         if (signUp.status === 'complete') {
+           const finalized = await signUp.finalize();
           if (finalized.error) throw finalized.error;
           router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
           return;
@@ -45,8 +45,8 @@ export default function SignUpScreen() {
         }
         const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
         if (result.error) throw result.error;
-        if (signUp.status === 'complete') {
-          const finalized = await signUp.finalize();
+         if (signUp.status === 'complete') {
+           const finalized = await signUp.finalize();
           if (finalized.error) throw finalized.error;
           router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
         }

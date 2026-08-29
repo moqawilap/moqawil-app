@@ -25,8 +25,8 @@ export default function SignInScreen() {
     try {
       const result = await signIn.password({ identifier: email.trim(), password });
       if (result.error) throw result.error;
-      if (signIn.status === 'complete') {
-        const finalized = await signIn.finalize();
+       if (signIn.status === 'complete') {
+         const finalized = await signIn.finalize();
         if (finalized.error) throw finalized.error;
         router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
       } else {

@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/MoqawilUI';
 import { useColors } from '@/hooks/useColors';
+import { useApp } from '@/context/AppContext';
 
 import {
   useGetAdminOverview, getGetAdminOverviewQueryKey,
@@ -32,6 +33,7 @@ export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+  const { isArabic } = useApp();
   const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
 
   const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Subscriptions' | 'Payments' | 'Settings'>('Overview');
@@ -40,9 +42,10 @@ export default function AdminScreen() {
   if (!isSignedIn || !isAdmin) return (
     <View style={[styles.center, { backgroundColor: colors.background }]}>
       <BrandMark />
-      <Text style={[styles.title, { color: colors.foreground }]}>Admin access required</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>{isSignedIn ? (isArabic ? 'هذه الصفحة للمدير فقط' : 'Administrator access only') : (isArabic ? 'سجّل الدخول للوصول إلى لوحة الإدارة' : 'Sign in to access the admin console')}</Text>
+      <Text style={[styles.accessNote, { color: colors.mutedForeground }]}>{isSignedIn ? (isArabic ? 'سجّل الخروج ثم استخدم حساب المدير المعتمد.' : 'Sign out and use the approved administrator account.') : (isArabic ? 'تحتاج إلى تسجيل الدخول أولًا بحساب المدير.' : 'You need to sign in with the administrator account first.')}</Text>
       <Pressable style={[styles.button, { backgroundColor: colors.primary }]} onPress={() => isSignedIn ? router.back() : router.push('/sign-in')}>
-        <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>{isSignedIn ? 'Go back' : 'Sign in'}</Text>
+        <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>{isSignedIn ? (isArabic ? 'رجوع' : 'Go back') : (isArabic ? 'تسجيل الدخول' : 'Sign in')}</Text>
       </Pressable>
     </View>
   );
@@ -523,11 +526,12 @@ function SettingsTab() {
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 24 },
   loader: { marginTop: 40 },
   button: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
   buttonText: { fontWeight: '700', fontSize: 15 },
-  title: { fontSize: 18, fontWeight: '700' },
+  title: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  accessNote: { fontSize: 13, lineHeight: 20, textAlign: 'center', maxWidth: 300, marginTop: -4 },
 
   headerContainer: { paddingBottom: 0, borderBottomWidth: 1 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
