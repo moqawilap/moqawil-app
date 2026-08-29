@@ -14,7 +14,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { router, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { AppProvider } from '@/context/AppContext';
+import { AppProvider, useApp } from '@/context/AppContext';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { getGetMeQueryKey, setAuthTokenGetter, setBaseUrl, useGetMe } from '@workspace/api-client-react';
@@ -44,6 +44,7 @@ function AuthUserSync() {
 
 function RootLayoutNav() {
   const { isLoaded, isSignedIn } = useAuth();
+  const { preferencesLoaded } = useApp();
   const segments = useSegments();
   const isAuthRoute = segments[0] === '(auth)';
 
@@ -66,7 +67,7 @@ function RootLayoutNav() {
         <Stack.Screen name="requests" options={{ presentation: 'modal' }} />
         <Stack.Screen name="workshop-requests" options={{ presentation: 'modal' }} />
       </Stack>
-      {(!isLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFC' }}><ActivityIndicator color="#0E5A70" /></View> : null}
+      {(!isLoaded || !preferencesLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFC' }}><ActivityIndicator color="#0E5A70" /></View> : null}
     </View>
   );
 }

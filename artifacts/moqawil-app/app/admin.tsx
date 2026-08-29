@@ -21,12 +21,26 @@ import {
 } from '@workspace/api-client-react';
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not process this request.';
-const confirmAction = (title: string, message: string, action: () => void) => {
+const text = (isArabic: boolean, english: string, arabic: string) => isArabic ? arabic : english;
+const statusText = (isArabic: boolean, status: string) => ({
+  free_trial: text(isArabic, 'Free trial', 'تجربة مجانية'),
+  active: text(isArabic, 'Active', 'نشط'),
+  payment_due: text(isArabic, 'Payment due', 'الدفع مستحق'),
+  expired: text(isArabic, 'Expired', 'منتهي'),
+  cancelled: text(isArabic, 'Cancelled', 'ملغى'),
+  suspended: text(isArabic, 'Suspended', 'معلّق'),
+  pending: text(isArabic, 'Pending', 'قيد الانتظار'),
+  paid: text(isArabic, 'Paid', 'مدفوع'),
+  failed: text(isArabic, 'Failed', 'فشل'),
+  refunded: text(isArabic, 'Refunded', 'مسترد'),
+  void: text(isArabic, 'Void', 'ملغى'),
+}[status] ?? status);
+const confirmAction = (title: string, message: string, action: () => void, cancelLabel = 'Cancel') => {
   if (Platform.OS === 'web') {
     if (globalThis.confirm(`${title}\n\n${message}`)) action();
     return;
   }
-  Alert.alert(title, message, [{ text: 'Cancel', style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
+  Alert.alert(title, message, [{ text: cancelLabel, style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
 };
 
 export default function AdminScreen() {
@@ -52,19 +66,19 @@ export default function AdminScreen() {
   );
 
   return (
-    <View style={[styles.page, { backgroundColor: colors.background }]}>
+    <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}>
       <View style={[styles.headerContainer, { paddingTop: insets.top + 16, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={styles.top}>
           <Pressable testID="admin-back" onPress={() => router.back()} hitSlop={10}>
-            <Feather name="arrow-left" size={20} color={colors.foreground} />
+            <Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} />
           </Pressable>
           <BrandMark compact />
         </View>
-        <Text style={[styles.screenTitle, { color: colors.foreground }]}>Admin Console</Text>
+        <Text style={[styles.screenTitle, { color: colors.foreground }]}>{text(isArabic, 'Admin Console', 'لوحة الإدارة')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabScrollContent}>
            {(['Overview', 'Contractors', 'Workshops', 'Listings', 'Subscriptions', 'Payments', 'Settings'] as const).map(tab => (
             <Pressable key={tab} testID={`tab-${tab}`} style={[styles.tab, activeTab === tab && [styles.activeTab, { backgroundColor: colors.foreground }]]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{tab}</Text>
+              <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Contractors: 'المقاولون', Workshops: 'الورش', Listings: 'الإعلانات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -84,32 +98,33 @@ export default function AdminScreen() {
 
 function OverviewTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const { data: overview, isLoading, isError, refetch, isRefetching } = useGetAdminOverview();
 
   if (isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
-  if (isError || !overview) return <Text style={{ color: colors.destructive }}>Failed to load overview.</Text>;
+  if (isError || !overview) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load overview.', 'تعذر تحميل النظرة العامة.')}</Text>;
 
   return (
     <View testID="admin-overview" style={styles.grid}>
       <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.statValue, { color: colors.foreground }]}>{overview.contractors}</Text>
-        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>Contractors</Text>
+        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>{text(isArabic, 'Contractors', 'المقاولون')}</Text>
       </View>
       <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.statValue, { color: colors.foreground }]}>{overview.activeSubscriptions}</Text>
-        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>Active Subs</Text>
+        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>{text(isArabic, 'Active Subs', 'الاشتراكات النشطة')}</Text>
       </View>
       <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.statValue, { color: colors.destructive }]}>{overview.paymentDueSubscriptions}</Text>
-        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>Payments Due</Text>
+        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>{text(isArabic, 'Payments Due', 'مدفوعات مستحقة')}</Text>
       </View>
       <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.statValue, { color: colors.primary }]}>{overview.paymentsRecorded}</Text>
-        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>Payments Recorded</Text>
+        <Text style={[styles.statTitle, { color: colors.mutedForeground }]}>{text(isArabic, 'Payments Recorded', 'المدفوعات المسجلة')}</Text>
       </View>
       <Pressable testID="refresh-overview" style={[styles.denseButton, { borderColor: colors.border, width: '100%', marginTop: 8 }]} onPress={() => refetch()}>
         <Feather name="refresh-cw" size={14} color={colors.foreground} />
-        <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{isRefetching ? 'Refreshing...' : 'Refresh Stats'}</Text>
+        <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{isRefetching ? text(isArabic, 'Refreshing...', 'جارٍ التحديث...') : text(isArabic, 'Refresh Stats', 'تحديث الإحصاءات')}</Text>
       </Pressable>
     </View>
   );
@@ -119,6 +134,7 @@ const blankContractor = () => ({ businessName: '', city: '', businessNameArabic:
 
 function ContractorsTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const client = useQueryClient();
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
 
@@ -127,9 +143,9 @@ function ContractorsTab() {
   const [showForm, setShowForm] = useState(false);
 
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() });
-  const create = useCreateAdminContractor({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankContractor()); }, onError: (e) => Alert.alert('Validation', errorMessage(e)) } });
-  const update = useUpdateAdminContractor({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankContractor()); }, onError: (e) => Alert.alert('Validation', errorMessage(e)) } });
-  const archive = useDeleteAdminContractor({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert('Failed', errorMessage(e)) } });
+  const create = useCreateAdminContractor({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankContractor()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+  const update = useUpdateAdminContractor({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankContractor()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+  const archive = useDeleteAdminContractor({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)) } });
 
   const set = (key: string, value: string) => setForm((v: any) => ({ ...v, [key]: value }));
   const begin = (c?: AdminContractor) => {
@@ -152,7 +168,7 @@ function ContractorsTab() {
 
   const save = () => {
     if (form.businessName.trim().length < 2 || form.city.trim().length < 2) {
-      Alert.alert('Missing details', 'Business name and city are required.');
+      Alert.alert(text(isArabic, 'Missing details', 'بيانات ناقصة'), text(isArabic, 'Business name and city are required.', 'اسم النشاط والمدينة مطلوبان.'));
       return;
     }
     const data: AdminContractorInput = {
@@ -168,81 +184,81 @@ function ContractorsTab() {
   return (
     <View testID="admin-contractors" style={styles.tabContainer}>
       <View style={styles.tabHeader}>
-        <Text style={[styles.tabTitle, { color: colors.foreground }]}>Contractors</Text>
+        <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Contractors', 'المقاولون')}</Text>
         <Pressable testID="add-contractor" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => begin()}>
           <Feather name="plus" size={14} color={colors.background} />
-          <Text style={[styles.denseButtonText, { color: colors.background }]}>Add</Text>
+          <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Add', 'إضافة')}</Text>
         </Pressable>
       </View>
 
       {showForm && (
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? 'Edit Contractor' : 'New Contractor'}</Text>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? text(isArabic, 'Edit Contractor', 'تعديل مقاول') : text(isArabic, 'New Contractor', 'مقاول جديد')}</Text>
           <View style={styles.formGrid}>
-            {([['businessName', 'Business name', 'default'], ['businessNameArabic', 'Arabic name', 'default'], ['city', 'City', 'default'], ['wilayat', 'Wilayat', 'default'], ['serviceArea', 'Service area', 'default'], ['phone', 'Phone', 'default'], ['adminRating', 'Admin rating (1-5)', 'decimal-pad'], ['agreedContractAmountOmaniRial', 'Agreed OMR', 'decimal-pad']] as const).map(([key, label, kType]) => (
+            {([['businessName', 'Business name', 'اسم النشاط', 'default'], ['businessNameArabic', 'Arabic name', 'الاسم بالعربية', 'default'], ['city', 'City', 'المدينة', 'default'], ['wilayat', 'Wilayat', 'الولاية', 'default'], ['serviceArea', 'Service area', 'منطقة الخدمة', 'default'], ['phone', 'Phone', 'الهاتف', 'default'], ['adminRating', 'Admin rating (1-5)', 'تقييم المدير (1-5)', 'decimal-pad'], ['agreedContractAmountOmaniRial', 'Agreed OMR', 'قيمة العقد (ر.ع.)', 'decimal-pad']] as const).map(([key, label, labelAr, kType]) => (
               <View key={key} style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
                 <TextInput testID={`contractor-field-${key}`} value={String(form[key] ?? '')} onChangeText={v => set(key, v)} keyboardType={kType as any} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
           </View>
           <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Bio</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Bio', 'النبذة')}</Text>
             <TextInput testID="contractor-field-bio" value={form.bio ?? ''} onChangeText={v => set('bio', v)} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
           <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Arabic Bio / النبذة بالعربية</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Arabic Bio', 'النبذة بالعربية')}</Text>
             <TextInput testID="contractor-field-bioArabic" value={form.bioArabic ?? ''} onChangeText={v => set('bioArabic', v)} multiline textAlign="right" style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
           <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Evaluation Notes</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Evaluation Notes', 'ملاحظات التقييم')}</Text>
             <TextInput testID="contractor-field-evaluationNotes" value={form.evaluationNotes ?? ''} onChangeText={v => set('evaluationNotes', v)} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
           <View style={styles.toggles}>
             <Pressable testID="form-verified" style={styles.toggleRow} onPress={() => setForm((v: any) => ({ ...v, isVerified: !v.isVerified }))}>
               <Feather name={form.isVerified ? 'check-square' : 'square'} size={18} color={form.isVerified ? colors.primary : colors.mutedForeground} />
-              <Text style={[styles.toggleText, { color: colors.foreground }]}>Verified</Text>
+              <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Verified', 'موثّق')}</Text>
             </Pressable>
             <Pressable testID="form-published" style={styles.toggleRow} onPress={() => setForm((v: any) => ({ ...v, isPublished: !v.isPublished }))}>
               <Feather name={form.isPublished ? 'check-square' : 'square'} size={18} color={form.isPublished ? colors.primary : colors.mutedForeground} />
-              <Text style={[styles.toggleText, { color: colors.foreground }]}>Published</Text>
+              <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Published', 'منشور')}</Text>
             </Pressable>
           </View>
           <View style={styles.formActions}>
             <Pressable testID="save-server-contractor" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
-              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? 'Saving...' : 'Save Contractor'}</Text>
+              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Contractor', 'حفظ المقاول')}</Text>
             </Pressable>
             <Pressable testID="cancel-contractor-form" style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}>
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>Cancel</Text>
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
             </Pressable>
           </View>
         </View>
       )}
 
       {contractors.isLoading && <ActivityIndicator color={colors.primary} style={styles.loader} />}
-      {contractors.isError && <Text style={{ color: colors.destructive }}>Unable to load contractors.</Text>}
+      {contractors.isError && <Text style={{ color: colors.destructive }}>{text(isArabic, 'Unable to load contractors.', 'تعذر تحميل المقاولين.')}</Text>}
       {contractors.data?.map(c => (
         <View key={c.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{c.businessName}</Text>
             <View style={styles.badges}>
-              {c.isVerified && <View style={[styles.badge, { backgroundColor: colors.primarySoft }]}><Text style={[styles.badgeText, { color: colors.primary }]}>Verified</Text></View>}
-              <View style={[styles.badge, { backgroundColor: c.isPublished ? '#D9F8F2' : colors.muted }]}><Text style={[styles.badgeText, { color: c.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{c.isPublished ? 'Live' : 'Hidden'}</Text></View>
+              {c.isVerified && <View style={[styles.badge, { backgroundColor: colors.primarySoft }]}><Text style={[styles.badgeText, { color: colors.primary }]}>{text(isArabic, 'Verified', 'موثّق')}</Text></View>}
+              <View style={[styles.badge, { backgroundColor: c.isPublished ? '#D9F8F2' : colors.muted }]}><Text style={[styles.badgeText, { color: c.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{c.isPublished ? text(isArabic, 'Live', 'نشط') : text(isArabic, 'Hidden', 'مخفي')}</Text></View>
             </View>
           </View>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{c.city} • Linked: {c.accountLinkStatus}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{c.city} • {text(isArabic, 'Linked', 'مرتبط')}: {c.accountLinkStatus}</Text>
           <View style={styles.cardActions}>
             <Pressable testID={`edit-contractor-${c.id}`} onPress={() => begin(c)} style={styles.actionLink}>
-              <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
+              <Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text>
             </Pressable>
             <Pressable testID={`toggle-verify-${c.id}`} onPress={() => update.mutate({ id: c.id, data: { isVerified: !c.isVerified } })} style={styles.actionLink}>
-              <Text style={[styles.actionText, { color: colors.foreground }]}>{c.isVerified ? 'Unverify' : 'Verify'}</Text>
+              <Text style={[styles.actionText, { color: colors.foreground }]}>{c.isVerified ? text(isArabic, 'Unverify', 'إلغاء التوثيق') : text(isArabic, 'Verify', 'توثيق')}</Text>
             </Pressable>
             <Pressable testID={`toggle-publish-${c.id}`} onPress={() => update.mutate({ id: c.id, data: { isPublished: !c.isPublished } })} style={styles.actionLink}>
-              <Text style={[styles.actionText, { color: colors.foreground }]}>{c.isPublished ? 'Unpublish' : 'Publish'}</Text>
+              <Text style={[styles.actionText, { color: colors.foreground }]}>{c.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text>
             </Pressable>
-            <Pressable testID={`archive-contractor-${c.id}`} onPress={() => confirmAction('Archive', 'This hides the profile permanently.', () => archive.mutate({ id: c.id, params: { confirm: true } }))} style={styles.actionLink}>
-              <Text style={[styles.actionText, { color: colors.destructive }]}>Archive</Text>
+            <Pressable testID={`archive-contractor-${c.id}`} onPress={() => confirmAction(text(isArabic, 'Archive', 'أرشفة'), text(isArabic, 'This hides the profile permanently.', 'سيؤدي هذا إلى إخفاء الملف نهائيًا.'), () => archive.mutate({ id: c.id, params: { confirm: true } }), text(isArabic, 'Cancel', 'إلغاء'))} style={styles.actionLink}>
+              <Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Archive', 'أرشفة')}</Text>
             </Pressable>
           </View>
         </View>
@@ -261,7 +277,7 @@ function WorkshopsTab() {
   const create = useCreateAdminContractor({
     mutation: {
       onSuccess: () => { client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() }); setForm(blankWorkshop()); setShowForm(false); },
-      onError: (e) => Alert.alert('Validation', errorMessage(e)),
+      onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)),
     },
   });
   const [form, setForm] = useState(blankWorkshop());
@@ -290,35 +306,35 @@ function WorkshopsTab() {
     <View testID="admin-workshops" style={styles.tabContainer}>
       <View style={styles.tabHeader}>
         <View>
-          <Text style={[styles.tabTitle, { color: colors.foreground }]}>Workshops</Text>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>Add workshop names to the public building directory.</Text>
+          <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Workshops', 'الورش')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Add workshop names to the public building directory.', 'أضف أسماء الورش إلى دليل البناء العام.')}</Text>
         </View>
         <Pressable testID="add-workshop" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => setShowForm(true)}>
           <Feather name="plus" size={14} color={colors.background} />
-          <Text style={[styles.denseButtonText, { color: colors.background }]}>Add</Text>
+          <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Add', 'إضافة')}</Text>
         </Pressable>
       </View>
       {showForm && (
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.formTitle, { color: colors.foreground }]}>New Workshop</Text>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'New Workshop', 'ورشة جديدة')}</Text>
           <View style={styles.formGrid}>
-            {([['name', 'Workshop name'], ['nameArabic', 'Arabic name'], ['specialty', 'Specialty'], ['city', 'City'], ['wilayat', 'Wilayat'], ['phone', 'Phone']] as const).map(([key, label]) => (
+            {([['name', 'Workshop name', 'اسم الورشة'], ['nameArabic', 'Arabic name', 'الاسم بالعربية'], ['specialty', 'Specialty', 'التخصص'], ['city', 'City', 'المدينة'], ['wilayat', 'Wilayat', 'الولاية'], ['phone', 'Phone', 'الهاتف']] as const).map(([key, label, labelAr]) => (
               <View key={key} style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
                 <TextInput testID={`workshop-field-${key}`} value={form[key]} onChangeText={(value) => set(key, value)} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
           </View>
           <Pressable style={styles.toggleRow} onPress={() => set('isPublished', !form.isPublished)}>
             <Feather name={form.isPublished ? 'check-square' : 'square'} size={18} color={form.isPublished ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.toggleText, { color: colors.foreground }]}>Publish immediately</Text>
+            <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Publish immediately', 'نشر فورًا')}</Text>
           </Pressable>
           <View style={styles.formActions}>
             <Pressable testID="save-workshop" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
-              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending ? 'Saving...' : 'Save Workshop'}</Text>
+              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Workshop', 'حفظ الورشة')}</Text>
             </Pressable>
             <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}>
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>Cancel</Text>
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
             </Pressable>
           </View>
         </View>
@@ -329,7 +345,7 @@ function WorkshopsTab() {
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>{workshop.businessName}</Text>
             <View style={[styles.badge, { backgroundColor: workshop.isPublished ? '#D9F8F2' : colors.muted }]}>
-              <Text style={[styles.badgeText, { color: workshop.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{workshop.isPublished ? 'Live' : 'Hidden'}</Text>
+            <Text style={[styles.badgeText, { color: workshop.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{workshop.isPublished ? text(isArabic, 'Live', 'نشط') : text(isArabic, 'Hidden', 'مخفي')}</Text>
             </View>
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{workshop.city}{workshop.wilayat ? ` • ${workshop.wilayat}` : ''}</Text>
@@ -357,6 +373,7 @@ const blankListing = (): ListingForm => ({ title: '', titleArabic: '', type: 'sa
 
 function ListingsTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const client = useQueryClient();
   const listings = useListAdminListings({ query: { queryKey: getListAdminListingsQueryKey() } });
   const [form, setForm] = useState(blankListing());
@@ -364,9 +381,9 @@ function ListingsTab() {
   const [showForm, setShowForm] = useState(false);
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminListingsQueryKey() });
   const closeForm = () => { setForm(blankListing()); setEditing(null); setShowForm(false); };
-  const create = useCreateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert('Validation', errorMessage(e)) } });
-  const update = useUpdateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert('Validation', errorMessage(e)) } });
-  const remove = useDeleteAdminListing({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert('Failed', errorMessage(e)) } });
+  const create = useCreateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+  const update = useUpdateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+  const remove = useDeleteAdminListing({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)) } });
   const set = <Key extends keyof ListingForm>(key: Key, value: ListingForm[Key]) => setForm((current) => ({ ...current, [key]: value }));
   const begin = (listing?: MarketplaceListing) => {
     if (!listing) { setForm(blankListing()); setEditing(null); }
@@ -378,7 +395,7 @@ function ListingsTab() {
   };
   const save = () => {
     if (!form.title.trim() || !form.titleArabic.trim() || !form.price.trim() || !form.location.trim() || !form.locationArabic.trim() || !form.area.trim()) {
-      Alert.alert('Missing details', 'Title, price, location, and area are required.');
+      Alert.alert(text(isArabic, 'Missing details', 'بيانات ناقصة'), text(isArabic, 'Title, price, location, and area are required.', 'العنوان والسعر والموقع والمساحة مطلوبة.'));
       return;
     }
     const data: AdminListingInput = {
@@ -394,21 +411,21 @@ function ListingsTab() {
     <View testID="admin-listings" style={styles.tabContainer}>
       <View style={styles.tabHeader}>
         <View>
-          <Text style={[styles.tabTitle, { color: colors.foreground }]}>Property Listings</Text>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>Create and publish ads for the marketplace.</Text>
+          <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Property Listings', 'إعلانات العقارات')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Create and publish ads for the marketplace.', 'أنشئ إعلانات وانشرها في السوق.')}</Text>
         </View>
         <Pressable testID="add-listing" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => begin()}>
           <Feather name="plus" size={14} color={colors.background} />
-          <Text style={[styles.denseButtonText, { color: colors.background }]}>Add</Text>
+          <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Add', 'إضافة')}</Text>
         </Pressable>
       </View>
       {showForm && (
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? 'Edit Listing' : 'New Listing'}</Text>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? text(isArabic, 'Edit Listing', 'تعديل الإعلان') : text(isArabic, 'New Listing', 'إعلان جديد')}</Text>
           <View style={styles.formGrid}>
-            {([['title', 'Title'], ['titleArabic', 'Arabic title'], ['price', 'Price'], ['location', 'Location'], ['locationArabic', 'Arabic location'], ['area', 'Area'], ['bedrooms', 'Bedrooms'], ['bathrooms', 'Bathrooms'], ['contactPhone', 'Contact phone'], ['imageUrl', 'Image URL']] as const).map(([key, label]) => (
+            {([['title', 'Title', 'العنوان'], ['titleArabic', 'Arabic title', 'العنوان بالعربية'], ['price', 'Price', 'السعر'], ['location', 'Location', 'الموقع'], ['locationArabic', 'Arabic location', 'الموقع بالعربية'], ['area', 'Area', 'المساحة'], ['bedrooms', 'Bedrooms', 'غرف النوم'], ['bathrooms', 'Bathrooms', 'دورات المياه'], ['contactPhone', 'Contact phone', 'هاتف التواصل'], ['imageUrl', 'Image URL', 'رابط الصورة']] as const).map(([key, label, labelAr]) => (
               <View key={key} style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
                 <TextInput testID={`listing-field-${key}`} value={String(form[key])} onChangeText={(value) => set(key, value)} keyboardType={key === 'bedrooms' || key === 'bathrooms' ? 'number-pad' : 'default'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
@@ -417,20 +434,20 @@ function ListingsTab() {
             {(['sale', 'rent'] as const).map((type) => (
               <Pressable key={type} style={styles.toggleRow} onPress={() => set('type', type)}>
                 <Feather name={form.type === type ? 'check-circle' : 'circle'} size={18} color={form.type === type ? colors.primary : colors.mutedForeground} />
-                <Text style={[styles.toggleText, { color: colors.foreground }]}>{type === 'sale' ? 'For sale' : 'For rent'}</Text>
+                <Text style={[styles.toggleText, { color: colors.foreground }]}>{type === 'sale' ? text(isArabic, 'For sale', 'للبيع') : text(isArabic, 'For rent', 'للإيجار')}</Text>
               </Pressable>
             ))}
             <Pressable style={styles.toggleRow} onPress={() => set('isPublished', !form.isPublished)}>
               <Feather name={form.isPublished ? 'check-square' : 'square'} size={18} color={form.isPublished ? colors.primary : colors.mutedForeground} />
-              <Text style={[styles.toggleText, { color: colors.foreground }]}>Published</Text>
+              <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Published', 'منشور')}</Text>
             </Pressable>
           </View>
           <View style={styles.formActions}>
             <Pressable testID="save-listing" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
-              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? 'Saving...' : 'Save Listing'}</Text>
+              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Listing', 'حفظ الإعلان')}</Text>
             </Pressable>
             <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={closeForm}>
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>Cancel</Text>
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
             </Pressable>
           </View>
         </View>
@@ -441,14 +458,14 @@ function ListingsTab() {
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>{listing.title}</Text>
             <View style={[styles.badge, { backgroundColor: listing.isPublished ? '#D9F8F2' : colors.muted }]}>
-              <Text style={[styles.badgeText, { color: listing.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{listing.isPublished ? 'Live' : 'Draft'}</Text>
+              <Text style={[styles.badgeText, { color: listing.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{listing.isPublished ? text(isArabic, 'Live', 'نشط') : text(isArabic, 'Draft', 'مسودة')}</Text>
             </View>
           </View>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{listing.location} • {listing.price} • {listing.type === 'sale' ? 'For sale' : 'For rent'}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{listing.location} • {listing.price} • {listing.type === 'sale' ? text(isArabic, 'For sale', 'للبيع') : text(isArabic, 'For rent', 'للإيجار')}</Text>
           <View style={styles.cardActions}>
-            <Pressable testID={`edit-listing-${listing.id}`} onPress={() => begin(listing)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text></Pressable>
-            <Pressable testID={`toggle-listing-${listing.id}`} onPress={() => update.mutate({ id: listing.id, data: { isPublished: !listing.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{listing.isPublished ? 'Unpublish' : 'Publish'}</Text></Pressable>
-            <Pressable testID={`delete-listing-${listing.id}`} onPress={() => confirmAction('Delete', 'This removes the listing and its engagement data.', () => remove.mutate({ id: listing.id }))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>Delete</Text></Pressable>
+            <Pressable testID={`edit-listing-${listing.id}`} onPress={() => begin(listing)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
+            <Pressable testID={`toggle-listing-${listing.id}`} onPress={() => update.mutate({ id: listing.id, data: { isPublished: !listing.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{listing.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text></Pressable>
+            <Pressable testID={`delete-listing-${listing.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'This removes the listing and its engagement data.', 'سيؤدي هذا إلى حذف الإعلان وبيانات تفاعله.'), () => remove.mutate({ id: listing.id }), text(isArabic, 'Cancel', 'إلغاء'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
           </View>
         </View>
       ))}
@@ -458,13 +475,14 @@ function ListingsTab() {
 
 function SubscriptionsTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const client = useQueryClient();
   const subs = useListAdminSubscriptions({ query: { queryKey: getListAdminSubscriptionsQueryKey() } });
 
   const updateSub = useUpdateAdminSubscription({
     mutation: {
       onSuccess: () => client.invalidateQueries({ queryKey: getListAdminSubscriptionsQueryKey() }),
-      onError: (e) => Alert.alert('Error', errorMessage(e))
+      onError: (e) => Alert.alert(text(isArabic, 'Error', 'خطأ'), errorMessage(e))
     }
   });
 
@@ -473,37 +491,37 @@ function SubscriptionsTab() {
   const [extendMonths, setExtendMonths] = useState('1');
 
   if (subs.isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
-  if (subs.isError) return <Text style={{ color: colors.destructive }}>Failed to load subscriptions.</Text>;
+  if (subs.isError) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load subscriptions.', 'تعذر تحميل الاشتراكات.')}</Text>;
 
   const statuses = ['free_trial', 'active', 'payment_due', 'expired', 'cancelled', 'suspended'];
 
   return (
     <View testID="admin-subscriptions" style={styles.tabContainer}>
-      <Text style={[styles.tabTitle, { color: colors.foreground, marginBottom: 12 }]}>Subscriptions</Text>
+      <Text style={[styles.tabTitle, { color: colors.foreground, marginBottom: 12 }]}>{text(isArabic, 'Subscriptions', 'الاشتراكات')}</Text>
       {subs.data?.map(sub => (
         <View key={sub.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{sub.contractorName || 'Unknown'}</Text>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{sub.contractorName || text(isArabic, 'Unknown', 'غير معروف')}</Text>
             <View style={[styles.badge, { backgroundColor: sub.status === 'active' ? '#D9F8F2' : (sub.status === 'payment_due' ? '#FDEBEB' : colors.muted) }]}>
-              <Text style={[styles.badgeText, { color: sub.status === 'active' ? '#0B6E6B' : (sub.status === 'payment_due' ? '#C55353' : colors.mutedForeground) }]}>{sub.status.replace('_', ' ')}</Text>
+              <Text style={[styles.badgeText, { color: sub.status === 'active' ? '#0B6E6B' : (sub.status === 'payment_due' ? '#C55353' : colors.mutedForeground) }]}>{statusText(isArabic, sub.status)}</Text>
             </View>
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{sub.planName} • {sub.priceOmaniRial} OMR</Text>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>Period: {sub.currentPeriodStartsAt ? sub.currentPeriodStartsAt.split('T')[0] : 'N/A'} - {sub.currentPeriodEndsAt ? sub.currentPeriodEndsAt.split('T')[0] : 'N/A'}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Period', 'الفترة')}: {sub.currentPeriodStartsAt ? sub.currentPeriodStartsAt.split('T')[0] : 'N/A'} - {sub.currentPeriodEndsAt ? sub.currentPeriodEndsAt.split('T')[0] : 'N/A'}</Text>
 
           {editingId === sub.id ? (
             <View style={[styles.inlineForm, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <Text style={[styles.label, { color: colors.foreground }]}>Set Status</Text>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Set Status', 'تحديد الحالة')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                 {statuses.map(s => (
                   <Pressable key={s} onPress={() => setFormStatus(s)} style={[styles.statusPill, formStatus === s ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.statusPillText, formStatus === s ? { color: colors.background } : { color: colors.foreground }]}>{s.replace('_', ' ')}</Text>
+                    <Text style={[styles.statusPillText, formStatus === s ? { color: colors.background } : { color: colors.foreground }]}>{statusText(isArabic, s)}</Text>
                   </Pressable>
                 ))}
               </ScrollView>
 
               <View style={styles.formGroupFull}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Extend Trial (Months)</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Extend Trial (Months)', 'تمديد التجربة (بالأشهر)')}</Text>
                 <TextInput value={extendMonths} onChangeText={setExtendMonths} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} />
               </View>
 
@@ -513,17 +531,17 @@ function SubscriptionsTab() {
                     onSuccess: () => setEditingId(null)
                   });
                 }}>
-                  <Text style={[styles.denseButtonText, { color: colors.background }]}>Update</Text>
+                  <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Update', 'تحديث')}</Text>
                 </Pressable>
                 <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setEditingId(null)}>
-                  <Text style={[styles.denseButtonText, { color: colors.foreground }]}>Cancel</Text>
+                  <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
                 </Pressable>
               </View>
             </View>
           ) : (
             <View style={styles.cardActions}>
               <Pressable testID={`edit-sub-${sub.id}`} onPress={() => { setEditingId(sub.id); setFormStatus(sub.status); setExtendMonths(''); }} style={styles.actionLink}>
-                <Text style={[styles.actionText, { color: colors.primary }]}>Manage</Text>
+                <Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Manage', 'إدارة')}</Text>
               </Pressable>
             </View>
           )}
@@ -535,6 +553,7 @@ function SubscriptionsTab() {
 
 function PaymentsTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const client = useQueryClient();
   const payments = useListAdminPayments({ query: { queryKey: getListAdminPaymentsQueryKey() } });
 
@@ -545,7 +564,7 @@ function PaymentsTab() {
          setAdding(false);
          setForm({ subscriptionId: '', amountOmaniRial: '0', status: 'paid', provider: 'manual', providerReference: '' });
       },
-      onError: (e) => Alert.alert('Error', errorMessage(e))
+      onError: (e) => Alert.alert(text(isArabic, 'Error', 'خطأ'), errorMessage(e))
     }
   });
 
@@ -553,54 +572,54 @@ function PaymentsTab() {
   const [form, setForm] = useState<any>({ subscriptionId: '', amountOmaniRial: '0', status: 'paid', provider: 'manual', providerReference: '' });
 
   if (payments.isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
-  if (payments.isError) return <Text style={{ color: colors.destructive }}>Failed to load payments.</Text>;
+  if (payments.isError) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load payments.', 'تعذر تحميل المدفوعات.')}</Text>;
 
   const statuses = ['pending', 'paid', 'failed', 'refunded', 'void'];
 
   return (
     <View testID="admin-payments" style={styles.tabContainer}>
       <View style={styles.tabHeader}>
-        <Text style={[styles.tabTitle, { color: colors.foreground }]}>Payments</Text>
+        <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Payments', 'المدفوعات')}</Text>
         <Pressable testID="add-payment" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => setAdding(true)}>
           <Feather name="plus" size={14} color={colors.background} />
-          <Text style={[styles.denseButtonText, { color: colors.background }]}>Record</Text>
+          <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Record', 'تسجيل')}</Text>
         </Pressable>
       </View>
 
       {adding && (
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.formTitle, { color: colors.foreground }]}>Record Payment</Text>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Record Payment', 'تسجيل دفعة')}</Text>
           <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Subscription ID</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Subscription ID', 'معرّف الاشتراك')}</Text>
             <TextInput value={form.subscriptionId} onChangeText={v => setForm({ ...form, subscriptionId: v })} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
           <View style={styles.formGrid}>
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.foreground }]}>Amount (OMR)</Text>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Amount (OMR)', 'المبلغ (ر.ع.)')}</Text>
               <TextInput value={form.amountOmaniRial} onChangeText={v => setForm({ ...form, amountOmaniRial: v })} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
             </View>
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.foreground }]}>Provider</Text>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Provider', 'المزوّد')}</Text>
               <TextInput value={form.provider} onChangeText={v => setForm({ ...form, provider: v })} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
             </View>
           </View>
           <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Provider Reference</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Provider Reference', 'مرجع المزوّد')}</Text>
             <TextInput value={form.providerReference} onChangeText={v => setForm({ ...form, providerReference: v })} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
 
-          <Text style={[styles.label, { color: colors.foreground, marginTop: 8 }]}>Status</Text>
+          <Text style={[styles.label, { color: colors.foreground, marginTop: 8 }]}>{text(isArabic, 'Status', 'الحالة')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
             {statuses.map(s => (
               <Pressable key={s} onPress={() => setForm({ ...form, status: s })} style={[styles.statusPill, form.status === s ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <Text style={[styles.statusPillText, form.status === s ? { color: colors.background } : { color: colors.foreground }]}>{s}</Text>
+                <Text style={[styles.statusPillText, form.status === s ? { color: colors.background } : { color: colors.foreground }]}>{statusText(isArabic, s)}</Text>
               </Pressable>
             ))}
           </ScrollView>
 
           <View style={styles.formActions}>
             <Pressable testID="save-payment" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={() => {
-              if (!form.subscriptionId) { Alert.alert('Required', 'Subscription ID is required'); return; }
+              if (!form.subscriptionId) { Alert.alert(text(isArabic, 'Required', 'مطلوب'), text(isArabic, 'Subscription ID is required', 'معرّف الاشتراك مطلوب')); return; }
               createPayment.mutate({
                 data: {
                   subscriptionId: form.subscriptionId,
@@ -611,10 +630,10 @@ function PaymentsTab() {
                 }
               });
             }}>
-              <Text style={[styles.denseButtonText, { color: colors.background }]}>{createPayment.isPending ? 'Saving...' : 'Save Payment'}</Text>
+              <Text style={[styles.denseButtonText, { color: colors.background }]}>{createPayment.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Payment', 'حفظ الدفعة')}</Text>
             </Pressable>
             <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setAdding(false)}>
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>Cancel</Text>
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
             </Pressable>
           </View>
         </View>
@@ -628,8 +647,8 @@ function PaymentsTab() {
               <Text style={[styles.badgeText, { color: p.status === 'paid' ? '#0B6E6B' : colors.mutedForeground }]}>{p.status}</Text>
             </View>
           </View>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>Sub: {p.subscriptionId}</Text>
-          {p.providerReference && <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>Ref: {p.providerReference}</Text>}
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Sub', 'اشتراك')}: {p.subscriptionId}</Text>
+          {p.providerReference && <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Ref', 'مرجع')}: {p.providerReference}</Text>}
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{new Date(p.createdAt).toLocaleString()}</Text>
         </View>
       ))}
@@ -639,15 +658,16 @@ function PaymentsTab() {
 
 function SettingsTab() {
   const colors = useColors();
+  const { isArabic } = useApp();
   const client = useQueryClient();
   const { data: settings, isLoading, isError } = useGetAdminSettings();
   const updateSettings = useUpdateAdminSettings({
     mutation: {
       onSuccess: () => {
         client.invalidateQueries({ queryKey: getGetAdminSettingsQueryKey() });
-        Alert.alert('Success', 'Settings updated');
+        Alert.alert(text(isArabic, 'Success', 'تم'), text(isArabic, 'Settings updated', 'تم تحديث الإعدادات'));
       },
-      onError: (e) => Alert.alert('Error', errorMessage(e))
+      onError: (e) => Alert.alert(text(isArabic, 'Error', 'خطأ'), errorMessage(e))
     }
   });
 
@@ -670,7 +690,7 @@ function SettingsTab() {
   }, [settings]);
 
   if (isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
-  if (isError) return <Text style={{ color: colors.destructive }}>Failed to load settings.</Text>;
+  if (isError) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load settings.', 'تعذر تحميل الإعدادات.')}</Text>;
   if (!form) return null;
 
   const save = () => {
@@ -693,32 +713,32 @@ function SettingsTab() {
 
   return (
     <View testID="admin-settings" style={styles.tabContainer}>
-      <Text style={[styles.tabTitle, { color: colors.foreground, marginBottom: 16 }]}>Marketplace Settings</Text>
+      <Text style={[styles.tabTitle, { color: colors.foreground, marginBottom: 16 }]}>{text(isArabic, 'Marketplace Settings', 'إعدادات السوق')}</Text>
 
       <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.formTitle, { color: colors.foreground }]}>Billing Defaults</Text>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Billing Defaults', 'إعدادات الفوترة')}</Text>
         <View style={styles.formGrid}>
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Trial Months</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Trial Months', 'أشهر التجربة')}</Text>
             <TextInput value={form.trialMonths} onChangeText={v => setForm({ ...form, trialMonths: v })} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Default Price (OMR)</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Default Price (OMR)', 'السعر الافتراضي (ر.ع.)')}</Text>
             <TextInput value={form.defaultPriceOmaniRial} onChangeText={v => setForm({ ...form, defaultPriceOmaniRial: v })} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
         </View>
       </View>
 
       <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.formTitle, { color: colors.foreground }]}>Ranking Weights</Text>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Ranking Weights', 'أوزان الترتيب')}</Text>
         <View style={styles.formGrid}>
           {[
-            ['wRating', 'Rating'], ['wReviews', 'Reviews'], ['wProjects', 'Projects'],
-            ['wProfile', 'Profile'], ['wVerification', 'Verification'], ['wActivity', 'Activity'],
-            ['wEngagement', 'Engagement']
-          ].map(([key, label]) => (
+            ['wRating', 'Rating', 'التقييم'], ['wReviews', 'Reviews', 'المراجعات'], ['wProjects', 'Projects', 'المشاريع'],
+            ['wProfile', 'Profile', 'الملف الشخصي'], ['wVerification', 'Verification', 'التوثيق'], ['wActivity', 'Activity', 'النشاط'],
+            ['wEngagement', 'Engagement', 'التفاعل']
+          ].map(([key, label, labelAr]) => (
             <View key={key} style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
               <TextInput value={form[key]} onChangeText={v => setForm({ ...form, [key]: v })} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
             </View>
           ))}
@@ -726,7 +746,7 @@ function SettingsTab() {
       </View>
 
       <Pressable testID="save-settings" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, marginTop: 8 }]} onPress={save}>
-        <Text style={[styles.denseButtonText, { color: colors.background }]}>{updateSettings.isPending ? 'Saving...' : 'Save Settings'}</Text>
+        <Text style={[styles.denseButtonText, { color: colors.background }]}>{updateSettings.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Settings', 'حفظ الإعدادات')}</Text>
       </Pressable>
     </View>
   );

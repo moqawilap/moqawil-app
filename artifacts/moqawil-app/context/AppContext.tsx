@@ -17,6 +17,7 @@ type AppContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   isArabic: boolean;
+  preferencesLoaded: boolean;
   location: LocationState;
   locationLoading: boolean;
   refreshLocation: (options?: { silent?: boolean }) => Promise<void>;
@@ -48,6 +49,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en');
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [location, setLocation] = useState<LocationState>(defaultLocation);
   const [locationLoading, setLocationLoading] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -58,15 +60,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
-        if (!value) return;
-         const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; managedProviders?: Provider[]; engagementClientId?: string };
-        if (parsed.locale) setLocaleState(parsed.locale);
-        if (parsed.location) setLocation(parsed.location);
-        if (parsed.savedIds) setSavedIds(parsed.savedIds);
-        if (parsed.managedProviders) setManagedProviders(parsed.managedProviders);
-         setEngagementClientId(parsed.engagementClientId ?? createEngagementClientId());
+        if (value) {
+          const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; managedProviders?: Provider[]; engagementClientId?: string };
+          if (parsed.locale) setLocaleState(parsed.locale);
+          if (parsed.location) setLocation(parsed.location);
+          if (parsed.savedIds) setSavedIds(parsed.savedIds);
+          if (parsed.managedProviders) setManagedProviders(parsed.managedProviders);
+          setEngagementClientId(parsed.engagementClientId ?? createEngagementClientId());
+        } else {
+          setEngagementClientId(createEngagementClientId());
+        }
       })
-       .catch(() => setEngagementClientId(createEngagementClientId()));
+      .catch(() => setEngagementClientId(createEngagementClientId()))
+      .finally(() => setPreferencesLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -187,6 +193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       locale,
       setLocale,
       isArabic: locale === 'ar',
+      preferencesLoaded,
       location,
        locationLoading,
       refreshLocation,
@@ -201,7 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateProvider,
       removeProvider,
     }),
-     [locale, location, locationLoading, savedIds, engagementClientId, activeService, managedProviders],
+     [locale, location, locationLoading, savedIds, engagementClientId, activeService, managedProviders, preferencesLoaded],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
