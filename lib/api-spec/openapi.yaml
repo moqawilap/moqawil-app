@@ -520,7 +520,7 @@ components:
          dailySpentOmaniRial: { type: number }
          createdAt: { type: string, format: date-time }
          updatedAt: { type: string, format: date-time }
-       required: [id, contractorId, title, description, ctaLabel, mediaUrl, mediaType, audience, totalBudgetOmaniRial, dailyBudgetOmaniRial, billingModel, unitRateOmaniRial, startAt, endAt, status, impressionCount, clickCount, conversionCount, spentOmaniRial, remainingOmaniRial, dailySpentOmaniRial, createdAt, updatedAt]
+       required: [id, contractorId, title, description, ctaLabel, mediaUrl, mediaType, audience, frequencyCapPerDay, totalBudgetOmaniRial, dailyBudgetOmaniRial, billingModel, unitRateOmaniRial, startAt, endAt, status, impressionCount, clickCount, conversionCount, spentOmaniRial, remainingOmaniRial, dailySpentOmaniRial, createdAt, updatedAt]
      AdEventInput:
        type: object
        properties:
