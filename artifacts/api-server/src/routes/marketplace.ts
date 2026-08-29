@@ -56,17 +56,27 @@ async function paymentResponse(item: typeof payments.$inferSelect) {
 }
 async function adminContractorResponse(profile: typeof contractorProfiles.$inferSelect) {
   const publicSummary = await contractorSummary(profile);
-  const owner = await db.query.users.findFirst({ where: eq(users.id, profile.userId) });
+  const [owner, profileServices] = await Promise.all([
+    db.query.users.findFirst({ where: eq(users.id, profile.userId) }),
+    db.select({ name: services.name, category: services.category }).from(services).where(and(eq(services.contractorId, profile.id), eq(services.isActive, true))),
+  ]);
+  const serviceNames = profileServices.filter((service) => service.category === "consultants").map((service) => service.name);
   return {
     ...publicSummary, businessNameArabic: profile.businessNameArabic, bioArabic: profile.bioArabic,
     wilayat: profile.wilayat, serviceArea: profile.serviceArea, phone: profile.phone,
     evaluationNotes: profile.evaluationNotes, adminRating: profile.adminRating,
     agreedContractAmountOmaniRial: decimal(profile.agreedContractAmountOmaniRial),
+    isDesigner: serviceNames.length > 0, serviceNames,
     accountLinkStatus: owner?.identitySource === "clerk" ? "linked_clerk" : "managed_unlinked",
   };
 }
 function validOptionalText(value: unknown, maximum: number) {
   return value === undefined || value === null || (typeof value === "string" && value.length <= maximum);
+}
+function validServiceNames(value: unknown, allowEmpty = false) {
+  return Array.isArray(value) && value.length <= 26 && (allowEmpty || value.length >= 1)
+    && new Set(value).size === value.length
+    && value.every((item) => typeof item === "string" && item.trim().length >= 2 && item.trim().length <= 160);
 }
 
 const listingActions = ["view", "like", "save", "contact"] as const;
@@ -776,7 +786,8 @@ router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res,
 router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean")) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames)) || (input.isDesigner === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
+    const designerServiceNames = input.isDesigner === true ? (input.serviceNames as string[]).map((name) => name.trim()) : [];
     const settings = await getSettings();
     const profile = await db.transaction(async (tx) => {
       const [managedUser] = await tx.insert(users).values({ clerkUserId: `managed:${crypto.randomUUID()}`, email: `managed-${crypto.randomUUID()}@listing.invalid`, displayName: input.businessName.trim(), role: "contractor", identitySource: "managed_listing" }).returning();
@@ -793,6 +804,14 @@ router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, ne
           description: typeof input.bioArabic === "string" ? input.bioArabic : null,
         });
       }
+      if (designerServiceNames.length) {
+        await tx.insert(services).values(designerServiceNames.map((name) => ({
+          contractorId: created.id,
+          name,
+          category: "consultants",
+          description: typeof input.bioArabic === "string" ? input.bioArabic : null,
+        })));
+      }
       await tx.insert(auditEvents).values({ actorUserId: (req as AuthenticatedRequest).marketplaceUser.id, action: "managed_contractor_created", entityType: "contractor", entityId: created.id, metadata: { accountLinkStatus: "managed_unlinked" } });
       return created;
     });
@@ -808,12 +827,25 @@ router.get("/admin/payments", requireUser, requireAdmin, async (_req, res, next)
 router.patch("/admin/contractors/:id", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished"];
-    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean")) { res.status(400).json({ error: "Invalid contractor update" }); return; }
+    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isDesigner", "serviceNames"];
+    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
     const changes: Partial<typeof contractorProfiles.$inferInsert> = { updatedAt: new Date() };
-    for (const key of allowed) if (input[key] !== undefined) (changes as Record<string, unknown>)[key] = key === "businessName" || key === "city" ? input[key].trim() : key === "agreedContractAmountOmaniRial" && input[key] !== null ? input[key].toFixed(3) : input[key];
+    const profileFields = allowed.filter((key) => key !== "isDesigner" && key !== "serviceNames");
+    for (const key of profileFields) if (input[key] !== undefined) (changes as Record<string, unknown>)[key] = key === "businessName" || key === "city" ? input[key].trim() : key === "agreedContractAmountOmaniRial" && input[key] !== null ? input[key].toFixed(3) : input[key];
     const [profile] = await db.update(contractorProfiles).set(changes).where(eq(contractorProfiles.id, String(req.params.id))).returning();
     if (!profile) { res.status(404).json({ error: "Contractor not found" }); return; }
+    if (input.isDesigner !== undefined || input.serviceNames !== undefined) {
+      const designerServiceNames = input.isDesigner === false ? [] : (input.serviceNames as string[] | undefined)?.map((name) => name.trim()) ?? [];
+      await db.delete(services).where(and(eq(services.contractorId, profile.id), eq(services.category, "consultants")));
+      if (designerServiceNames.length) {
+        await db.insert(services).values(designerServiceNames.map((name) => ({
+          contractorId: profile.id,
+          name,
+          category: "consultants",
+          description: profile.bioArabic,
+        })));
+      }
+    }
     await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "contractor_updated", "contractor", profile.id, { fields: Object.keys(input).filter((key) => allowed.includes(key)) });
     res.json(await adminContractorResponse(profile));
   } catch (error) { next(error); }
