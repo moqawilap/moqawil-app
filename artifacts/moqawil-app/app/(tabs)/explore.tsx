@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, ProviderCard, PropertyCard, ScreenHeader, SegmentedControl, ServiceIcon } from '@/components/MoqawilUI';
 import { images, listings, mergeMarketplaceListings, serviceItems } from '@/data/mockData';
 import { buildingServices } from '@/data/buildingServices';
+import { designServices } from '@/data/designServices';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -45,6 +46,7 @@ export default function ExploreScreen() {
   const [selectedWilayat, setSelectedWilayat] = useState('');
   const [locationMenu, setLocationMenu] = useState<'governorate' | 'wilayat' | null>(null);
   const [selectedBuildingService, setSelectedBuildingService] = useState('');
+  const [selectedDesignService, setSelectedDesignService] = useState('');
   const [minimumRating, setMinimumRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [minimumBudget, setMinimumBudget] = useState('');
@@ -61,7 +63,7 @@ export default function ExploreScreen() {
   const directory = useListContractors({
     search: query.trim() || undefined,
     category: directoryCategory === 'contractors' ? undefined : directoryCategory,
-    service: selectedService === 'building' ? selectedBuildingService || undefined : undefined,
+    service: selectedService === 'building' ? selectedBuildingService || undefined : selectedService === 'design' ? selectedDesignService || undefined : undefined,
     city: selectedGovernorate || undefined,
     wilayat: selectedWilayat || undefined,
     verified: verifiedOnly || undefined,
@@ -73,6 +75,7 @@ export default function ExploreScreen() {
     setActiveService(serviceId);
     setMode(serviceId === 'real-estate' ? 'Properties' : 'Providers');
     setSelectedBuildingService('');
+    setSelectedDesignService('');
   };
   const selectedGovernorateInfo = omanGovernorates.find((item) => item.name === selectedGovernorate);
   const selectedWilayatInfo = selectedGovernorateInfo?.wilayats.find((item) => item.name === selectedWilayat);
@@ -107,7 +110,7 @@ export default function ExploreScreen() {
         if (sort === 'newest') return dateFromText(b.createdAt) - dateFromText(a.createdAt);
         return ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0);
       });
-  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService, sort]);
+  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService, selectedDesignService, sort]);
 
   const filteredListings = useMemo(() => availableListings
     .filter((listing) => {
@@ -229,6 +232,22 @@ export default function ExploreScreen() {
                {buildingServices.map((service) => {
                  const selected = selectedBuildingService === service.name;
                  return <Pressable key={service.name} testID={`building-service-${service.name}`} onPress={() => setSelectedBuildingService(selected ? '' : service.name)} style={({ pressed }) => [styles.buildingChip, { backgroundColor: selected ? colors.primary : colors.surface, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}>
+                   <Text style={{ color: selected ? colors.primaryForeground : colors.foreground }}>{isArabic ? service.nameAr : service.name}</Text>
+                 </Pressable>;
+               })}
+             </ScrollView>
+           </View> : selectedService === 'design' ? <View style={styles.buildingSection}>
+             <View style={styles.buildingHeading}>
+               <View>
+                 <Text style={[styles.buildingTitle, { color: colors.foreground }]}>{isArabic ? 'نوع المصمم' : 'Designer type'}</Text>
+                 <Text style={[styles.buildingSubtitle, { color: colors.mutedForeground }]}>{isArabic ? 'اختر تخصص التصميم الذي تحتاجه' : 'Choose the design specialty you need'}</Text>
+               </View>
+               {selectedDesignService ? <Pressable testID="clear-design-service" onPress={() => setSelectedDesignService('')}><Text style={[styles.clearText, { color: colors.primary }]}>{isArabic ? 'مسح' : 'Clear'}</Text></Pressable> : null}
+             </View>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.buildingChips}>
+               {designServices.map((service) => {
+                 const selected = selectedDesignService === service.name;
+                 return <Pressable key={service.name} testID={`design-service-${service.name}`} onPress={() => setSelectedDesignService(selected ? '' : service.name)} style={({ pressed }) => [styles.buildingChip, { backgroundColor: selected ? colors.primary : colors.surface, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}>
                    <Text style={{ color: selected ? colors.primaryForeground : colors.foreground }}>{isArabic ? service.nameAr : service.name}</Text>
                  </Pressable>;
                })}
