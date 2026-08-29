@@ -114,7 +114,6 @@ export default function SignInScreen() {
     try {
       const result = await signIn.resetPasswordEmailCode.submitPassword({
         password: newPassword,
-        signOutOfOtherSessions: true,
       });
       if (result.error) throw result.error;
       if (signIn.status !== 'complete') throw new Error('Password reset needs another verification step.');
