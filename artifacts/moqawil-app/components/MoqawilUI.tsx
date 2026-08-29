@@ -232,7 +232,7 @@ export function ListingEngagementMetrics({ listingId, saved = false, onSave, com
   const { isArabic, engagementClientId } = useApp();
   const queryClient = useQueryClient();
   const params = engagementClientId ? { clientId: engagementClientId } : undefined;
-  const query = useGetListingEngagement(listingId, params, { query: { enabled: Boolean(engagementClientId) } });
+  const query = useGetListingEngagement(listingId, params, { query: { queryKey: getGetListingEngagementQueryKey(listingId, params), enabled: Boolean(engagementClientId) } });
   const record = useRecordListingEngagement({
     mutation: {
       onSuccess: (next) => {
