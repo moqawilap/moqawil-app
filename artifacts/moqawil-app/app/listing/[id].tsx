@@ -45,7 +45,7 @@ export default function ListingDetail() {
               <View key={label} style={styles.spec}><Text style={[styles.specValue, { color: colors.foreground }]}>{value}</Text><Text style={[styles.specLabel, { color: colors.mutedForeground }]}>{label}</Text></View>
             ))}
           </View>
-          <ListingEngagementMetrics listingId={listing.id} saved={isSaved(listing.id)} onSave={() => toggleSaved(listing.id)} />
+          <ListingEngagementMetrics listingId={listing.id} saved={isSaved(listing.id)} onSave={() => toggleSaved(listing.id)} trackView />
           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>A home with room to grow</Text>
           <Text style={[styles.description, { color: colors.mutedForeground }]}>Explore the full property details, ask questions directly, and arrange a visit with the listing contact.</Text>
           <View style={[styles.tip, { backgroundColor: colors.primarySoft }]}>

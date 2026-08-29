@@ -227,7 +227,7 @@ function EngagementStat({ icon, value, label, compact = false }: { icon: keyof t
   );
 }
 
-export function ListingEngagementMetrics({ listingId, saved = false, onSave, compact = false }: { listingId: string; saved?: boolean; onSave?: () => void; compact?: boolean }) {
+export function ListingEngagementMetrics({ listingId, saved = false, onSave, compact = false, trackView = false }: { listingId: string; saved?: boolean; onSave?: () => void; compact?: boolean; trackView?: boolean }) {
   const colors = useColors();
   const { isArabic, engagementClientId } = useApp();
   const queryClient = useQueryClient();
@@ -243,10 +243,10 @@ export function ListingEngagementMetrics({ listingId, saved = false, onSave, com
   });
   const viewed = React.useRef(false);
   React.useEffect(() => {
-    if (!engagementClientId || viewed.current) return;
+    if (!trackView || !engagementClientId || viewed.current) return;
     viewed.current = true;
     record.mutate({ listingId, data: { action: 'view', clientId: engagementClientId } });
-  }, [engagementClientId, listingId]);
+  }, [engagementClientId, listingId, trackView]);
 
   const data = query.data;
   const submit = (action: 'like' | 'save', active: boolean) => {
