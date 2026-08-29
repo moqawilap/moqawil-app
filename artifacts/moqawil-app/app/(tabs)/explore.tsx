@@ -72,7 +72,6 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
-  const ads = useListAds({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }, { query: { queryKey: getListAdsQueryKey({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }) } });
   const availableListings = useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('Providers');
@@ -91,6 +90,7 @@ export default function ExploreScreen() {
   const hasInvalidBudget = (!!minimumBudget.trim() && minimumBudgetValue === undefined) || (!!maximumBudget.trim() && maximumBudgetValue === undefined);
   const budgetRangeValid = !hasInvalidBudget && (minimumBudgetValue === undefined || maximumBudgetValue === undefined || minimumBudgetValue <= maximumBudgetValue);
   const selectedService = activeService ?? 'contractors';
+  const ads = useListAds({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }, { query: { queryKey: getListAdsQueryKey({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }) } });
   const selectedServiceInfo = serviceItems.find((service) => service.id === selectedService) ?? serviceItems[0];
   const visibleMode = selectedService === 'real-estate' ? 'Properties' : mode;
   const directoryCategory = selectedService === 'design' ? 'consultants' : selectedService;
@@ -311,6 +311,20 @@ export default function ExploreScreen() {
     </View>
   );
 }
+
+const adStyles = StyleSheet.create({
+  card: { borderWidth: 1, borderRadius: 18, overflow: 'hidden', marginBottom: 16 },
+  header: { paddingHorizontal: 13, paddingTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  sponsored: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 7 },
+  sponsoredText: { fontSize: 10, fontWeight: '800' },
+  advertiser: { fontSize: 11, flex: 1, textAlign: 'right' },
+  media: { width: '100%', height: 150, marginTop: 10 },
+  videoPlaceholder: { height: 150, marginTop: 10, alignItems: 'center', justifyContent: 'center', gap: 7 },
+  copy: { padding: 13, gap: 7 },
+  title: { fontSize: 16, fontWeight: '800' },
+  description: { fontSize: 12, lineHeight: 18 },
+  cta: { alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, marginTop: 3 },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

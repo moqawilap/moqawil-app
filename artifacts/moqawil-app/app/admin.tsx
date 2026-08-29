@@ -834,12 +834,12 @@ function AdvertisingTab() {
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(blankAdCampaign);
+  const [form, setForm] = useState<any>(blankAdCampaign);
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminAdCampaignsQueryKey() });
   const create = useCreateAdminAdCampaign({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankAdCampaign()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
 
-  const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: string, value: string) => setForm((current: any) => ({ ...current, [key]: value }));
   const begin = (campaign?: AdCampaign) => {
     if (!campaign) {
       setEditingId(null);
@@ -950,7 +950,7 @@ function AdvertisingTab() {
           </View>
           <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Media type', 'نوع الوسائط')}</Text>
           <View style={styles.formActions}>
-            {(['image', 'video'] as const).map((type) => <Pressable key={type} onPress={() => setForm((current) => ({ ...current, mediaType: type }))} style={[styles.statusPill, form.mediaType === type ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.mediaType === type ? colors.background : colors.foreground }]}>{type === 'image' ? text(isArabic, 'Image', 'صورة') : text(isArabic, 'Video', 'فيديو')}</Text></Pressable>)}
+            {(['image', 'video'] as const).map((type) => <Pressable key={type} onPress={() => setForm((current: any) => ({ ...current, mediaType: type }))} style={[styles.statusPill, form.mediaType === type ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.mediaType === type ? colors.background : colors.foreground }]}>{type === 'image' ? text(isArabic, 'Image', 'صورة') : text(isArabic, 'Video', 'فيديو')}</Text></Pressable>)}
           </View>
           <View style={styles.formGrid}>
             {[
@@ -962,11 +962,11 @@ function AdvertisingTab() {
           </View>
           <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Billing model', 'نموذج الفوترة')}</Text>
           <View style={styles.formActions}>
-            {(['cpm', 'cpc', 'cpa'] as const).map((model) => <Pressable key={model} onPress={() => setForm((current) => ({ ...current, billingModel: model }))} style={[styles.statusPill, form.billingModel === model ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.billingModel === model ? colors.background : colors.foreground }]}>{model.toUpperCase()}</Text></Pressable>)}
+            {(['cpm', 'cpc', 'cpa'] as const).map((model) => <Pressable key={model} onPress={() => setForm((current: any) => ({ ...current, billingModel: model }))} style={[styles.statusPill, form.billingModel === model ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.billingModel === model ? colors.background : colors.foreground }]}>{model.toUpperCase()}</Text></Pressable>)}
           </View>
           <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Campaign state', 'حالة الحملة')}</Text>
           <View style={styles.formActions}>
-            {(['draft', 'active', 'paused'] as const).map((state) => <Pressable key={state} onPress={() => setForm((current) => ({ ...current, status: state }))} style={[styles.statusPill, form.status === state ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.status === state ? colors.background : colors.foreground }]}>{statusText(isArabic, state)}</Text></Pressable>)}
+            {(['draft', 'active', 'paused'] as const).map((state) => <Pressable key={state} onPress={() => setForm((current: any) => ({ ...current, status: state }))} style={[styles.statusPill, form.status === state ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.status === state ? colors.background : colors.foreground }]}>{statusText(isArabic, state)}</Text></Pressable>)}
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Payment is reserved for the campaign budget; Visa/Apple Pay activation will be added after the payment connection is enabled.', 'المبلغ محجوز لميزانية الحملة؛ سيتم تفعيل Visa وApple Pay بعد ربط بوابة الدفع.')}</Text>
           <View style={styles.formActions}>
