@@ -1121,6 +1121,9 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
   input: { borderWidth: 1, borderRadius: 8, height: 40, paddingHorizontal: 12, fontSize: 14 },
   inputMulti: { borderWidth: 1, borderRadius: 8, minHeight: 80, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, textAlignVertical: 'top' },
+  buildingChips: { gap: 8, paddingRight: 4 },
+  buildingChip: { minHeight: 38, maxWidth: 250, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
+  filterPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
 
   toggles: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginVertical: 8 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
