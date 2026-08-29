@@ -5,6 +5,7 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListContractorsSort } from './listContractorsSort';
 
 export type ListContractorsParams = {
 city?: string;
@@ -13,6 +14,15 @@ category?: string;
 service?: string;
 verified?: boolean;
 search?: string;
+/**
+ * @minimum 0
+ */
+minBudget?: number;
+/**
+ * @minimum 0
+ */
+maxBudget?: number;
+sort?: ListContractorsSort;
 /**
  * @minimum 1
  */

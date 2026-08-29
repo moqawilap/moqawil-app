@@ -24,6 +24,26 @@ export interface Contractor {
   rating: number;
   reviewCount: number;
   rankingScore: number;
+  /** @nullable */
+  priceOmaniRial: number | null;
+  createdAt: string;
+}
+
+export type UserProfileRole = typeof UserProfileRole[keyof typeof UserProfileRole];
+
+
+export const UserProfileRole = {
+  customer: 'customer',
+  contractor: 'contractor',
+  admin: 'admin',
+} as const;
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  /** @nullable */
+  displayName?: string | null;
+  role: UserProfileRole;
 }
 
 export type AdminContractorAccountLinkStatus = typeof AdminContractorAccountLinkStatus[keyof typeof AdminContractorAccountLinkStatus];
@@ -689,6 +709,15 @@ service?: string;
 verified?: boolean;
 search?: string;
 /**
+ * @minimum 0
+ */
+minBudget?: number;
+/**
+ * @minimum 0
+ */
+maxBudget?: number;
+sort?: ListContractorsSort;
+/**
  * @minimum 1
  */
 page?: number;
@@ -698,6 +727,17 @@ page?: number;
  */
 limit?: number;
 };
+
+export type ListContractorsSort = typeof ListContractorsSort[keyof typeof ListContractorsSort];
+
+
+export const ListContractorsSort = {
+  relevance: 'relevance',
+  price_asc: 'price_asc',
+  price_desc: 'price_desc',
+  oldest: 'oldest',
+  newest: 'newest',
+} as const;
 
 export type GetListingsEngagementParams = {
 /**

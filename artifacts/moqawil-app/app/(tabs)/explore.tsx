@@ -11,6 +11,27 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getListListingsQueryKey, useListContractors, useListListings } from '@workspace/api-client-react';
 
+type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'oldest' | 'newest';
+
+function amountFromText(value?: string | number | null) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (!value) return null;
+  const parsed = Number(value.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function dateFromText(value?: string) {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function budgetFromInput(value: string) {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -26,6 +47,13 @@ export default function ExploreScreen() {
   const [selectedBuildingService, setSelectedBuildingService] = useState('');
   const [minimumRating, setMinimumRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [minimumBudget, setMinimumBudget] = useState('');
+  const [maximumBudget, setMaximumBudget] = useState('');
+  const [sort, setSort] = useState<SortOption>('relevance');
+  const minimumBudgetValue = budgetFromInput(minimumBudget);
+  const maximumBudgetValue = budgetFromInput(maximumBudget);
+  const hasInvalidBudget = (!!minimumBudget.trim() && minimumBudgetValue === undefined) || (!!maximumBudget.trim() && maximumBudgetValue === undefined);
+  const budgetRangeValid = !hasInvalidBudget && (minimumBudgetValue === undefined || maximumBudgetValue === undefined || minimumBudgetValue <= maximumBudgetValue);
   const selectedService = activeService ?? 'contractors';
   const selectedServiceInfo = serviceItems.find((service) => service.id === selectedService) ?? serviceItems[0];
   const visibleMode = selectedService === 'real-estate' ? 'Properties' : mode;
@@ -36,6 +64,9 @@ export default function ExploreScreen() {
     city: selectedGovernorate || undefined,
     wilayat: selectedWilayat || undefined,
     verified: verifiedOnly || undefined,
+    minBudget: budgetRangeValid ? minimumBudgetValue : undefined,
+    maxBudget: budgetRangeValid ? maximumBudgetValue : undefined,
+    sort,
     limit: 50,
   });
 
@@ -55,7 +86,7 @@ export default function ExploreScreen() {
       specialtyAr: contractor.bio || 'مقاول', rating: contractor.rating, reviews: contractor.reviewCount, distance: contractor.city,
       city: contractor.city, verified: contractor.isVerified,
       image: contractor.avatarUrl ? { uri: contractor.avatarUrl } : selectedService === 'consultants' ? images.interior : selectedService === 'maintenance' ? images.villa : images.contractor,
-      rankingScore: contractor.rankingScore,
+      rankingScore: contractor.rankingScore, priceOmaniRial: contractor.priceOmaniRial, createdAt: contractor.createdAt,
     }));
     const fallbackProviders = managedProviders.filter((provider) =>
       selectedService === 'contractors' ? provider.role === 'contractor' :
@@ -67,9 +98,47 @@ export default function ExploreScreen() {
       .filter((provider) => selectedService !== 'building' || !selectedBuildingService || provider.buildingServices?.includes(selectedBuildingService));
     const source = apiProviders?.length ? apiProviders : fallbackProviders;
     return source
-      .filter((provider) => (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized)) && provider.rating >= minimumRating)
-      .sort((a, b) => ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0));
-  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService]);
+      .filter((provider) => {
+        const price = amountFromText('priceOmaniRial' in provider ? provider.priceOmaniRial : provider.contractAmount || provider.startingPrice);
+        return (!normalized || `${provider.name} ${provider.specialty}`.toLowerCase().includes(normalized))
+          && provider.rating >= minimumRating
+          && (minimumBudgetValue === undefined || (price !== null && price >= minimumBudgetValue))
+          && (maximumBudgetValue === undefined || (price !== null && price <= maximumBudgetValue));
+      })
+      .sort((a, b) => {
+        const aPrice = amountFromText('priceOmaniRial' in a ? a.priceOmaniRial : a.contractAmount || a.startingPrice);
+        const bPrice = amountFromText('priceOmaniRial' in b ? b.priceOmaniRial : b.contractAmount || b.startingPrice);
+        if (sort === 'price_asc') return (aPrice ?? Number.MAX_SAFE_INTEGER) - (bPrice ?? Number.MAX_SAFE_INTEGER);
+        if (sort === 'price_desc') return (bPrice ?? -1) - (aPrice ?? -1);
+        if (sort === 'oldest') return dateFromText(a.createdAt) - dateFromText(b.createdAt);
+        if (sort === 'newest') return dateFromText(b.createdAt) - dateFromText(a.createdAt);
+        return ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0);
+      });
+  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService, minimumBudgetValue, maximumBudgetValue, sort]);
+
+  const filteredListings = useMemo(() => availableListings
+    .filter((listing) => {
+      const price = amountFromText(listing.price);
+      return (minimumBudgetValue === undefined || (price !== null && price >= minimumBudgetValue))
+        && (maximumBudgetValue === undefined || (price !== null && price <= maximumBudgetValue));
+    })
+    .sort((a, b) => {
+      const aPrice = amountFromText(a.price);
+      const bPrice = amountFromText(b.price);
+      if (sort === 'price_asc') return (aPrice ?? Number.MAX_SAFE_INTEGER) - (bPrice ?? Number.MAX_SAFE_INTEGER);
+      if (sort === 'price_desc') return (bPrice ?? -1) - (aPrice ?? -1);
+      if (sort === 'oldest') return dateFromText(a.createdAt) - dateFromText(b.createdAt);
+      return dateFromText(b.createdAt) - dateFromText(a.createdAt);
+    }), [availableListings, minimumBudgetValue, maximumBudgetValue, sort]);
+
+  const sortOptions: Array<{ value: SortOption; label: string; labelAr: string }> = [
+    { value: 'relevance', label: 'Best match', labelAr: 'الأفضل تطابقًا' },
+    { value: 'price_asc', label: 'Lowest price', labelAr: 'السعر الأقل' },
+    { value: 'price_desc', label: 'Highest price', labelAr: 'السعر الأعلى' },
+    { value: 'newest', label: 'Newest', labelAr: 'الأحدث' },
+    { value: 'oldest', label: 'Oldest', labelAr: 'الأقدم' },
+  ];
+  const selectedSortLabel = sortOptions.find((option) => option.value === sort);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -102,6 +171,21 @@ export default function ExploreScreen() {
              </Pressable>
              {[0, 3, 4].map((rating) => <Pressable testID={`rating-filter-${rating}`} key={rating} onPress={() => setMinimumRating(rating)} style={({ pressed }) => [styles.filterChip, { borderColor: minimumRating === rating ? colors.primary : colors.border, backgroundColor: minimumRating === rating ? colors.primarySoft : colors.surface }, pressed && styles.filterPressed]}>{rating ? <><Feather name="star" size={12} color={colors.star} fill={colors.star} /><Text style={{ color: colors.foreground }}>{rating}+</Text></> : <Text style={{ color: colors.foreground }}>{isArabic ? 'كل التقييمات' : 'Any rating'}</Text>}</Pressable>)}
              <Pressable testID="verified-filter" onPress={() => setVerifiedOnly((value) => !value)} style={({ pressed }) => [styles.filterChip, { borderColor: verifiedOnly ? colors.primary : colors.border, backgroundColor: verifiedOnly ? colors.primarySoft : colors.surface }, pressed && styles.filterPressed]}><Feather name="check-circle" size={13} color={verifiedOnly ? colors.primary : colors.mutedForeground} /><Text style={{ color: colors.foreground }}>{isArabic ? 'موثّق' : 'Verified'}</Text></Pressable>
+          </View>
+          <View style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.budgetTitle, { color: colors.foreground }]}>{isArabic ? 'الميزانية (ر.ع.)' : 'Budget (OMR)'}</Text>
+            <View style={styles.budgetInputs}>
+              <TextInput testID="minimum-budget" value={minimumBudget} onChangeText={setMinimumBudget} keyboardType="decimal-pad" placeholder={isArabic ? 'الحد الأدنى' : 'Minimum'} placeholderTextColor={colors.mutedForeground} style={[styles.budgetInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+              <Text style={{ color: colors.mutedForeground }}>—</Text>
+              <TextInput testID="maximum-budget" value={maximumBudget} onChangeText={setMaximumBudget} keyboardType="decimal-pad" placeholder={isArabic ? 'الحد الأعلى' : 'Maximum'} placeholderTextColor={colors.mutedForeground} style={[styles.budgetInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+            </View>
+            {!budgetRangeValid ? <Text style={styles.budgetError}>{isArabic ? 'يجب أن يكون الحد الأدنى أقل من الحد الأعلى.' : 'Minimum budget must not exceed maximum budget.'}</Text> : null}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortOptions}>
+              {sortOptions.map((option) => {
+                const selected = sort === option.value;
+                return <Pressable key={option.value} testID={`sort-${option.value}`} onPress={() => setSort(option.value)} style={({ pressed }) => [styles.sortChip, { backgroundColor: selected ? colors.primary : colors.background, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}><Text style={[styles.sortChipText, { color: selected ? colors.primaryForeground : colors.foreground }]}>{isArabic ? option.labelAr : option.label}</Text></Pressable>;
+              })}
+            </ScrollView>
           </View>
            {locationMenu ? <View style={[styles.locationMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
              <ScrollView nestedScrollEnabled style={styles.locationMenuScroll}>
@@ -145,15 +229,16 @@ export default function ExploreScreen() {
             }} options={['Providers', 'Properties']} labels={{ Providers: isArabic ? 'المزودون' : 'Providers', Properties: isArabic ? 'العقارات' : 'Properties' }} />
            {visibleMode === 'Providers' ? (
             <View>
-                <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? `${selectedServiceInfo.labelAr} قريبون منك` : `${selectedServiceInfo.label} near you`}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? 'الأفضل تطابقًا' : 'Best match'}</Text></View></View>
+                <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? `${selectedServiceInfo.labelAr} قريبون منك` : `${selectedServiceInfo.label} near you`}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? selectedSortLabel?.labelAr : selectedSortLabel?.label}</Text></View></View>
                 {directory.isLoading && !directory.data ? <View testID="contractors-loading">{[1, 2, 3].map((item) => <View key={item} style={[styles.skeletonCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={[styles.skeletonImage, { backgroundColor: colors.surfaceMuted }]} /><View style={styles.skeletonCopy}><View style={[styles.skeletonLine, { backgroundColor: colors.surfaceMuted, width: '72%' }]} /><View style={[styles.skeletonLine, { backgroundColor: colors.surfaceMuted, width: '52%' }]} /><View style={[styles.skeletonLine, { backgroundColor: colors.surfaceMuted, width: '38%' }]} /></View></View>)}</View> : null}
                 {(!directory.isLoading || directory.data) ? filteredProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image ?? require('@/assets/images/contractor-project.jpg')} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />) : null}
                 {!directory.isLoading && !filteredProviders.length ? <EmptyState icon="search" title={isArabic ? 'لم نجد ما يطابق بحثك' : 'Nothing matched your search'} description={isArabic ? 'جرّب تغيير الخدمة أو إزالة أحد الفلاتر.' : 'Try another service, location, or remove a filter.'} /> : null}
             </View>
           ) : (
             <View>
-               <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? 'عقارات قريبة' : 'Properties nearby'}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? 'الأحدث' : 'Newest'}</Text></View></View>
-               <View style={styles.propertyGrid}>{availableListings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { listing: true })} />)}</View>
+               <View style={styles.resultsHeader}><Text style={[styles.resultTitle, { color: colors.foreground }]}>{isArabic ? 'عقارات قريبة' : 'Properties nearby'}</Text><View style={styles.sortRow}><Feather name="sliders" size={14} color={colors.primary} /><Text style={[styles.sortText, { color: colors.primary }]}>{isArabic ? selectedSortLabel?.labelAr : selectedSortLabel?.label}</Text></View></View>
+               <View style={styles.propertyGrid}>{filteredListings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { listing: true })} />)}</View>
+               {!filteredListings.length ? <EmptyState icon="home" title={isArabic ? 'لا توجد عقارات ضمن الميزانية' : 'No properties in this budget'} description={isArabic ? 'جرّب تعديل الحد الأدنى أو الأعلى.' : 'Try changing the minimum or maximum budget.'} /> : null}
             </View>
           )}
         </View>
@@ -176,6 +261,14 @@ const styles = StyleSheet.create({
   sortText: { fontSize: 11, fontWeight: '700' },
   propertyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  budgetCard: { borderWidth: 1, borderRadius: 16, padding: 12, marginBottom: 16, gap: 10 },
+  budgetTitle: { fontSize: 13, fontWeight: '800' },
+  budgetInputs: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  budgetInput: { flex: 1, height: 42, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, fontSize: 13 },
+  budgetError: { color: '#C83A4A', fontSize: 11, fontWeight: '600' },
+  sortOptions: { gap: 8, paddingRight: 4 },
+  sortChip: { minHeight: 36, borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, justifyContent: 'center' },
+  sortChipText: { fontSize: 11, fontWeight: '700' },
    locationFilter: { minWidth: 145, maxWidth: 175, height: 38, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
    locationFilterText: { flex: 1, fontSize: 12 },
    locationMenu: { borderWidth: 1, borderRadius: 16, marginTop: -8, marginBottom: 10, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 3 },

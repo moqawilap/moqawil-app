@@ -21,4 +21,7 @@ export interface Contractor {
   rating: number;
   reviewCount: number;
   rankingScore: number;
+  /** @nullable */
+  priceOmaniRial: number | null;
+  createdAt: Date;
 }

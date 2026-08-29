@@ -33,6 +33,11 @@ async function logAudit(actorUserId: string, action: string, entityType: string,
 async function createInAppNotification(userId: string, title: string, body: string, metadata: Record<string, unknown> = {}) {
   await db.insert(notifications).values({ userId, type: "system", channel: "in_app", deliveryStatus: "delivered", title, body, deliveryMetadata: metadata, deliveredAt: new Date() });
 }
+function parseBudgetQuery(value: unknown) {
+  if (value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
 function validImageUrls(value: unknown) {
   return Array.isArray(value) && value.length <= 5 && value.every((item) => typeof item === "string" && item.length <= 2_000_000);
 }
@@ -133,10 +138,12 @@ async function contractorSummary(profile: typeof contractorProfiles.$inferSelect
   const review = reviewRows[0]!;
   const activeDays = profile.lastActiveAt ? Math.max(0, 30 - Math.floor((Date.now() - profile.lastActiveAt.getTime()) / 86_400_000)) : 0;
   return {
-    id: profile.id, businessName: profile.businessName, city: profile.city, bio: profile.bio,
+    id: profile.id, businessName: profile.businessName, city: profile.city, wilayat: profile.wilayat, bio: profile.bio,
     avatarUrl: profile.avatarUrl, isVerified: profile.isVerified, isPublished: profile.isPublished, rating: Number(review.rating),
     reviewCount: Number(review.count),
     rankingScore: calculateRanking({ rating: Number(review.rating), reviews: Number(review.count), projects: profile.completedProjectsCount, profile: profile.profileScore, verified: profile.isVerified, activeDays, engagement: profile.engagementScore }, settings.rankingWeights),
+    priceOmaniRial: decimal(profile.agreedContractAmountOmaniRial),
+    createdAt: profile.createdAt.toISOString(),
   };
 }
 
@@ -247,6 +254,19 @@ router.get("/contractors", async (req, res, next) => {
     if (typeof req.query.search === "string" && req.query.search.length <= 100) filters.push(ilike(contractorProfiles.businessName, `%${req.query.search}%`));
     if (typeof req.query.category === "string") filters.push(sql`exists (select 1 from ${services} where ${services.contractorId} = ${contractorProfiles.id} and ${services.category} = ${req.query.category} and ${services.isActive})`);
     if (typeof req.query.service === "string" && req.query.service.length <= 160) filters.push(sql`exists (select 1 from ${services} where ${services.contractorId} = ${contractorProfiles.id} and ${services.name} = ${req.query.service} and ${services.isActive})`);
+    const minBudget = parseBudgetQuery(req.query.minBudget);
+    const maxBudget = parseBudgetQuery(req.query.maxBudget);
+    if (minBudget === undefined || maxBudget === undefined || (minBudget !== null && maxBudget !== null && minBudget > maxBudget)) {
+      res.status(400).json({ error: "Budget limits must be valid non-negative numbers, with minimum no greater than maximum" });
+      return;
+    }
+    if (minBudget !== null) filters.push(sql`${contractorProfiles.agreedContractAmountOmaniRial} is not null and ${contractorProfiles.agreedContractAmountOmaniRial} >= ${minBudget.toFixed(3)}`);
+    if (maxBudget !== null) filters.push(sql`${contractorProfiles.agreedContractAmountOmaniRial} is not null and ${contractorProfiles.agreedContractAmountOmaniRial} <= ${maxBudget.toFixed(3)}`);
+    const sort = typeof req.query.sort === "string" ? req.query.sort : "relevance";
+    if (!["relevance", "price_asc", "price_desc", "oldest", "newest"].includes(sort)) {
+      res.status(400).json({ error: "Unsupported contractor sort" });
+      return;
+    }
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
     const settings = await getSettings();
@@ -270,11 +290,17 @@ router.get("/contractors", async (req, res, next) => {
         .innerJoin(subscriptions, eq(subscriptions.contractorId, contractorProfiles.id))
         .leftJoin(reviews, and(eq(reviews.contractorId, contractorProfiles.id), eq(reviews.isPublished, true)))
         .where(and(...filters)).groupBy(contractorProfiles.id)
-        .orderBy(desc(score), asc(contractorProfiles.businessName), asc(contractorProfiles.id)).limit(limit).offset((page - 1) * limit),
+        .orderBy(
+          sort === "price_asc" ? asc(sql`coalesce(${contractorProfiles.agreedContractAmountOmaniRial}, '999999999')`) :
+          sort === "price_desc" ? desc(sql`coalesce(${contractorProfiles.agreedContractAmountOmaniRial}, '0')`) :
+          sort === "oldest" ? asc(contractorProfiles.createdAt) :
+          sort === "newest" ? desc(contractorProfiles.createdAt) : desc(score),
+          asc(contractorProfiles.businessName), asc(contractorProfiles.id),
+        ).limit(limit).offset((page - 1) * limit),
       db.select({ count: sql<number>`count(distinct ${contractorProfiles.id})` }).from(contractorProfiles)
         .innerJoin(subscriptions, eq(subscriptions.contractorId, contractorProfiles.id)).where(and(...filters)),
     ]);
-    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore) })), page, total: Number(totalRows[0]!.count) });
+    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore), priceOmaniRial: decimal(row.profile.agreedContractAmountOmaniRial), createdAt: row.profile.createdAt.toISOString() })), page, total: Number(totalRows[0]!.count) });
   } catch (error) { next(error); }
 });
 
@@ -317,6 +343,16 @@ router.get("/contractors/:id", async (req, res, next) => {
       })),
     });
   } catch (error) { next(error); }
+});
+
+router.get("/me", requireUser, async (req, res) => {
+  const user = (req as AuthenticatedRequest).marketplaceUser;
+  res.json({
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role,
+  });
 });
 
 router.get("/me/subscription", requireUser, requireContractor, async (req, res, next) => {

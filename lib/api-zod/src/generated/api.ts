@@ -13,6 +13,11 @@ export const HealthCheckResponse = zod.object({
 })
 
 
+export const listContractorsQueryMinBudgetMin = 0;
+
+export const listContractorsQueryMaxBudgetMin = 0;
+
+export const listContractorsQuerySortDefault = `relevance`;
 export const listContractorsQueryPageDefault = 1;
 
 export const listContractorsQueryLimitDefault = 20;
@@ -27,6 +32,9 @@ export const ListContractorsQueryParams = zod.object({
   "service": zod.coerce.string().optional(),
   "verified": zod.coerce.boolean().optional(),
   "search": zod.coerce.string().optional(),
+  "minBudget": zod.coerce.number().min(listContractorsQueryMinBudgetMin).optional(),
+  "maxBudget": zod.coerce.number().min(listContractorsQueryMaxBudgetMin).optional(),
+  "sort": zod.enum(['relevance', 'price_asc', 'price_desc', 'oldest', 'newest']).default(listContractorsQuerySortDefault),
   "page": zod.coerce.number().min(1).default(listContractorsQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(listContractorsQueryLimitMax).default(listContractorsQueryLimitDefault)
 })
@@ -43,10 +51,20 @@ export const ListContractorsResponse = zod.object({
   "isPublished": zod.boolean(),
   "rating": zod.number(),
   "reviewCount": zod.number(),
-  "rankingScore": zod.number()
+  "rankingScore": zod.number(),
+  "priceOmaniRial": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
 })),
   "page": zod.number(),
   "total": zod.number()
+})
+
+
+export const GetMeResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "displayName": zod.string().nullish(),
+  "role": zod.enum(['customer', 'contractor', 'admin'])
 })
 
 
@@ -234,7 +252,9 @@ export const GetContractorResponse = zod.object({
   "isPublished": zod.boolean(),
   "rating": zod.number(),
   "reviewCount": zod.number(),
-  "rankingScore": zod.number()
+  "rankingScore": zod.number(),
+  "priceOmaniRial": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
 }).and(zod.object({
   "phone": zod.string().nullable(),
   "services": zod.array(zod.object({
@@ -391,7 +411,9 @@ export const UpsertMyContractorProfileResponse = zod.object({
   "isPublished": zod.boolean(),
   "rating": zod.number(),
   "reviewCount": zod.number(),
-  "rankingScore": zod.number()
+  "rankingScore": zod.number(),
+  "priceOmaniRial": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
 }),
   "subscription": zod.object({
   "id": zod.string(),
@@ -599,7 +621,9 @@ export const ListAdminContractorsResponseItem = zod.object({
   "isPublished": zod.boolean(),
   "rating": zod.number(),
   "reviewCount": zod.number(),
-  "rankingScore": zod.number()
+  "rankingScore": zod.number(),
+  "priceOmaniRial": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
 }).and(zod.object({
   "businessNameArabic": zod.string().nullish(),
   "bioArabic": zod.string().nullish(),
@@ -669,7 +693,9 @@ export const CreateAdminContractorResponse = zod.object({
   "isPublished": zod.boolean(),
   "rating": zod.number(),
   "reviewCount": zod.number(),
-  "rankingScore": zod.number()
+  "rankingScore": zod.number(),
+  "priceOmaniRial": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
 }).and(zod.object({
   "businessNameArabic": zod.string().nullish(),
   "bioArabic": zod.string().nullish(),
@@ -920,7 +946,9 @@ export const UpdateAdminContractorResponse = zod.object({
   "isPublished": zod.boolean(),
   "rating": zod.number(),
   "reviewCount": zod.number(),
-  "rankingScore": zod.number()
+  "rankingScore": zod.number(),
+  "priceOmaniRial": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
 }).and(zod.object({
   "businessNameArabic": zod.string().nullish(),
   "bioArabic": zod.string().nullish(),

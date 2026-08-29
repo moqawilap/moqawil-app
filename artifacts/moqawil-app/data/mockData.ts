@@ -24,6 +24,8 @@ export type Provider = {
   projects: number;
   startingPrice: string;
   contractAmount: string;
+  priceOmaniRial?: number | null;
+  createdAt?: string;
   phone: string;
 };
 
@@ -42,6 +44,7 @@ export type Listing = {
   image: ImageSourcePropType;
   phone?: string;
   featured?: boolean;
+  createdAt?: string;
 };
 
 export function marketplaceListingToLocal(listing: MarketplaceListing): Listing {
@@ -59,6 +62,7 @@ export function marketplaceListingToLocal(listing: MarketplaceListing): Listing 
     area: listing.area,
     image: listing.imageUrl ? { uri: listing.imageUrl } : images.interior,
     phone: listing.contactPhone ?? undefined,
+    createdAt: listing.createdAt,
   };
 }
 

@@ -21,7 +21,7 @@ export default function SignInScreen() {
   const finishSignIn = async () => {
     const finalized = await signIn.finalize();
     if (finalized.error) throw finalized.error;
-    router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
+    router.replace('/');
   };
 
   const submit = async () => {

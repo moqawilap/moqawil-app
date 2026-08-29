@@ -29,10 +29,21 @@ paths:
         - { name: service, in: query, schema: { type: string } }
         - { name: verified, in: query, schema: { type: boolean } }
         - { name: search, in: query, schema: { type: string } }
+        - { name: minBudget, in: query, schema: { type: number, minimum: 0 } }
+        - { name: maxBudget, in: query, schema: { type: number, minimum: 0 } }
+        - { name: sort, in: query, schema: { type: string, enum: [relevance, price_asc, price_desc, oldest, newest], default: relevance } }
         - { name: page, in: query, schema: { type: number, minimum: 1, default: 1 } }
         - { name: limit, in: query, schema: { type: number, minimum: 1, maximum: 50, default: 20 } }
       responses:
         "200": { description: Directory page, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorDirectoryPage" } } } }
+  /me:
+    get:
+      operationId: getMe
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Current application user, content: { application/json: { schema: { $ref: "#/components/schemas/UserProfile" } } } }
+        "401": { description: Authentication required }
   /listings/engagement:
     get:
       operationId: getListingsEngagement
@@ -326,7 +337,17 @@ components:
         rating: { type: number }
         reviewCount: { type: number }
         rankingScore: { type: number }
-      required: [id, businessName, city, isVerified, isPublished, rating, reviewCount, rankingScore]
+        priceOmaniRial: { type: [number, "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, businessName, city, isVerified, isPublished, rating, reviewCount, rankingScore, priceOmaniRial, createdAt]
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        displayName: { type: [string, "null"] }
+        role: { type: string, enum: [customer, contractor, admin] }
+      required: [id, email, role]
     AdminContractor:
       allOf:
         - $ref: "#/components/schemas/Contractor"

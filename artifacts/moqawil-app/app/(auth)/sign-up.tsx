@@ -35,7 +35,7 @@ export default function SignUpScreen() {
          if (signUp.status === 'complete') {
            const finalized = await signUp.finalize();
           if (finalized.error) throw finalized.error;
-          router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
+          router.replace('/');
           return;
         }
         const verification = await signUp.verifications.sendEmailCode();
@@ -52,7 +52,7 @@ export default function SignUpScreen() {
          if (signUp.status === 'complete') {
            const finalized = await signUp.finalize();
           if (finalized.error) throw finalized.error;
-          router.replace(email.trim().toLowerCase() === 'moqawil.ap@gmail.com' ? '/admin' : '/');
+          router.replace('/');
         }
       }
     } catch (error) {
