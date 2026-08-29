@@ -18,6 +18,11 @@ export interface ContractorProfileUpsert {
      */
   city: string;
   /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  wilayat: string;
+  /**
      * @maxLength 5000
      * @nullable
      */

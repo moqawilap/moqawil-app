@@ -298,16 +298,18 @@ export function ActionButton({
   onPress,
   secondary = false,
   style,
+  testID,
 }: {
   label: string;
   icon?: keyof typeof Feather.glyphMap;
   onPress: () => void;
   secondary?: boolean;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const colors = useColors();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [
       styles.actionButton,
       { backgroundColor: secondary ? colors.surface : colors.primary, borderColor: secondary ? colors.border : colors.primary },
       pressed && styles.pressed,

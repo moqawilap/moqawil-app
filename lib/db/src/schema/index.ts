@@ -197,6 +197,7 @@ export const quotes = pgTable("quotes", {
   status: quoteStatusEnum("status").notNull().default("submitted"),
   ...timestamps,
 }, (table) => [
+  uniqueIndex("quotes_request_contractor_unique_idx").on(table.requestId, table.contractorId),
   index("quotes_request_idx").on(table.requestId, table.status),
   index("quotes_contractor_idx").on(table.contractorId, table.createdAt),
 ]);

@@ -26,8 +26,10 @@ export default function ServiceRequestScreen() {
   const governorate = omanGovernorates[governorateIndex]!;
   const wilayat = governorate.wilayats[wilayatIndex]!;
   const createRequest = useCreateServiceRequest({ mutation: {
-    onSuccess: () => {
-      Alert.alert(isArabic ? 'تم إرسال الطلب' : 'Request sent', isArabic ? 'سيصل طلبك إلى الورش المطابقة وستظهر عروضهم في طلباتي.' : 'Matching workshops can now respond. Their quotes will appear in My requests.', [{ text: isArabic ? 'عرض الطلبات' : 'View requests', onPress: () => router.replace('/requests' as never) }]);
+    onSuccess: (result) => {
+      const recipientCount = result.recipientCount ?? 0;
+      router.replace('/requests' as never);
+      Alert.alert(isArabic ? 'تم إرسال الطلب' : 'Request sent', recipientCount > 0 ? (isArabic ? `تم إرسال طلبك إلى ${recipientCount} من الورش المطابقة.` : `Your request was sent to ${recipientCount} matching workshop${recipientCount === 1 ? '' : 's'}.`) : (isArabic ? 'تم حفظ طلبك، وستظهر الورش المطابقة عند توفرها.' : 'Your request was saved. Matching workshops will appear when available.'));
     },
     onError: () => Alert.alert(isArabic ? 'تعذر إرسال الطلب' : 'Could not send request', isArabic ? 'تحقق من البيانات وحاول مرة أخرى.' : 'Check the details and try again.'),
   }});
@@ -46,9 +48,10 @@ export default function ServiceRequestScreen() {
     setImages((current) => [...current, image]);
   };
   const valid = requirements.trim().length >= 8;
+  const validBudget = !budget.trim() || (Number.isFinite(Number(budget)) && Number(budget) >= 0);
   if (!isSignedIn) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لإرسال طلب خدمة' : 'Sign in to request a service'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
-  return <View style={[styles.page, { backgroundColor: colors.background }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 50 }} keyboardShouldPersistTaps="handled"><View style={styles.content}>
-    <Pressable onPress={() => router.back()}><Feather name="arrow-left" size={20} color={colors.foreground} /></Pressable>
+  return <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}><ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 50 }} keyboardShouldPersistTaps="handled"><View style={styles.content}>
+    <Pressable testID="service-request-back" onPress={() => router.back()}><Feather name={isArabic ? 'arrow-right' : 'arrow-left'} size={20} color={colors.foreground} /></Pressable>
     <ScreenHeader title={isArabic ? 'أحتاج خدمة' : 'I need a service'} subtitle={isArabic ? 'أرسل طلبًا واحدًا لعدة ورش قريبة' : 'Send one request to matching workshops nearby'} />
     <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نوع الخدمة' : 'Service type'}</Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>{buildingServices.slice(0, 12).map((item) => <Pressable key={item.name} onPress={() => setService(item)} style={[styles.chip, { borderColor: colors.border, backgroundColor: service.name === item.name ? colors.primarySoft : colors.surface }]}><Text style={{ color: service.name === item.name ? colors.primary : colors.foreground, fontSize: 12 }}>{isArabic ? item.nameAr : item.name}</Text></Pressable>)}</ScrollView>
@@ -63,7 +66,7 @@ export default function ServiceRequestScreen() {
     <View style={styles.imageHeader}><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور العمل - اختياري' : 'Work photos - optional'}</Text><Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{images.length}/5</Text></View>
     <ScrollView horizontal contentContainerStyle={styles.images}>{images.map((image, index) => <View key={`${image.slice(0, 15)}-${index}`}><Image source={{ uri: image }} style={styles.thumb} /><Pressable onPress={() => setImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} style={[styles.remove, { backgroundColor: colors.navy }]}><Feather name="x" size={12} color="#fff" /></Pressable></View>)}<Pressable onPress={pickImage} style={[styles.addPhoto, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}><Feather name="camera" size={20} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: 11 }}>{isArabic ? 'إضافة' : 'Add'}</Text></Pressable></ScrollView>
     <Text style={[styles.note, { color: colors.mutedForeground }]}>{isArabic ? 'سيتم إرسال الطلب للورش المنشورة في نفس المحافظة والولاية.' : 'Your request is sent to published workshops in the same governorate and wilayat.'}</Text>
-    <ActionButton label={createRequest.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Sending…') : (isArabic ? 'إرسال الطلب للورش' : 'Send to workshops')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أضف تفاصيل أكثر' : 'Add more details', isArabic ? 'اكتب 8 أحرف على الأقل عن الخدمة المطلوبة.' : 'Please describe the service in at least 8 characters.'); return; } createRequest.mutate({ data: { serviceCategory: 'building', serviceName: service.name, governorate: governorate.name, wilayat: wilayat.name, requirements: requirements.trim(), budgetOmaniRial: budget.trim() ? Number(budget) : null, imageUrls: images } }); }} />
+    <ActionButton testID="submit-service-request" label={createRequest.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Sending…') : (isArabic ? 'إرسال الطلب للورش' : 'Send to workshops')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أضف تفاصيل أكثر' : 'Add more details', isArabic ? 'اكتب 8 أحرف على الأقل عن الخدمة المطلوبة.' : 'Please describe the service in at least 8 characters.'); return; } if (!validBudget) { Alert.alert(isArabic ? 'ميزانية غير صحيحة' : 'Invalid budget', isArabic ? 'أدخل ميزانية صحيحة أو اترك الحقل فارغًا.' : 'Enter a valid budget or leave the field empty.'); return; } createRequest.mutate({ data: { serviceCategory: 'building', serviceName: service.name, governorate: governorate.name, wilayat: wilayat.name, requirements: requirements.trim(), budgetOmaniRial: budget.trim() ? Number(budget) : null, imageUrls: images } }); }} />
     {createRequest.isPending ? <ActivityIndicator color={colors.primary} style={{ marginTop: 10 }} /> : null}
   </View></ScrollView></View>;
 }

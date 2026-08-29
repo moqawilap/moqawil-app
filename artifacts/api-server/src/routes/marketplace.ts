@@ -385,6 +385,7 @@ router.get("/me/contractor-profile", requireUser, requireContractor, async (req,
     res.json({
       businessName: profile.businessName,
       city: profile.city,
+      wilayat: profile.wilayat,
       bio: profile.bio,
       serviceArea: profile.serviceArea,
       phone: profile.phone,
@@ -447,19 +448,19 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
       return;
     }
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048)) { res.status(400).json({ error: "Invalid contractor profile fields" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || typeof input.wilayat !== "string" || input.wilayat.trim().length < 2 || input.wilayat.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048)) { res.status(400).json({ error: "Invalid contractor profile fields" }); return; }
     if (user.role === "customer") {
       await promoteCustomerToContractor(user.clerkUserId);
     }
     const settings = await getSettings();
     const result = await db.transaction(async (tx) => {
       const [profile] = await tx.insert(contractorProfiles).values({
-        userId: user.id, businessName: input.businessName.trim(), city: input.city.trim(),
+        userId: user.id, businessName: input.businessName.trim(), city: input.city.trim(), wilayat: typeof input.wilayat === "string" ? input.wilayat.trim() : null,
         bio: typeof input.bio === "string" ? input.bio : null, serviceArea: typeof input.serviceArea === "string" ? input.serviceArea : null,
         phone: typeof input.phone === "string" ? input.phone : null, avatarUrl: typeof input.avatarUrl === "string" ? input.avatarUrl : null,
         lastActiveAt: new Date(),
       }).onConflictDoUpdate({ target: contractorProfiles.userId, set: {
-        businessName: input.businessName.trim(), city: input.city.trim(), bio: typeof input.bio === "string" ? input.bio : null,
+        businessName: input.businessName.trim(), city: input.city.trim(), wilayat: typeof input.wilayat === "string" ? input.wilayat.trim() : null, bio: typeof input.bio === "string" ? input.bio : null,
         serviceArea: typeof input.serviceArea === "string" ? input.serviceArea : null, phone: typeof input.phone === "string" ? input.phone : null,
         avatarUrl: typeof input.avatarUrl === "string" ? input.avatarUrl : null, lastActiveAt: new Date(), updatedAt: new Date(),
       } }).returning();
@@ -539,6 +540,7 @@ router.get("/me/workshop-requests", requireUser, requireContractor, async (req, 
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
     if (!profile) { res.status(404).json({ error: "A workshop profile is required" }); return; }
+    await db.update(requestRecipients).set({ status: "viewed", updatedAt: new Date() }).where(and(eq(requestRecipients.contractorId, profile.id), eq(requestRecipients.status, "invited")));
     const rows = await db.select({ request: serviceRequests, recipientId: requestRecipients.id, recipientStatus: requestRecipients.status })
       .from(requestRecipients).innerJoin(serviceRequests, eq(serviceRequests.id, requestRecipients.requestId))
       .where(eq(requestRecipients.contractorId, profile.id)).orderBy(desc(serviceRequests.createdAt));
@@ -554,7 +556,7 @@ router.post("/me/workshop-requests/:id/quote", requireUser, requireContractor, a
     if (!profile || !Number.isFinite(input.amountOmaniRial) || input.amountOmaniRial < 0 || !Number.isInteger(input.estimatedDays) || input.estimatedDays < 1 || input.estimatedDays > 365 || typeof input.details !== "string" || input.details.trim().length < 4 || input.details.length > 3000) { res.status(400).json({ error: "Invalid quote fields" }); return; }
     const request = await db.query.serviceRequests.findFirst({ where: eq(serviceRequests.id, String(req.params.id)) });
     const recipient = request && await db.query.requestRecipients.findFirst({ where: and(eq(requestRecipients.requestId, request.id), eq(requestRecipients.contractorId, profile.id)) });
-    if (!request || !recipient || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Request is unavailable" }); return; }
+    if (!request || !recipient || recipient.status === "quoted" || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Request is unavailable" }); return; }
     const [quote] = await db.transaction(async (tx) => {
       const created = await tx.insert(quotes).values({ requestId: request.id, contractorId: profile.id, amountOmaniRial: Number(input.amountOmaniRial).toFixed(3), estimatedDays: input.estimatedDays, details: input.details.trim() }).returning();
       await tx.update(requestRecipients).set({ status: "quoted", updatedAt: new Date() }).where(eq(requestRecipients.id, recipient.id));
@@ -571,14 +573,22 @@ router.post("/me/quotes/:id/accept", requireUser, async (req, res, next) => {
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const quote = await db.query.quotes.findFirst({ where: eq(quotes.id, String(req.params.id)) });
     const request = quote && await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, quote.requestId), eq(serviceRequests.customerId, user.id)) });
-    if (!quote || !request || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Quote is unavailable" }); return; }
+    if (!quote || quote.status !== "submitted" || !request || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Quote is unavailable" }); return; }
     const contractor = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, quote.contractorId) });
-    await db.transaction(async (tx) => {
+    if (!contractor) { res.status(404).json({ error: "Quote is unavailable" }); return; }
+    const accepted = await db.transaction(async (tx) => {
+      const [awarded] = await tx.update(serviceRequests).set({ status: "awarded", updatedAt: new Date() }).where(and(
+        eq(serviceRequests.id, request.id),
+        eq(serviceRequests.customerId, user.id),
+        or(eq(serviceRequests.status, "open"), eq(serviceRequests.status, "quoted")),
+      )).returning({ id: serviceRequests.id });
+      if (!awarded) return false;
       await tx.update(quotes).set({ status: "accepted", updatedAt: new Date() }).where(eq(quotes.id, quote.id));
       await tx.update(quotes).set({ status: "rejected", updatedAt: new Date() }).where(and(eq(quotes.requestId, request.id), sql`${quotes.id} <> ${quote.id}`));
-      await tx.update(serviceRequests).set({ status: "awarded", updatedAt: new Date() }).where(eq(serviceRequests.id, request.id));
-      await tx.insert(notifications).values({ userId: contractor!.userId, type: "system", channel: "in_app", deliveryStatus: "delivered", title: "Quote accepted", body: `Your quote for ${request.serviceName} was accepted.`, deliveryMetadata: { requestId: request.id, quoteId: quote.id }, deliveredAt: new Date() });
+      await tx.insert(notifications).values({ userId: contractor.userId, type: "system", channel: "in_app", deliveryStatus: "delivered", title: "Quote accepted", body: `Your quote for ${request.serviceName} was accepted.`, deliveryMetadata: { requestId: request.id, quoteId: quote.id }, deliveredAt: new Date() });
+      return true;
     });
+    if (!accepted) { res.status(409).json({ error: "Another quote has already been accepted" }); return; }
     res.json({ ...quote, amountOmaniRial: decimal(quote.amountOmaniRial), status: "accepted" });
   } catch (error) { next(error); }
 });

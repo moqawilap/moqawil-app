@@ -354,6 +354,9 @@ export const getMyContractorProfileResponseBusinessNameMax = 200;
 export const getMyContractorProfileResponseCityMin = 2;
 export const getMyContractorProfileResponseCityMax = 100;
 
+export const getMyContractorProfileResponseWilayatMin = 2;
+export const getMyContractorProfileResponseWilayatMax = 100;
+
 export const getMyContractorProfileResponseBioMax = 5000;
 
 export const getMyContractorProfileResponseServiceAreaMax = 255;
@@ -367,6 +370,7 @@ export const getMyContractorProfileResponseAvatarUrlMax = 2048;
 export const GetMyContractorProfileResponse = zod.object({
   "businessName": zod.string().min(getMyContractorProfileResponseBusinessNameMin).max(getMyContractorProfileResponseBusinessNameMax),
   "city": zod.string().min(getMyContractorProfileResponseCityMin).max(getMyContractorProfileResponseCityMax),
+  "wilayat": zod.string().min(getMyContractorProfileResponseWilayatMin).max(getMyContractorProfileResponseWilayatMax),
   "bio": zod.string().max(getMyContractorProfileResponseBioMax).nullish(),
   "serviceArea": zod.string().max(getMyContractorProfileResponseServiceAreaMax).nullish(),
   "phone": zod.string().max(getMyContractorProfileResponsePhoneMax).nullish(),
@@ -379,6 +383,9 @@ export const upsertMyContractorProfileBodyBusinessNameMax = 200;
 
 export const upsertMyContractorProfileBodyCityMin = 2;
 export const upsertMyContractorProfileBodyCityMax = 100;
+
+export const upsertMyContractorProfileBodyWilayatMin = 2;
+export const upsertMyContractorProfileBodyWilayatMax = 100;
 
 export const upsertMyContractorProfileBodyBioMax = 5000;
 
@@ -393,6 +400,7 @@ export const upsertMyContractorProfileBodyAvatarUrlMax = 2048;
 export const UpsertMyContractorProfileBody = zod.object({
   "businessName": zod.string().min(upsertMyContractorProfileBodyBusinessNameMin).max(upsertMyContractorProfileBodyBusinessNameMax),
   "city": zod.string().min(upsertMyContractorProfileBodyCityMin).max(upsertMyContractorProfileBodyCityMax),
+  "wilayat": zod.string().min(upsertMyContractorProfileBodyWilayatMin).max(upsertMyContractorProfileBodyWilayatMax),
   "bio": zod.string().max(upsertMyContractorProfileBodyBioMax).nullish(),
   "serviceArea": zod.string().max(upsertMyContractorProfileBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(upsertMyContractorProfileBodyPhoneMax).nullish(),

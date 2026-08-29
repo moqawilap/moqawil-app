@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getGetMySubscriptionQueryKey, useGetMySubscription } from '@workspace/api-client-react';
+import { getGetMeQueryKey, getGetMySubscriptionQueryKey, useGetMe, useGetMySubscription } from '@workspace/api-client-react';
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -15,9 +15,10 @@ export default function ProfileScreen() {
   const { locale, setLocale, location, refreshLocation, isArabic, savedIds } = useApp();
   const { isSignedIn, signOut } = useAuth();
   const { user } = useUser();
+  const me = useGetMe({ query: { queryKey: getGetMeQueryKey(), enabled: !!isSignedIn, retry: false } });
   const metadata = (user?.publicMetadata ?? {}) as Record<string, unknown>;
   const isAdmin = metadata.role === 'admin' || metadata.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
-  const isContractor = metadata.role === 'contractor' || metadata.isContractor === true;
+  const isContractor = metadata.role === 'contractor' || metadata.isContractor === true || me.data?.role === 'contractor';
   const subscription = useGetMySubscription({ query: { queryKey: getGetMySubscriptionQueryKey(), enabled: !!isSignedIn && isContractor } });
   const menu = [
      { icon: 'map-pin' as const, title: isArabic ? 'موقعك الحالي' : 'Current location', value: location.source === 'default' ? (isArabic ? 'اضغط للسماح بتحديد موقعك' : 'Tap to allow location access') : `${location.area}, ${location.city}`, onPress: refreshLocation },
