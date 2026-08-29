@@ -64,7 +64,7 @@ export const serviceItems: Array<{
     subtitle: 'Build with confidence',
     subtitleAr: 'ابنِ بثقة',
     icon: 'hard-hat',
-    color: '#0F6FB7',
+    color: '#1E5674',
   },
   {
     id: 'consultants',
@@ -73,7 +73,7 @@ export const serviceItems: Array<{
     subtitle: 'Plan it right',
     subtitleAr: 'خطّط بشكل صحيح',
     icon: 'compass',
-    color: '#0B9B8C',
+    color: '#2B7774',
   },
   {
     id: 'building',
@@ -82,7 +82,7 @@ export const serviceItems: Array<{
     subtitle: 'Find the right craft',
     subtitleAr: 'اختر ورشتك المناسبة',
     icon: 'hard-hat',
-    color: '#D97745',
+    color: '#A87545',
   },
   {
     id: 'real-estate',
@@ -91,7 +91,7 @@ export const serviceItems: Array<{
     subtitle: 'Find your place',
     subtitleAr: 'اعثر على مكانك',
     icon: 'home',
-    color: '#C07B42',
+    color: '#7B6451',
   },
   {
     id: 'maintenance',
@@ -100,7 +100,7 @@ export const serviceItems: Array<{
     subtitle: 'Fix it fast',
     subtitleAr: 'أصلحها بسرعة',
     icon: 'tool',
-    color: '#7D62BE',
+    color: '#566D68',
   },
 ];
 

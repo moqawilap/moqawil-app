@@ -19,42 +19,42 @@ const colors = {
     tint: '#0F6FB7',
 
     // Core surfaces
-    background: '#F3F7F9',
-    foreground: '#102E4A',
+    background: '#F6F4EF',
+    foreground: '#102B43',
 
     // Cards / elevated surfaces
-    card: '#FEFFFF',
-    cardForeground: '#102E4A',
+    card: '#FFFDFC',
+    cardForeground: '#102B43',
 
     // Primary action color (buttons, links, active states)
-    primary: '#0F6FB7',
+    primary: '#174A67',
     primaryForeground: '#FFFFFF',
 
     // Secondary / less-emphasis interactive surfaces
-    secondary: '#E4F1F6',
-    secondaryForeground: '#102E4A',
+    secondary: '#E8EEF0',
+    secondaryForeground: '#12364E',
 
     // Muted / subdued elements (dividers, timestamps, placeholders)
-    muted: '#E8EFF3',
-    mutedForeground: '#6C7F91',
+    muted: '#EEEDE8',
+    mutedForeground: '#70808B',
 
     // Accent highlights (badges, selected items, focus rings)
-    accent: '#D7F5EF',
-    accentForeground: '#0B6E6B',
+    accent: '#F4E7C8',
+    accentForeground: '#A97832',
 
     // Destructive actions (delete, error states)
     destructive: '#D95C5C',
     destructiveForeground: '#FFFFFF',
 
     // Borders and input outlines
-    border: '#D7E3EA',
-    input: '#D7E3EA',
+    border: '#DCE1DF',
+    input: '#DCE1DF',
 
     // Product-specific tokens
-    navy: '#08284A',
-    surface: '#FEFFFF',
-    surfaceMuted: '#E8F0F4',
-    primarySoft: '#DFF1F8',
+    navy: '#092A45',
+    surface: '#FFFDFC',
+    surfaceMuted: '#EFF1EE',
+    primarySoft: '#E3EDF1',
     star: '#F5AA45',
   },
 

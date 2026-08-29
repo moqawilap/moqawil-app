@@ -27,7 +27,7 @@ export default function HomeScreen() {
             <BrandMark />
             <IconButton icon="bell" onPress={() => router.push('/profile')} accessibilityLabel="Open notifications" />
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={isArabic ? 'تحديد موقعي الحالي' : 'Detect my current location'} onPress={() => { refreshLocation().catch(() => undefined); }} style={styles.locationButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel={isArabic ? 'تحديد موقعي الحالي' : 'Detect my current location'} onPress={() => { refreshLocation().catch(() => undefined); }} style={[styles.locationButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.locationPin, { backgroundColor: colors.primarySoft }]}><Feather name="map-pin" size={15} color={colors.primary} /></View>
             <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{locationLoading ? (isArabic ? 'جارٍ تحديد موقعك…' : 'Detecting your location…') : location.source === 'default' ? (isArabic ? 'اضغط لتحديد موقعك الحالي' : 'Tap to detect your location') : (isArabic ? 'تبحث في موقعك الحالي' : 'You are browsing in your location')}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
             <View style={[styles.locationAction, { backgroundColor: colors.primarySoft }]}><Feather name={locationLoading ? 'loader' : 'navigation'} size={13} color={colors.primary} /><Text style={[styles.locationActionText, { color: colors.primary }]}>{locationLoading ? (isArabic ? 'انتظر' : 'Wait') : location.source === 'default' ? (isArabic ? 'حدد موقعي' : 'Detect') : (isArabic ? 'تحديث' : 'Update')}</Text></View>
@@ -91,30 +91,30 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 17 },
-  locationButton: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 23 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  locationButton: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24, borderWidth: 1, borderRadius: 17, padding: 8 },
   locationPin: { width: 33, height: 33, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   locationText: { flex: 1, gap: 2 },
   locationEyebrow: { fontSize: 10 },
   locationName: { fontSize: 13, fontWeight: '800' },
   locationAction: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
   locationActionText: { fontSize: 10, fontWeight: '800' },
-   heroCard: { borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 2, shadowColor: '#08284A', shadowOpacity: 0.05, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 2 },
-   heroRule: { width: 34, height: 4, borderRadius: 4, marginBottom: 17 },
-   greeting: { gap: 7, marginBottom: 18 },
-  eyebrow: { fontSize: 10, letterSpacing: 1.2, fontWeight: '800' },
-  title: { fontSize: 28, lineHeight: 33, fontWeight: '800', letterSpacing: -0.8, maxWidth: 345 },
+   heroCard: { borderRadius: 28, borderWidth: 1, padding: 21, marginBottom: 2, shadowColor: '#092A45', shadowOpacity: 0.18, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 4 },
+   heroRule: { width: 52, height: 4, borderRadius: 4, marginBottom: 19 },
+   greeting: { gap: 9, marginBottom: 21 },
+   eyebrow: { fontSize: 10, letterSpacing: 1.6, fontWeight: '800' },
+  title: { fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' }), fontSize: 30, lineHeight: 37, fontWeight: '700', letterSpacing: -0.25, maxWidth: 345 },
   arabicTitle: { fontFamily: Platform.select({ android: 'sans-serif', ios: 'System', default: 'sans-serif' }), fontWeight: '700', letterSpacing: 0, lineHeight: 37, textAlign: 'right' },
-  subtitle: { fontSize: 13, lineHeight: 19 },
+  subtitle: { fontSize: 14, lineHeight: 21 },
   arabicSubtitle: { fontFamily: Platform.select({ android: 'sans-serif', ios: 'System', default: 'sans-serif' }), fontWeight: '500', lineHeight: 22, textAlign: 'right' },
-  serviceRow: { gap: 11, paddingBottom: 5 },
-  serviceCard: { width: 152, height: 150, borderRadius: 22, padding: 15, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
-  serviceIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  serviceLabel: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  serviceRow: { gap: 13, paddingBottom: 7 },
+  serviceCard: { width: 158, height: 158, borderRadius: 24, padding: 17, overflow: 'hidden', shadowColor: '#092A45', shadowOpacity: 0.16, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 3 },
+  serviceIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  serviceLabel: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.1 },
   serviceSubtitle: { color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 4 },
   serviceArrow: { position: 'absolute', right: 14, bottom: 14 },
-  sectionBlock: { marginTop: 28 },
-  locationBanner: { minHeight: 174, borderRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, marginTop: 28, overflow: 'hidden', shadowColor: '#08284A', shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  sectionBlock: { marginTop: 32 },
+  locationBanner: { minHeight: 174, borderRadius: 26, borderWidth: 1, paddingHorizontal: 19, paddingTop: 17, paddingBottom: 19, marginTop: 32, overflow: 'hidden', shadowColor: '#092A45', shadowOpacity: 0.19, shadowRadius: 20, shadowOffset: { width: 0, height: 9 }, elevation: 4 },
   locationBannerArabic: { paddingHorizontal: 17 },
   bannerTopline: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 },
   bannerToplineRule: { width: 20, height: 1 },
