@@ -23,8 +23,8 @@ export default function SignUpScreen() {
       setErrorMessage('Enter your email address and create a password to continue.');
       return;
     }
-    if (!verificationStarted && password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters.');
+    if (!verificationStarted && password.length < 15) {
+      setErrorMessage('Password must be at least 15 characters.');
       return;
     }
     setBusy(true);
@@ -76,7 +76,7 @@ export default function SignUpScreen() {
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Join Oman’s trusted marketplace for property and professional services.</Text>
         <Text style={[styles.label, { color: colors.foreground }]}>Email address</Text>
         <TextInput editable={!verificationStarted} autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
-         <Text style={[styles.label, { color: colors.foreground }]}>Password <Text style={{ color: colors.mutedForeground, fontWeight: '500' }}>(8 characters minimum)</Text></Text>
+         <Text style={[styles.label, { color: colors.foreground }]}>Password <Text style={{ color: colors.mutedForeground, fontWeight: '500' }}>(15 characters minimum)</Text></Text>
         <TextInput editable={!verificationStarted} secureTextEntry value={password} onChangeText={setPassword} placeholder="Create a password" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} />
         {verificationStarted ? <><Text style={[styles.label, { color: colors.foreground }]}>Verification code</Text><TextInput keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Enter the code from your email" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} /></> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
