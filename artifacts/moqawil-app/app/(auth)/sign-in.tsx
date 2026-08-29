@@ -64,7 +64,10 @@ export default function SignInScreen() {
       if (codeResult.error) throw codeResult.error;
       setResetStep('code');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'We could not send a reset code. Check your email and try again.';
+      const rawMessage = error instanceof Error ? error.message : '';
+      const message = /couldn.?t find|not found|does not exist|no account/i.test(rawMessage)
+        ? 'No account was found with this email in the current development app. Create the account first, then try again.'
+        : rawMessage || 'We could not send a reset code. Check your email and try again.';
       setErrorMessage(message);
       if (Platform.OS !== 'web') Alert.alert('Unable to reset password', message);
     } finally {
