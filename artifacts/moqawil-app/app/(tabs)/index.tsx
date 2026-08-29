@@ -12,7 +12,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, location, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders } = useApp();
+  const { isArabic, location, locationLoading, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders } = useApp();
 
   const openService = (id: string) => {
     setActiveService(id);
@@ -27,10 +27,10 @@ export default function HomeScreen() {
             <BrandMark />
             <IconButton icon="bell" onPress={() => router.push('/profile')} accessibilityLabel="Open notifications" />
           </View>
-          <Pressable onPress={() => { refreshLocation().catch(() => undefined); }} style={styles.locationButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel={isArabic ? 'تحديد موقعي الحالي' : 'Detect my current location'} onPress={() => { refreshLocation().catch(() => undefined); }} style={styles.locationButton}>
             <View style={[styles.locationPin, { backgroundColor: colors.primarySoft }]}><Feather name="map-pin" size={15} color={colors.primary} /></View>
-            <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{location.source === 'default' ? (isArabic ? 'اضغط لتحديد موقعك الحالي' : 'Tap to detect your location') : (isArabic ? 'تبحث في موقعك الحالي' : 'You are browsing in your location')}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
-            <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+            <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{locationLoading ? (isArabic ? 'جارٍ تحديد موقعك…' : 'Detecting your location…') : location.source === 'default' ? (isArabic ? 'اضغط لتحديد موقعك الحالي' : 'Tap to detect your location') : (isArabic ? 'تبحث في موقعك الحالي' : 'You are browsing in your location')}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
+            <View style={[styles.locationAction, { backgroundColor: colors.primarySoft }]}><Feather name={locationLoading ? 'loader' : 'navigation'} size={13} color={colors.primary} /><Text style={[styles.locationActionText, { color: colors.primary }]}>{locationLoading ? (isArabic ? 'انتظر' : 'Wait') : location.source === 'default' ? (isArabic ? 'حدد موقعي' : 'Detect') : (isArabic ? 'تحديث' : 'Update')}</Text></View>
           </Pressable>
           <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.heroRule, { backgroundColor: colors.accentForeground }]} />
@@ -93,6 +93,8 @@ const styles = StyleSheet.create({
   locationText: { flex: 1, gap: 2 },
   locationEyebrow: { fontSize: 10 },
   locationName: { fontSize: 13, fontWeight: '800' },
+  locationAction: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
+  locationActionText: { fontSize: 10, fontWeight: '800' },
    heroCard: { borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 2, shadowColor: '#08284A', shadowOpacity: 0.05, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 2 },
    heroRule: { width: 34, height: 4, borderRadius: 4, marginBottom: 17 },
    greeting: { gap: 7, marginBottom: 18 },

@@ -17,6 +17,7 @@ type AppContextValue = {
   setLocale: (locale: Locale) => void;
   isArabic: boolean;
   location: LocationState;
+  locationLoading: boolean;
   refreshLocation: (options?: { silent?: boolean }) => Promise<void>;
   savedIds: string[];
   toggleSaved: (id: string) => void;
@@ -43,6 +44,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en');
   const [location, setLocation] = useState<LocationState>(defaultLocation);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [activeService, setActiveService] = useState<string | null>(null);
   const [managedProviders, setManagedProviders] = useState<Provider[]>(seedProviders);
@@ -75,6 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshLocation = async ({ silent = false }: { silent?: boolean } = {}) => {
+    setLocationLoading(true);
     try {
       if (Platform.OS === 'web') {
         if (!navigator.geolocation) throw new Error('Geolocation unavailable');
@@ -118,7 +121,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         source: 'device',
       });
     } catch {
-      if (!silent) Alert.alert('Could not update location', 'Allow location access to show services near you.');
+      if (!silent) Alert.alert(locale === 'ar' ? 'تعذر تحديد الموقع' : 'Could not update location', locale === 'ar' ? 'اسمح للمتصفح بالوصول إلى موقعك ثم اضغط مرة أخرى.' : 'Allow location access in your browser, then try again.');
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -170,6 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLocale,
       isArabic: locale === 'ar',
       location,
+       locationLoading,
       refreshLocation,
       savedIds,
       toggleSaved,
@@ -181,7 +187,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateProvider,
       removeProvider,
     }),
-    [locale, location, savedIds, activeService, managedProviders],
+     [locale, location, locationLoading, savedIds, activeService, managedProviders],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
