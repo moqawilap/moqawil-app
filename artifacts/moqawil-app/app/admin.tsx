@@ -38,6 +38,9 @@ const statusText = (isArabic: boolean, status: string) => ({
   failed: text(isArabic, 'Failed', 'فشل'),
   refunded: text(isArabic, 'Refunded', 'مسترد'),
   void: text(isArabic, 'Void', 'ملغى'),
+  draft: text(isArabic, 'Draft', 'مسودة'),
+  paused: text(isArabic, 'Paused', 'متوقفة'),
+  completed: text(isArabic, 'Completed', 'مكتملة'),
 }[status] ?? status);
 const confirmAction = (title: string, message: string, action: () => void, cancelLabel = 'Cancel') => {
   if (Platform.OS === 'web') {
@@ -790,6 +793,201 @@ function ListingsTab() {
             <Pressable testID={`edit-listing-${listing.id}`} onPress={() => begin(listing)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
             <Pressable testID={`toggle-listing-${listing.id}`} onPress={() => update.mutate({ id: listing.id, data: { isPublished: !listing.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{listing.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text></Pressable>
             <Pressable testID={`delete-listing-${listing.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'This removes the listing and its engagement data.', 'سيؤدي هذا إلى حذف الإعلان وبيانات تفاعله.'), () => remove.mutate({ id: listing.id }), text(isArabic, 'Cancel', 'إلغاء'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const blankAdCampaign = () => {
+  const start = new Date();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 30);
+  return {
+    contractorId: '',
+    title: '',
+    description: '',
+    ctaLabel: 'تواصل معنا',
+    ctaUrl: '',
+    mediaUrl: '',
+    mediaType: 'image' as const,
+    audienceCity: '',
+    audienceWilayat: '',
+    audienceService: '',
+    frequencyCapPerDay: '3',
+    totalBudgetOmaniRial: '25',
+    dailyBudgetOmaniRial: '5',
+    billingModel: 'cpc' as const,
+    unitRateOmaniRial: '0.5',
+    startAt: start.toISOString().slice(0, 10),
+    endAt: end.toISOString().slice(0, 10),
+    status: 'draft' as const,
+  };
+};
+
+function AdvertisingTab() {
+  const colors = useColors();
+  const { isArabic } = useApp();
+  const client = useQueryClient();
+  const campaigns = useListAdminAdCampaigns({ query: { queryKey: getListAdminAdCampaignsQueryKey() } });
+  const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(blankAdCampaign);
+  const invalidate = () => client.invalidateQueries({ queryKey: getListAdminAdCampaignsQueryKey() });
+  const create = useCreateAdminAdCampaign({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankAdCampaign()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+  const update = useUpdateAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+
+  const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const begin = (campaign?: AdCampaign) => {
+    if (!campaign) {
+      setEditingId(null);
+      setForm(blankAdCampaign());
+      setShowForm(true);
+      return;
+    }
+    setEditingId(campaign.id);
+    setForm({
+      contractorId: campaign.contractorId,
+      title: campaign.title,
+      description: campaign.description,
+      ctaLabel: campaign.ctaLabel,
+      ctaUrl: campaign.ctaUrl ?? '',
+      mediaUrl: campaign.mediaUrl,
+      mediaType: campaign.mediaType,
+      audienceCity: campaign.audience.cities?.[0] ?? '',
+      audienceWilayat: campaign.audience.wilayats?.[0] ?? '',
+      audienceService: campaign.audience.serviceCategories?.[0] ?? '',
+      frequencyCapPerDay: String(campaign.frequencyCapPerDay),
+      totalBudgetOmaniRial: String(campaign.totalBudgetOmaniRial),
+      dailyBudgetOmaniRial: String(campaign.dailyBudgetOmaniRial),
+      billingModel: campaign.billingModel,
+      unitRateOmaniRial: String(campaign.unitRateOmaniRial),
+      startAt: campaign.startAt.slice(0, 10),
+      endAt: campaign.endAt.slice(0, 10),
+      status: campaign.status === 'completed' ? 'paused' : campaign.status,
+    });
+    setShowForm(true);
+  };
+  const save = () => {
+    const total = Number(form.totalBudgetOmaniRial);
+    const daily = Number(form.dailyBudgetOmaniRial);
+    const rate = Number(form.unitRateOmaniRial);
+    const cap = Number(form.frequencyCapPerDay);
+    if (!form.contractorId || form.title.trim().length < 2 || !form.mediaUrl || !Number.isFinite(total) || !Number.isFinite(daily) || daily > total || !Number.isFinite(rate) || !Number.isInteger(cap) || cap < 1 || !form.startAt || !form.endAt) {
+      Alert.alert(text(isArabic, 'Missing campaign details', 'بيانات الحملة غير مكتملة'), text(isArabic, 'Choose an advertiser, media, dates, and valid budgets. Daily budget cannot exceed total budget.', 'اختر المعلن والوسائط والتواريخ وأدخل ميزانيات صحيحة. لا يمكن أن تتجاوز الميزانية اليومية الإجمالية.'));
+      return;
+    }
+    const data = {
+      contractorId: form.contractorId,
+      title: form.title.trim(),
+      description: form.description.trim() || form.title.trim(),
+      ctaLabel: form.ctaLabel.trim() || (isArabic ? 'اعرف المزيد' : 'Learn more'),
+      ctaUrl: form.ctaUrl.trim() || null,
+      mediaUrl: form.mediaUrl.trim(),
+      mediaType: form.mediaType,
+      audience: {
+        ...(form.audienceCity.trim() ? { cities: [form.audienceCity.trim()] } : {}),
+        ...(form.audienceWilayat.trim() ? { wilayats: [form.audienceWilayat.trim()] } : {}),
+        ...(form.audienceService.trim() ? { serviceCategories: [form.audienceService.trim()] } : {}),
+      },
+      frequencyCapPerDay: cap,
+      totalBudgetOmaniRial: total,
+      dailyBudgetOmaniRial: daily,
+      billingModel: form.billingModel,
+      unitRateOmaniRial: rate,
+      startAt: new Date(`${form.startAt}T00:00:00.000Z`).toISOString(),
+      endAt: new Date(`${form.endAt}T23:59:59.000Z`).toISOString(),
+      status: form.status,
+    } as AdminAdCampaignInput;
+    if (editingId) update.mutate({ id: editingId, data: data as any });
+    else create.mutate({ data });
+  };
+
+  if (campaigns.isLoading || contractors.isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
+  if (campaigns.isError || contractors.isError) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load advertising.', 'تعذر تحميل الإعلانات.')}</Text>;
+
+  return (
+    <View testID="admin-advertising" style={styles.tabContainer}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Advertising campaigns', 'الحملات الإعلانية')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Paid campaigns shown to customers with daily frequency control.', 'حملات مدفوعة تظهر للعملاء مع التحكم في تكرار الظهور يوميًا.')}</Text>
+        </View>
+        <Pressable testID="add-ad-campaign" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => begin()}>
+          <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'New campaign', 'حملة جديدة')}</Text>
+        </Pressable>
+      </View>
+      {showForm ? (
+        <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, editingId ? 'Edit campaign' : 'Campaign setup', editingId ? 'تعديل الحملة' : 'إعداد الحملة')}</Text>
+          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Advertiser', 'المعلن')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+            {(contractors.data ?? []).map((contractor) => (
+              <Pressable key={contractor.id} onPress={() => set('contractorId', contractor.id)} style={[styles.statusPill, form.contractorId === contractor.id ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.statusPillText, { color: form.contractorId === contractor.id ? colors.background : colors.foreground }]}>{isArabic ? contractor.businessNameArabic || contractor.businessName : contractor.businessName}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={styles.formGrid}>
+            {[
+              ['title', 'Campaign title', 'عنوان الحملة'],
+              ['ctaLabel', 'Button label', 'نص الزر'],
+              ['ctaUrl', 'Action URL', 'رابط الإجراء'],
+              ['mediaUrl', 'Media URL or image data', 'رابط الوسائط أو بيانات الصورة'],
+              ['audienceCity', 'Target city', 'المدينة المستهدفة'],
+              ['audienceWilayat', 'Target wilayat', 'الولاية المستهدفة'],
+              ['audienceService', 'Target service', 'الخدمة المستهدفة'],
+              ['startAt', 'Start date (YYYY-MM-DD)', 'تاريخ البدء'],
+              ['endAt', 'End date (YYYY-MM-DD)', 'تاريخ الانتهاء'],
+            ].map(([key, label, labelAr]) => (
+              <View key={key} style={key === 'mediaUrl' ? styles.formGroupFull : styles.formGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+                <TextInput value={String((form as any)[key])} onChangeText={(value) => set(key, value)} multiline={key === 'mediaUrl'} style={[styles.input, key === 'mediaUrl' && { minHeight: 56 }, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+              </View>
+            ))}
+          </View>
+          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Media type', 'نوع الوسائط')}</Text>
+          <View style={styles.formActions}>
+            {(['image', 'video'] as const).map((type) => <Pressable key={type} onPress={() => setForm((current) => ({ ...current, mediaType: type }))} style={[styles.statusPill, form.mediaType === type ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.mediaType === type ? colors.background : colors.foreground }]}>{type === 'image' ? text(isArabic, 'Image', 'صورة') : text(isArabic, 'Video', 'فيديو')}</Text></Pressable>)}
+          </View>
+          <View style={styles.formGrid}>
+            {[
+              ['totalBudgetOmaniRial', 'Total budget (OMR)', 'الميزانية الإجمالية (ر.ع.)'],
+              ['dailyBudgetOmaniRial', 'Daily budget (OMR)', 'الميزانية اليومية (ر.ع.)'],
+              ['unitRateOmaniRial', 'Rate per event (OMR)', 'سعر الحدث (ر.ع.)'],
+              ['frequencyCapPerDay', 'Views per customer/day', 'ظهور العميل يوميًا'],
+            ].map(([key, label, labelAr]) => <View key={key} style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text><TextInput value={String((form as any)[key])} onChangeText={(value) => set(key, value)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /></View>)}
+          </View>
+          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Billing model', 'نموذج الفوترة')}</Text>
+          <View style={styles.formActions}>
+            {(['cpm', 'cpc', 'cpa'] as const).map((model) => <Pressable key={model} onPress={() => setForm((current) => ({ ...current, billingModel: model }))} style={[styles.statusPill, form.billingModel === model ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.billingModel === model ? colors.background : colors.foreground }]}>{model.toUpperCase()}</Text></Pressable>)}
+          </View>
+          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Campaign state', 'حالة الحملة')}</Text>
+          <View style={styles.formActions}>
+            {(['draft', 'active', 'paused'] as const).map((state) => <Pressable key={state} onPress={() => setForm((current) => ({ ...current, status: state }))} style={[styles.statusPill, form.status === state ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.status === state ? colors.background : colors.foreground }]}>{statusText(isArabic, state)}</Text></Pressable>)}
+          </View>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Payment is reserved for the campaign budget; Visa/Apple Pay activation will be added after the payment connection is enabled.', 'المبلغ محجوز لميزانية الحملة؛ سيتم تفعيل Visa وApple Pay بعد ربط بوابة الدفع.')}</Text>
+          <View style={styles.formActions}>
+            <Pressable testID="save-ad-campaign" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}><Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Save campaign', 'حفظ الحملة')}</Text></Pressable>
+            <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}><Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text></Pressable>
+          </View>
+        </View>
+      ) : null}
+      {!campaigns.data?.length ? <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'No campaigns yet.', 'لا توجد حملات بعد.')}</Text> : null}
+      {campaigns.data?.map((campaign) => (
+        <View key={campaign.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>{campaign.title}</Text>
+            <View style={[styles.badge, { backgroundColor: campaign.status === 'active' ? '#D9F8F2' : campaign.status === 'paused' ? '#FFF2D6' : colors.muted }]}><Text style={[styles.badgeText, { color: campaign.status === 'active' ? '#0B6E6B' : colors.mutedForeground }]}>{statusText(isArabic, campaign.status)}</Text></View>
+          </View>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.advertiserNameArabic || campaign.advertiserName} • {campaign.billingModel.toUpperCase()} • {campaign.totalBudgetOmaniRial.toFixed(3)} OMR {text(isArabic, 'budget', 'ميزانية')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Spent', 'المصروف')}: {campaign.spentOmaniRial.toFixed(3)} • {text(isArabic, 'Remaining', 'المتبقي')}: {campaign.remainingOmaniRial.toFixed(3)} • {text(isArabic, 'Today', 'اليوم')}: {campaign.dailySpentOmaniRial.toFixed(3)} / {campaign.dailyBudgetOmaniRial.toFixed(3)} OMR</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.impressionCount} {text(isArabic, 'impressions', 'ظهور')} • {campaign.clickCount} {text(isArabic, 'clicks', 'نقرات')} • {campaign.conversionCount} {text(isArabic, 'results', 'نتائج')} • {text(isArabic, 'up to', 'حتى')} {campaign.frequencyCapPerDay} / {text(isArabic, 'customer/day', 'عميل/يوم')}</Text>
+          <View style={styles.cardActions}>
+            <Pressable testID={`edit-ad-${campaign.id}`} onPress={() => begin(campaign)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
+            {campaign.status !== 'completed' ? <Pressable testID={`toggle-ad-${campaign.id}`} onPress={() => update.mutate({ id: campaign.id, data: { status: campaign.status === 'active' ? 'paused' : 'active' } as any })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{campaign.status === 'active' ? text(isArabic, 'Pause', 'إيقاف') : text(isArabic, 'Activate', 'تشغيل')}</Text></Pressable> : null}
           </View>
         </View>
       ))}
