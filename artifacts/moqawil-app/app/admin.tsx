@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/MoqawilUI';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { designServices } from '@/data/designServices';
+import { maintenanceItems } from '@/data/mockData';
 
 import {
   useGetAdminOverview, getGetAdminOverviewQueryKey,
@@ -68,7 +70,7 @@ export default function AdminScreen() {
   const { isArabic } = useApp();
   const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
 
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Workshops' | 'Listings' | 'Subscriptions' | 'Payments' | 'Settings'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Workshops' | 'Designers' | 'Maintenance' | 'Listings' | 'Subscriptions' | 'Payments' | 'Settings'>('Overview');
 
   if (!isLoaded) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator color={colors.primary} /></View>;
   if (!isSignedIn || !isAdmin) return (
@@ -93,9 +95,9 @@ export default function AdminScreen() {
         </View>
         <Text style={[styles.screenTitle, { color: colors.foreground }]}>{text(isArabic, 'Admin Console', 'لوحة الإدارة')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabScrollContent}>
-           {(['Overview', 'Contractors', 'Workshops', 'Listings', 'Subscriptions', 'Payments', 'Settings'] as const).map(tab => (
+           {(['Overview', 'Contractors', 'Workshops', 'Designers', 'Maintenance', 'Listings', 'Subscriptions', 'Payments', 'Settings'] as const).map(tab => (
             <Pressable key={tab} testID={`tab-${tab}`} style={[styles.tab, activeTab === tab && [styles.activeTab, { backgroundColor: colors.foreground }]]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Contractors: 'المقاولون', Workshops: 'الورش', Listings: 'الإعلانات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
+               <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Contractors: 'المقاولون', Workshops: 'الورش', Designers: 'المصممون', Maintenance: 'الصيانة', Listings: 'العقارات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -104,6 +106,8 @@ export default function AdminScreen() {
         {activeTab === 'Overview' && <OverviewTab />}
         {activeTab === 'Contractors' && <ContractorsTab />}
          {activeTab === 'Workshops' && <WorkshopsTab />}
+          {activeTab === 'Designers' && <SpecialistsTab kind="designers" />}
+          {activeTab === 'Maintenance' && <SpecialistsTab kind="maintenance" />}
          {activeTab === 'Listings' && <ListingsTab />}
         {activeTab === 'Subscriptions' && <SubscriptionsTab />}
         {activeTab === 'Payments' && <PaymentsTab />}
@@ -395,6 +399,244 @@ function WorkshopsTab() {
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{workshop.city}{workshop.wilayat ? ` • ${workshop.wilayat}` : ''}</Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+type SpecialistKind = 'designers' | 'maintenance';
+type SpecialistForm = {
+  businessName: string;
+  businessNameArabic: string;
+  city: string;
+  wilayat: string;
+  serviceArea: string;
+  phone: string;
+  bio: string;
+  bioArabic: string;
+  avatarUrl: string;
+  evaluationNotes: string;
+  adminRating: string;
+  agreedContractAmountOmaniRial: string;
+  serviceNames: string[];
+  isVerified: boolean;
+  isPublished: boolean;
+};
+
+const specialistOptions = (kind: SpecialistKind) => kind === 'designers'
+  ? designServices.map((service) => ({ name: service.name, nameAr: service.nameAr }))
+  : maintenanceItems.map((service) => ({ name: service.label, nameAr: service.labelAr }));
+
+const blankSpecialist = (): SpecialistForm => ({
+  businessName: '', businessNameArabic: '', city: '', wilayat: '', serviceArea: '', phone: '',
+  bio: '', bioArabic: '', avatarUrl: '', evaluationNotes: '', adminRating: '',
+  agreedContractAmountOmaniRial: '', serviceNames: [], isVerified: false, isPublished: false,
+});
+
+function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
+  const colors = useColors();
+  const { isArabic } = useApp();
+  const client = useQueryClient();
+  const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
+  const [form, setForm] = useState<SpecialistForm>(blankSpecialist());
+  const [editing, setEditing] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const designers = kind === 'designers';
+  const options = specialistOptions(kind);
+  const title = designers ? text(isArabic, 'Designers', 'المصممون') : text(isArabic, 'Maintenance providers', 'مقدمو خدمات الصيانة');
+  const singular = designers ? text(isArabic, 'designer', 'مصمم') : text(isArabic, 'maintenance provider', 'مزود صيانة');
+  const list = contractors.data?.filter((item) => designers ? item.isDesigner : item.isMaintenance) ?? [];
+
+  const invalidate = () => client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() });
+  const create = useCreateAdminContractor({
+    mutation: {
+      onSuccess: () => { invalidate(); setShowForm(false); setForm(blankSpecialist()); },
+      onError: (error) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(error)),
+    },
+  });
+  const update = useUpdateAdminContractor({
+    mutation: {
+      onSuccess: () => { invalidate(); setShowForm(false); setForm(blankSpecialist()); },
+      onError: (error) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(error)),
+    },
+  });
+  const archive = useDeleteAdminContractor({ mutation: { onSuccess: invalidate, onError: (error) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(error)) } });
+
+  const set = <K extends keyof SpecialistForm>(key: K, value: SpecialistForm[K]) => setForm((current) => ({ ...current, [key]: value }));
+  const begin = (item?: AdminContractor) => {
+    if (item) {
+      setEditing(item.id);
+      setForm({
+        businessName: item.businessName,
+        businessNameArabic: item.businessNameArabic ?? '',
+        city: item.city,
+        wilayat: item.wilayat ?? '',
+        serviceArea: item.serviceArea ?? '',
+        phone: item.phone ?? '',
+        bio: item.bio ?? '',
+        bioArabic: item.bioArabic ?? '',
+        avatarUrl: item.avatarUrl ?? '',
+        evaluationNotes: item.evaluationNotes ?? '',
+        adminRating: item.adminRating ? String(item.adminRating) : '',
+        agreedContractAmountOmaniRial: item.agreedContractAmountOmaniRial ? String(item.agreedContractAmountOmaniRial) : '',
+        serviceNames: item.serviceNames ?? [],
+        isVerified: item.isVerified,
+        isPublished: item.isPublished,
+      });
+    } else {
+      setEditing(null);
+      setForm(blankSpecialist());
+    }
+    setShowForm(true);
+  };
+  const save = () => {
+    if (form.businessName.trim().length < 2 || form.city.trim().length < 2) {
+      Alert.alert(text(isArabic, 'Missing details', 'بيانات ناقصة'), text(isArabic, `${singular} name and city are required.`, `اسم ${singular} والمدينة مطلوبان.`));
+      return;
+    }
+    if (!form.serviceNames.length) {
+      Alert.alert(text(isArabic, 'Choose a specialty', 'اختر التخصص'), text(isArabic, `Choose at least one ${designers ? 'design specialty' : 'maintenance service'}.`, designers ? 'اختر تخصص تصميم واحدًا على الأقل.' : 'اختر خدمة صيانة واحدة على الأقل.'));
+      return;
+    }
+    const firstSpecialty = options.find((option) => option.name === form.serviceNames[0]);
+    const data: AdminContractorInput = {
+      businessName: form.businessName.trim(),
+      businessNameArabic: form.businessNameArabic.trim() || form.businessName.trim(),
+      city: form.city.trim(),
+      wilayat: form.wilayat.trim() || null,
+      serviceArea: form.serviceArea.trim() || null,
+      phone: form.phone.trim() || null,
+      bio: form.bio.trim() || firstSpecialty?.name || null,
+      bioArabic: form.bioArabic.trim() || firstSpecialty?.nameAr || null,
+      avatarUrl: form.avatarUrl.trim() || null,
+      evaluationNotes: form.evaluationNotes.trim() || null,
+      adminRating: form.adminRating === '' ? null : Number(form.adminRating) || null,
+      agreedContractAmountOmaniRial: form.agreedContractAmountOmaniRial === '' ? null : Number(form.agreedContractAmountOmaniRial) || null,
+      isVerified: form.isVerified,
+      isPublished: form.isPublished,
+      isDesigner: designers,
+      isMaintenance: !designers,
+      serviceNames: form.serviceNames,
+    };
+    if (editing) {
+      update.mutate({ id: editing, data });
+    } else {
+      create.mutate({ data });
+    }
+  };
+  const chooseImage = async () => {
+    const image = await pickAdminImage(isArabic);
+    if (image) set('avatarUrl', image);
+  };
+  const toggleSpecialty = (name: string) => set('serviceNames', form.serviceNames.includes(name)
+    ? form.serviceNames.filter((item) => item !== name)
+    : [...form.serviceNames, name]);
+
+  return (
+    <View testID={`admin-${kind}`} style={styles.tabContainer}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={[styles.tabTitle, { color: colors.foreground }]}>{title}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{designers ? text(isArabic, 'Manage design professionals and their specialties.', 'إدارة المصممين وتخصصاتهم.') : text(isArabic, 'Manage maintenance providers and their services.', 'إدارة مقدمي خدمات الصيانة وخدماتهم.')}</Text>
+        </View>
+        <Pressable testID={`add-${kind}`} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => begin()}>
+          <Feather name="plus" size={14} color={colors.background} />
+          <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Add', 'إضافة')}</Text>
+        </Pressable>
+      </View>
+      {showForm && (
+        <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? text(isArabic, `Edit ${singular}`, `تعديل ${singular}`) : text(isArabic, `New ${singular}`, `${designers ? 'مصمم' : 'مزود صيانة'} جديد`)}</Text>
+          <View style={styles.formGrid}>
+            {([
+              ['businessName', designers ? 'Designer name' : 'Provider name', designers ? 'اسم المصمم' : 'اسم المزود'],
+              ['businessNameArabic', 'Arabic name', 'الاسم بالعربية'],
+              ['city', 'City', 'المدينة'],
+              ['wilayat', 'Wilayat', 'الولاية'],
+              ['serviceArea', 'Service area', 'منطقة الخدمة'],
+              ['phone', 'Phone', 'الهاتف'],
+              ['adminRating', 'Admin rating (1-5)', 'تقييم المدير (1-5)'],
+              ['agreedContractAmountOmaniRial', 'Agreed OMR', 'قيمة العقد (ر.ع.)'],
+            ] as const).map(([key, label, labelAr]) => (
+              <View key={key} style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+                <TextInput testID={`${kind}-field-${key}`} value={String(form[key])} onChangeText={(value) => set(key, value as never)} keyboardType={key === 'adminRating' || key === 'agreedContractAmountOmaniRial' ? 'decimal-pad' : 'default'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+              </View>
+            ))}
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, designers ? 'Design specialties' : 'Maintenance services', designers ? 'تخصصات التصميم' : 'خدمات الصيانة')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.buildingChips}>
+              {options.map((option) => {
+                const selected = form.serviceNames.includes(option.name);
+                return <Pressable key={option.name} testID={`${kind}-service-${option.name}`} onPress={() => toggleSpecialty(option.name)} style={({ pressed }) => [styles.buildingChip, { backgroundColor: selected ? colors.primary : colors.surface, borderColor: selected ? colors.primary : colors.border }, pressed && styles.filterPressed]}>
+                  <Text style={{ color: selected ? colors.primaryForeground : colors.foreground }}>{isArabic ? option.nameAr : option.name}</Text>
+                </Pressable>;
+              })}
+            </ScrollView>
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, `${designers ? 'Designer' : 'Provider'} photo`, `صورة ${designers ? 'المصمم' : 'المزود'}`)}</Text>
+            {form.avatarUrl ? <Image source={{ uri: form.avatarUrl }} style={styles.listingImagePreview} /> : null}
+            <Pressable testID={`pick-${kind}-image`} onPress={chooseImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
+              <Feather name="image" size={16} color={colors.primary} />
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.avatarUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Bio', 'النبذة')}</Text>
+            <TextInput testID={`${kind}-field-bio`} value={form.bio} onChangeText={(value) => set('bio', value)} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Arabic bio', 'النبذة بالعربية')}</Text>
+            <TextInput testID={`${kind}-field-bioArabic`} value={form.bioArabic} onChangeText={(value) => set('bioArabic', value)} multiline textAlign="right" style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Evaluation notes', 'ملاحظات التقييم')}</Text>
+            <TextInput testID={`${kind}-field-evaluationNotes`} value={form.evaluationNotes} onChangeText={(value) => set('evaluationNotes', value)} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+          <View style={styles.toggles}>
+            <Pressable testID={`${kind}-form-verified`} style={styles.toggleRow} onPress={() => set('isVerified', !form.isVerified)}>
+              <Feather name={form.isVerified ? 'check-square' : 'square'} size={18} color={form.isVerified ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Verified', 'موثّق')}</Text>
+            </Pressable>
+            <Pressable testID={`${kind}-form-published`} style={styles.toggleRow} onPress={() => set('isPublished', !form.isPublished)}>
+              <Feather name={form.isPublished ? 'check-square' : 'square'} size={18} color={form.isPublished ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Published', 'منشور')}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.formActions}>
+            <Pressable testID={`save-${kind}`} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
+              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save', 'حفظ')}</Text>
+            </Pressable>
+            <Pressable testID={`cancel-${kind}-form`} style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}>
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+      {contractors.isLoading && <ActivityIndicator color={colors.primary} style={styles.loader} />}
+      {contractors.isError && <Text style={{ color: colors.destructive }}>{text(isArabic, 'Unable to load providers.', 'تعذر تحميل مقدمي الخدمات.')}</Text>}
+      {list.map((item) => (
+        <View key={item.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {item.avatarUrl ? <Image source={{ uri: item.avatarUrl }} style={styles.adminCardImage} /> : null}
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{isArabic ? item.businessNameArabic || item.businessName : item.businessName}</Text>
+            <View style={styles.badges}>
+              {item.isVerified && <View style={[styles.badge, { backgroundColor: colors.primarySoft }]}><Text style={[styles.badgeText, { color: colors.primary }]}>{text(isArabic, 'Verified', 'موثّق')}</Text></View>}
+              <View style={[styles.badge, { backgroundColor: item.isPublished ? '#D9F8F2' : colors.muted }]}><Text style={[styles.badgeText, { color: item.isPublished ? '#0B6E6B' : colors.mutedForeground }]}>{item.isPublished ? text(isArabic, 'Live', 'نشط') : text(isArabic, 'Hidden', 'مخفي')}</Text></View>
+            </View>
+          </View>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{item.city}{item.wilayat ? ` • ${item.wilayat}` : ''}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]} numberOfLines={2}>{(item.serviceNames ?? []).map((name) => options.find((option) => option.name === name)?.[isArabic ? 'nameAr' : 'name'] ?? name).join(' • ')}</Text>
+          <View style={styles.cardActions}>
+            <Pressable testID={`edit-${kind}-${item.id}`} onPress={() => begin(item)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
+            <Pressable testID={`toggle-verify-${kind}-${item.id}`} onPress={() => update.mutate({ id: item.id, data: { isVerified: !item.isVerified } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{item.isVerified ? text(isArabic, 'Unverify', 'إلغاء التوثيق') : text(isArabic, 'Verify', 'توثيق')}</Text></Pressable>
+            <Pressable testID={`toggle-publish-${kind}-${item.id}`} onPress={() => update.mutate({ id: item.id, data: { isPublished: !item.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{item.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text></Pressable>
+            <Pressable testID={`archive-${kind}-${item.id}`} onPress={() => confirmAction(text(isArabic, 'Archive', 'أرشفة'), text(isArabic, 'This hides the profile permanently.', 'سيؤدي هذا إلى إخفاء الملف نهائيًا.'), () => archive.mutate({ id: item.id, params: { confirm: true } }), text(isArabic, 'Cancel', 'إلغاء'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Archive', 'أرشفة')}</Text></Pressable>
+          </View>
+        </View>
+      ))}
+      {!contractors.isLoading && !list.length ? <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, `No ${kind} added yet.`, `لم تتم إضافة ${designers ? 'مصممين' : 'مقدمي صيانة'} بعد.`)}</Text> : null}
     </View>
   );
 }

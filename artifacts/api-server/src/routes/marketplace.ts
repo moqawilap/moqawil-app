@@ -60,13 +60,15 @@ async function adminContractorResponse(profile: typeof contractorProfiles.$infer
     db.query.users.findFirst({ where: eq(users.id, profile.userId) }),
     db.select({ name: services.name, category: services.category }).from(services).where(and(eq(services.contractorId, profile.id), eq(services.isActive, true))),
   ]);
-  const serviceNames = profileServices.filter((service) => service.category === "consultants").map((service) => service.name);
+  const serviceNames = profileServices.map((service) => service.name);
+  const isDesigner = profileServices.some((service) => service.category === "consultants");
+  const isMaintenance = profileServices.some((service) => service.category === "maintenance");
   return {
     ...publicSummary, businessNameArabic: profile.businessNameArabic, bioArabic: profile.bioArabic,
     wilayat: profile.wilayat, serviceArea: profile.serviceArea, phone: profile.phone,
     evaluationNotes: profile.evaluationNotes, adminRating: profile.adminRating,
     agreedContractAmountOmaniRial: decimal(profile.agreedContractAmountOmaniRial),
-    isDesigner: serviceNames.length > 0, serviceNames,
+    isDesigner, isMaintenance, serviceNames,
     accountLinkStatus: owner?.identitySource === "clerk" ? "linked_clerk" : "managed_unlinked",
   };
 }
@@ -786,8 +788,9 @@ router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res,
 router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames)) || (input.isDesigner === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
-    const designerServiceNames = input.isDesigner === true ? (input.serviceNames as string[]).map((name) => name.trim()) : [];
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
+    const managedServiceNames = input.isDesigner === true || input.isMaintenance === true ? (input.serviceNames as string[]).map((name) => name.trim()) : [];
+    const managedServiceCategory = input.isDesigner === true ? "consultants" : input.isMaintenance === true ? "maintenance" : null;
     const settings = await getSettings();
     const profile = await db.transaction(async (tx) => {
       const [managedUser] = await tx.insert(users).values({ clerkUserId: `managed:${crypto.randomUUID()}`, email: `managed-${crypto.randomUUID()}@listing.invalid`, displayName: input.businessName.trim(), role: "contractor", identitySource: "managed_listing" }).returning();
@@ -804,11 +807,11 @@ router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, ne
           description: typeof input.bioArabic === "string" ? input.bioArabic : null,
         });
       }
-      if (designerServiceNames.length) {
-        await tx.insert(services).values(designerServiceNames.map((name) => ({
+      if (managedServiceNames.length && managedServiceCategory) {
+        await tx.insert(services).values(managedServiceNames.map((name) => ({
           contractorId: created.id,
           name,
-          category: "consultants",
+          category: managedServiceCategory,
           description: typeof input.bioArabic === "string" ? input.bioArabic : null,
         })));
       }
@@ -827,21 +830,22 @@ router.get("/admin/payments", requireUser, requireAdmin, async (_req, res, next)
 router.patch("/admin/contractors/:id", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isDesigner", "serviceNames"];
-    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
+    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isDesigner", "isMaintenance", "serviceNames"];
+    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
     const changes: Partial<typeof contractorProfiles.$inferInsert> = { updatedAt: new Date() };
-    const profileFields = allowed.filter((key) => key !== "isDesigner" && key !== "serviceNames");
+    const profileFields = allowed.filter((key) => key !== "isDesigner" && key !== "isMaintenance" && key !== "serviceNames");
     for (const key of profileFields) if (input[key] !== undefined) (changes as Record<string, unknown>)[key] = key === "businessName" || key === "city" ? input[key].trim() : key === "agreedContractAmountOmaniRial" && input[key] !== null ? input[key].toFixed(3) : input[key];
     const [profile] = await db.update(contractorProfiles).set(changes).where(eq(contractorProfiles.id, String(req.params.id))).returning();
     if (!profile) { res.status(404).json({ error: "Contractor not found" }); return; }
-    if (input.isDesigner !== undefined || input.serviceNames !== undefined) {
-      const designerServiceNames = input.isDesigner === false ? [] : (input.serviceNames as string[] | undefined)?.map((name) => name.trim()) ?? [];
-      await db.delete(services).where(and(eq(services.contractorId, profile.id), eq(services.category, "consultants")));
-      if (designerServiceNames.length) {
-        await db.insert(services).values(designerServiceNames.map((name) => ({
+    if (input.isDesigner !== undefined || input.isMaintenance !== undefined || input.serviceNames !== undefined) {
+      const serviceCategory = input.isDesigner !== undefined ? "consultants" : input.isMaintenance !== undefined ? "maintenance" : null;
+      const serviceNames = input.isDesigner === false || input.isMaintenance === false ? [] : (input.serviceNames as string[] | undefined)?.map((name) => name.trim()) ?? [];
+      if (serviceCategory) await db.delete(services).where(and(eq(services.contractorId, profile.id), eq(services.category, serviceCategory)));
+      if (serviceNames.length && serviceCategory) {
+        await db.insert(services).values(serviceNames.map((name) => ({
           contractorId: profile.id,
           name,
-          category: "consultants",
+          category: serviceCategory,
           description: profile.bioArabic,
         })));
       }
