@@ -32,6 +32,7 @@ export const notificationDeliveryStatusEnum = pgEnum("notification_delivery_stat
 export const serviceRequestStatusEnum = pgEnum("service_request_status", ["open", "quoted", "awarded", "closed", "cancelled"]);
 export const requestRecipientStatusEnum = pgEnum("request_recipient_status", ["invited", "viewed", "quoted", "declined"]);
 export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "accepted", "rejected", "withdrawn"]);
+export const listingEngagementActionEnum = pgEnum("listing_engagement_action", ["view", "like", "save", "contact"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -199,6 +200,26 @@ export const quotes = pgTable("quotes", {
   index("quotes_contractor_idx").on(table.contractorId, table.createdAt),
 ]);
 
+export const listingEngagement = pgTable("listing_engagement", {
+  listingId: varchar("listing_id", { length: 255 }).primaryKey(),
+  viewCount: integer("view_count").notNull().default(0),
+  likeCount: integer("like_count").notNull().default(0),
+  saveCount: integer("save_count").notNull().default(0),
+  contactCount: integer("contact_count").notNull().default(0),
+  ...timestamps,
+});
+
+export const listingEngagementActions = pgTable("listing_engagement_actions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  listingId: varchar("listing_id", { length: 255 }).notNull().references(() => listingEngagement.listingId, { onDelete: "cascade" }),
+  actorKey: varchar("actor_key", { length: 128 }).notNull(),
+  action: listingEngagementActionEnum("action").notNull(),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("listing_engagement_actions_unique_idx").on(table.listingId, table.actorKey, table.action),
+  index("listing_engagement_actions_listing_idx").on(table.listingId, table.action),
+]);
+
 export const marketplaceSettings = pgTable("marketplace_settings", {
   key: varchar("key", { length: 100 }).primaryKey(),
   value: jsonb("value").notNull(),
@@ -227,5 +248,6 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
 export type ContractorProfile = typeof contractorProfiles.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type ListingEngagement = typeof listingEngagement.$inferSelect;
 export type RankingWeights = { rating: number; reviews: number; projects: number; profile: number; verification: number; activity: number; engagement: number };
 export const rankingWeightsSchema = z.object({ rating: z.number().min(0), reviews: z.number().min(0), projects: z.number().min(0), profile: z.number().min(0), verification: z.number().min(0), activity: z.number().min(0), engagement: z.number().min(0) });

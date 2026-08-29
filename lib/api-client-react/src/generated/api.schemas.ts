@@ -492,10 +492,49 @@ export interface AdminOverview {
   paymentsRecorded: number;
 }
 
+export interface ListingEngagement {
+  listingId: string;
+  /** @minimum 0 */
+  views: number;
+  /** @minimum 0 */
+  likes: number;
+  /** @minimum 0 */
+  saves: number;
+  /** @minimum 0 */
+  contacts: number;
+  liked: boolean;
+  saved: boolean;
+}
+
+export type ListingEngagementInputAction = typeof ListingEngagementInputAction[keyof typeof ListingEngagementInputAction];
+
+
+export const ListingEngagementInputAction = {
+  view: 'view',
+  like: 'like',
+  save: 'save',
+  contact: 'contact',
+} as const;
+
+export interface ListingEngagementInput {
+  action: ListingEngagementInputAction;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  clientId: string;
+  active?: boolean;
+}
+
 /**
  * Resource not found
  */
 export type NotFoundResponse = void;
+
+/**
+ * Invalid request
+ */
+export type BadRequestResponse = void;
 
 export type ListContractorsParams = {
 city?: string;
@@ -513,6 +552,28 @@ page?: number;
  * @maximum 50
  */
 limit?: number;
+};
+
+export type GetListingsEngagementParams = {
+/**
+ * Comma-separated listing identifiers
+ */
+ids: string;
+/**
+ * @minLength 8
+ * @maxLength 128
+ */
+clientId?: string;
+};
+
+export type GetListingsEngagement200 = {[key: string]: ListingEngagement};
+
+export type GetListingEngagementParams = {
+/**
+ * @minLength 8
+ * @maxLength 128
+ */
+clientId?: string;
 };
 
 export type DeleteAdminContractorParams = {

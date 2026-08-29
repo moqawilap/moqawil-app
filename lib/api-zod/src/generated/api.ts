@@ -50,6 +50,113 @@ export const ListContractorsResponse = zod.object({
 })
 
 
+export const getListingsEngagementQueryClientIdMin = 8;
+export const getListingsEngagementQueryClientIdMax = 128;
+
+
+
+export const GetListingsEngagementQueryParams = zod.object({
+  "ids": zod.coerce.string(),
+  "clientId": zod.coerce.string().min(getListingsEngagementQueryClientIdMin).max(getListingsEngagementQueryClientIdMax).optional()
+})
+
+export const getListingsEngagementResponseViewsMin = 0;
+
+export const getListingsEngagementResponseLikesMin = 0;
+
+export const getListingsEngagementResponseSavesMin = 0;
+
+export const getListingsEngagementResponseContactsMin = 0;
+
+
+
+export const GetListingsEngagementResponse = zod.record(zod.string(), zod.object({
+  "listingId": zod.string(),
+  "views": zod.number().min(getListingsEngagementResponseViewsMin),
+  "likes": zod.number().min(getListingsEngagementResponseLikesMin),
+  "saves": zod.number().min(getListingsEngagementResponseSavesMin),
+  "contacts": zod.number().min(getListingsEngagementResponseContactsMin),
+  "liked": zod.boolean(),
+  "saved": zod.boolean()
+}))
+
+
+export const getListingEngagementPathListingIdRegExp = new RegExp('^[a-zA-Z0-9_-]{1,100}$');
+
+
+export const GetListingEngagementParams = zod.object({
+  "listingId": zod.coerce.string().regex(getListingEngagementPathListingIdRegExp)
+})
+
+export const getListingEngagementQueryClientIdMin = 8;
+export const getListingEngagementQueryClientIdMax = 128;
+
+
+
+export const GetListingEngagementQueryParams = zod.object({
+  "clientId": zod.coerce.string().min(getListingEngagementQueryClientIdMin).max(getListingEngagementQueryClientIdMax).optional()
+})
+
+export const getListingEngagementResponseViewsMin = 0;
+
+export const getListingEngagementResponseLikesMin = 0;
+
+export const getListingEngagementResponseSavesMin = 0;
+
+export const getListingEngagementResponseContactsMin = 0;
+
+
+
+export const GetListingEngagementResponse = zod.object({
+  "listingId": zod.string(),
+  "views": zod.number().min(getListingEngagementResponseViewsMin),
+  "likes": zod.number().min(getListingEngagementResponseLikesMin),
+  "saves": zod.number().min(getListingEngagementResponseSavesMin),
+  "contacts": zod.number().min(getListingEngagementResponseContactsMin),
+  "liked": zod.boolean(),
+  "saved": zod.boolean()
+})
+
+
+export const recordListingEngagementPathListingIdRegExp = new RegExp('^[a-zA-Z0-9_-]{1,100}$');
+
+
+export const RecordListingEngagementParams = zod.object({
+  "listingId": zod.coerce.string().regex(recordListingEngagementPathListingIdRegExp)
+})
+
+export const recordListingEngagementBodyClientIdMin = 8;
+export const recordListingEngagementBodyClientIdMax = 128;
+
+
+
+export const RecordListingEngagementBody = zod.object({
+  "action": zod.enum(['view', 'like', 'save', 'contact']),
+  "clientId": zod.string().min(recordListingEngagementBodyClientIdMin).max(recordListingEngagementBodyClientIdMax),
+  "active": zod.boolean().optional()
+})
+
+export const recordListingEngagementResponseViewsMin = 0;
+
+export const recordListingEngagementResponseLikesMin = 0;
+
+export const recordListingEngagementResponseSavesMin = 0;
+
+export const recordListingEngagementResponseContactsMin = 0;
+
+
+
+export const RecordListingEngagementResponse = zod.object({
+  "listingId": zod.string(),
+  "views": zod.number().min(recordListingEngagementResponseViewsMin),
+  "likes": zod.number().min(recordListingEngagementResponseLikesMin),
+  "saves": zod.number().min(recordListingEngagementResponseSavesMin),
+  "contacts": zod.number().min(recordListingEngagementResponseContactsMin),
+  "liked": zod.boolean(),
+  "saved": zod.boolean()
+})
+
+
 export const GetContractorParams = zod.object({
   "id": zod.coerce.string()
 })

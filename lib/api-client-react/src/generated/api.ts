@@ -26,14 +26,20 @@ import type {
   AdminOverview,
   AdminPaymentCreate,
   AdminSubscriptionUpdate,
+  BadRequestResponse,
   ContractorDetail,
   ContractorDirectoryPage,
   ContractorProfileUpsert,
   ContractorProvisioning,
   DeleteAdminContractorParams,
   DevelopmentPaymentRequest,
+  GetListingEngagementParams,
+  GetListingsEngagement200,
+  GetListingsEngagementParams,
   HealthStatus,
   ListContractorsParams,
+  ListingEngagement,
+  ListingEngagementInput,
   MarketplaceSettings,
   NotFoundResponse,
   Notification,
@@ -221,6 +227,233 @@ export function useListContractors<TData = Awaited<ReturnType<typeof listContrac
 
 
 
+
+export const getGetListingsEngagementUrl = (params: GetListingsEngagementParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/listings/engagement?${stringifiedParams}` : `/api/listings/engagement`
+}
+
+export const getListingsEngagement = async (params: GetListingsEngagementParams, options?: Parameters<typeof customFetch>[1]): Promise<GetListingsEngagement200> => {
+
+  return customFetch<GetListingsEngagement200>(getGetListingsEngagementUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetListingsEngagementQueryKey = (params?: GetListingsEngagementParams,) => {
+    return [
+    `/api/listings/engagement`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetListingsEngagementQueryOptions = <TData = Awaited<ReturnType<typeof getListingsEngagement>>, TError = ErrorType<BadRequestResponse>>(params: GetListingsEngagementParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingsEngagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetListingsEngagementQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getListingsEngagement>>> = ({ signal }) => getListingsEngagement(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getListingsEngagement>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetListingsEngagementQueryResult = NonNullable<Awaited<ReturnType<typeof getListingsEngagement>>>
+export type GetListingsEngagementQueryError = ErrorType<BadRequestResponse>
+
+
+
+export function useGetListingsEngagement<TData = Awaited<ReturnType<typeof getListingsEngagement>>, TError = ErrorType<BadRequestResponse>>(
+ params: GetListingsEngagementParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingsEngagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetListingsEngagementQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetListingEngagementUrl = (listingId: string,
+    params?: GetListingEngagementParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/listings/${listingId}/engagement?${stringifiedParams}` : `/api/listings/${listingId}/engagement`
+}
+
+export const getListingEngagement = async (listingId: string,
+    params?: GetListingEngagementParams, options?: Parameters<typeof customFetch>[1]): Promise<ListingEngagement> => {
+
+  return customFetch<ListingEngagement>(getGetListingEngagementUrl(listingId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetListingEngagementQueryKey = (listingId: string,
+    params?: GetListingEngagementParams,) => {
+    return [
+    `/api/listings/${listingId}/engagement`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetListingEngagementQueryOptions = <TData = Awaited<ReturnType<typeof getListingEngagement>>, TError = ErrorType<BadRequestResponse>>(listingId: string,
+    params?: GetListingEngagementParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingEngagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetListingEngagementQueryKey(listingId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getListingEngagement>>> = ({ signal }) => getListingEngagement(listingId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: listingId !== null && listingId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getListingEngagement>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetListingEngagementQueryResult = NonNullable<Awaited<ReturnType<typeof getListingEngagement>>>
+export type GetListingEngagementQueryError = ErrorType<BadRequestResponse>
+
+
+
+export function useGetListingEngagement<TData = Awaited<ReturnType<typeof getListingEngagement>>, TError = ErrorType<BadRequestResponse>>(
+ listingId: string,
+    params?: GetListingEngagementParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingEngagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetListingEngagementQueryOptions(listingId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRecordListingEngagementUrl = (listingId: string,) => {
+
+
+
+
+  return `/api/listings/${listingId}/engagement`
+}
+
+export const recordListingEngagement = async (listingId: string,
+    listingEngagementInput: ListingEngagementInput, options?: Parameters<typeof customFetch>[1]): Promise<ListingEngagement> => {
+
+  return customFetch<ListingEngagement>(getRecordListingEngagementUrl(listingId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(listingEngagementInput)
+  }
+);}
+
+
+
+
+
+export const getRecordListingEngagementMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordListingEngagement>>, TError,{listingId: string;data: BodyType<ListingEngagementInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordListingEngagement>>, TError,{listingId: string;data: BodyType<ListingEngagementInput>}, TContext> => {
+
+const mutationKey = ['recordListingEngagement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordListingEngagement>>, {listingId: string;data: BodyType<ListingEngagementInput>}> = (props) => {
+          const {listingId,data} = props ?? {};
+
+          return  recordListingEngagement(listingId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordListingEngagementMutationResult = NonNullable<Awaited<ReturnType<typeof recordListingEngagement>>>
+    export type RecordListingEngagementMutationBody = BodyType<ListingEngagementInput>
+    export type RecordListingEngagementMutationError = ErrorType<BadRequestResponse>
+
+    export const useRecordListingEngagement = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordListingEngagement>>, TError,{listingId: string;data: BodyType<ListingEngagementInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordListingEngagement>>,
+        TError,
+        {listingId: string;data: BodyType<ListingEngagementInput>},
+        TContext
+      > => {
+      return useMutation(getRecordListingEngagementMutationOptions(options));
+    }
 
 export const getGetContractorUrl = (id: string,) => {
 

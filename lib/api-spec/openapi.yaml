@@ -10,6 +10,7 @@ tags:
   - name: contractors
   - name: account
   - name: admin
+  - name: listings
 paths:
   /healthz:
     get:
@@ -32,6 +33,34 @@ paths:
         - { name: limit, in: query, schema: { type: number, minimum: 1, maximum: 50, default: 20 } }
       responses:
         "200": { description: Directory page, content: { application/json: { schema: { $ref: "#/components/schemas/ContractorDirectoryPage" } } } }
+  /listings/engagement:
+    get:
+      operationId: getListingsEngagement
+      tags: [listings]
+      parameters:
+        - { name: ids, in: query, required: true, schema: { type: string, description: Comma-separated listing identifiers } }
+        - { name: clientId, in: query, schema: { type: string, minLength: 8, maxLength: 128 } }
+      responses:
+        "200": { description: Listing engagement keyed by listing identifier, content: { application/json: { schema: { type: object, additionalProperties: { $ref: "#/components/schemas/ListingEngagement" } } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /listings/{listingId}/engagement:
+    get:
+      operationId: getListingEngagement
+      tags: [listings]
+      parameters:
+        - { $ref: "#/components/parameters/ListingId" }
+        - { name: clientId, in: query, schema: { type: string, minLength: 8, maxLength: 128 } }
+      responses:
+        "200": { description: Listing engagement, content: { application/json: { schema: { $ref: "#/components/schemas/ListingEngagement" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      operationId: recordListingEngagement
+      tags: [listings]
+      parameters: [ { $ref: "#/components/parameters/ListingId" } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ListingEngagementInput" } } } }
+      responses:
+        "200": { description: Updated listing engagement, content: { application/json: { schema: { $ref: "#/components/schemas/ListingEngagement" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /contractors/{id}:
     get:
       operationId: getContractor
@@ -231,10 +260,12 @@ components:
   securitySchemes: { clerkAuth: { type: http, scheme: bearer, bearerFormat: JWT } }
   parameters:
     ContractorId: { name: id, in: path, required: true, schema: { type: string } }
+    ListingId: { name: listingId, in: path, required: true, schema: { type: string, pattern: "^[a-zA-Z0-9_-]{1,100}$" } }
     RequestId: { name: id, in: path, required: true, schema: { type: string } }
     QuoteId: { name: id, in: path, required: true, schema: { type: string } }
   responses:
     NotFound: { description: Resource not found }
+    BadRequest: { description: Invalid request }
   schemas:
     HealthStatus: { type: object, properties: { status: { type: string } }, required: [status] }
     Contractor:
@@ -298,3 +329,21 @@ components:
     RankingWeights: { type: object, properties: { rating: { type: number }, reviews: { type: number }, projects: { type: number }, profile: { type: number }, verification: { type: number }, activity: { type: number }, engagement: { type: number } }, required: [rating, reviews, projects, profile, verification, activity, engagement] }
     MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights] }
     AdminOverview: { type: object, properties: { contractors: { type: number }, activeSubscriptions: { type: number }, paymentDueSubscriptions: { type: number }, paymentsRecorded: { type: number } }, required: [contractors, activeSubscriptions, paymentDueSubscriptions, paymentsRecorded] }
+    ListingEngagement:
+      type: object
+      properties:
+        listingId: { type: string }
+        views: { type: number, minimum: 0 }
+        likes: { type: number, minimum: 0 }
+        saves: { type: number, minimum: 0 }
+        contacts: { type: number, minimum: 0 }
+        liked: { type: boolean }
+        saved: { type: boolean }
+      required: [listingId, views, likes, saves, contacts, liked, saved]
+    ListingEngagementInput:
+      type: object
+      properties:
+        action: { type: string, enum: [view, like, save, contact] }
+        clientId: { type: string, minLength: 8, maxLength: 128 }
+        active: { type: boolean }
+      required: [action, clientId]

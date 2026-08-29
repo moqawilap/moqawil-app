@@ -2,7 +2,7 @@ import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import {
-  auditEvents, contractorProfiles, db, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
@@ -64,6 +64,37 @@ function validOptionalText(value: unknown, maximum: number) {
   return value === undefined || value === null || (typeof value === "string" && value.length <= maximum);
 }
 
+const listingActions = ["view", "like", "save", "contact"] as const;
+type ListingAction = typeof listingActions[number];
+function validListingId(value: unknown): value is string {
+  return typeof value === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
+}
+function validActorKey(value: unknown): value is string {
+  return typeof value === "string" && value.length >= 8 && value.length <= 128;
+}
+function listingActionRow(row: typeof listingEngagement.$inferSelect, actions: Set<string>) {
+  return {
+    listingId: row.listingId,
+    views: row.viewCount,
+    likes: row.likeCount,
+    saves: row.saveCount,
+    contacts: row.contactCount,
+    liked: actions.has("like"),
+    saved: actions.has("save"),
+  };
+}
+async function ensureListingEngagement(listingId: string) {
+  await db.insert(listingEngagement).values({ listingId }).onConflictDoNothing();
+  return (await db.query.listingEngagement.findFirst({ where: eq(listingEngagement.listingId, listingId) }))!;
+}
+async function getListingEngagement(listingId: string, actorKey?: string) {
+  const row = await ensureListingEngagement(listingId);
+  const actions = actorKey
+    ? await db.select({ action: listingEngagementActions.action }).from(listingEngagementActions).where(and(eq(listingEngagementActions.listingId, listingId), eq(listingEngagementActions.actorKey, actorKey)))
+    : [];
+  return listingActionRow(row, new Set(actions.map((item) => item.action)));
+}
+
 async function contractorSummary(profile: typeof contractorProfiles.$inferSelect, settings?: Awaited<ReturnType<typeof getSettings>>) {
   settings ??= await getSettings();
   const reviewRows = await db.select({ rating: sql<number>`coalesce(avg(${reviews.rating}), 0)`, count: sql<number>`count(*)` }).from(reviews).where(and(eq(reviews.contractorId, profile.id), eq(reviews.isPublished, true)));
@@ -76,6 +107,78 @@ async function contractorSummary(profile: typeof contractorProfiles.$inferSelect
     rankingScore: calculateRanking({ rating: Number(review.rating), reviews: Number(review.count), projects: profile.completedProjectsCount, profile: profile.profileScore, verified: profile.isVerified, activeDays, engagement: profile.engagementScore }, settings.rankingWeights),
   };
 }
+
+router.get("/listings/engagement", async (req, res, next) => {
+  try {
+    const ids = typeof req.query.ids === "string" ? [...new Set(req.query.ids.split(",").map((id) => id.trim()).filter(Boolean))] : [];
+    if (!ids.length || ids.length > 50 || ids.some((id) => !validListingId(id))) {
+      res.status(400).json({ error: "ids must contain between 1 and 50 valid listing identifiers" });
+      return;
+    }
+    const actorKey = req.query.clientId;
+    if (actorKey !== undefined && !validActorKey(actorKey)) {
+      res.status(400).json({ error: "clientId must be between 8 and 128 characters" });
+      return;
+    }
+    const rows = await Promise.all(ids.map((id) => getListingEngagement(id, actorKey as string | undefined)));
+    res.json(Object.fromEntries(rows.map((row) => [row.listingId, row])));
+  } catch (error) { next(error); }
+});
+
+router.get("/listings/:listingId/engagement", async (req, res, next) => {
+  try {
+    if (!validListingId(req.params.listingId)) {
+      res.status(400).json({ error: "Invalid listing identifier" });
+      return;
+    }
+    const actorKey = req.query.clientId;
+    if (actorKey !== undefined && !validActorKey(actorKey)) {
+      res.status(400).json({ error: "clientId must be between 8 and 128 characters" });
+      return;
+    }
+    res.json(await getListingEngagement(req.params.listingId, actorKey as string | undefined));
+  } catch (error) { next(error); }
+});
+
+router.post("/listings/:listingId/engagement", async (req, res, next) => {
+  try {
+    const listingId = req.params.listingId;
+    const input = req.body ?? {};
+    const action = input.action as ListingAction;
+    if (!validListingId(listingId) || !listingActions.includes(action) || !validActorKey(input.clientId)) {
+      res.status(400).json({ error: "listingId, clientId, and a valid engagement action are required" });
+      return;
+    }
+    if ((action === "like" || action === "save") && typeof input.active !== "boolean") {
+      res.status(400).json({ error: "active must be true or false for like and save actions" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(listingEngagement).values({ listingId }).onConflictDoNothing();
+      if ((action === "like" || action === "save") && input.active === false) {
+        const removed = await tx.delete(listingEngagementActions).where(and(
+          eq(listingEngagementActions.listingId, listingId),
+          eq(listingEngagementActions.actorKey, input.clientId),
+          eq(listingEngagementActions.action, action),
+        )).returning({ id: listingEngagementActions.id });
+        if (removed.length) {
+          const column = action === "like" ? listingEngagement.likeCount : listingEngagement.saveCount;
+          await tx.update(listingEngagement).set({ [action === "like" ? "likeCount" : "saveCount"]: sql`${column} - 1`, updatedAt: new Date() }).where(eq(listingEngagement.listingId, listingId));
+        }
+        return;
+      }
+
+      const inserted = await tx.insert(listingEngagementActions).values({ listingId, actorKey: input.clientId, action }).onConflictDoNothing().returning({ id: listingEngagementActions.id });
+      if (inserted.length) {
+        const field = action === "view" ? "viewCount" : action === "like" ? "likeCount" : action === "save" ? "saveCount" : "contactCount";
+        const column = listingEngagement[field];
+        await tx.update(listingEngagement).set({ [field]: sql`${column} + 1`, updatedAt: new Date() }).where(eq(listingEngagement.listingId, listingId));
+      }
+    });
+    res.json(await getListingEngagement(listingId, input.clientId));
+  } catch (error) { next(error); }
+});
 
 router.get("/contractors", async (req, res, next) => {
   try {
