@@ -56,7 +56,10 @@ export default function SignUpScreen() {
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Check your details and try again.';
+       const clerkCode = typeof error === 'object' && error !== null && 'errors' in error && Array.isArray((error as { errors?: Array<{ code?: string }> }).errors) ? (error as { errors: Array<{ code?: string }> }).errors[0]?.code : undefined;
+       const message = clerkCode === 'form_identifier_exists' || clerkCode === 'identifier_exists'
+         ? 'This email already has an account. Use Sign in instead.'
+         : error instanceof Error ? error.message : 'Check your details and try again.';
       setErrorMessage(message);
       if (Platform.OS !== 'web') Alert.alert('Unable to create account', message);
     } finally {
