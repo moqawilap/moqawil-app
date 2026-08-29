@@ -118,6 +118,7 @@ function validAdCampaignInput(input: Record<string, unknown>, partial = false) {
   if (input.mediaUrl !== undefined && !validAdMedia(input.mediaUrl)) return false;
   if (input.mediaType !== undefined && input.mediaType !== "image" && input.mediaType !== "video") return false;
   if (input.audience !== undefined && !validAdAudience(input.audience)) return false;
+  if (input.frequencyCapPerDay !== undefined && (!Number.isInteger(input.frequencyCapPerDay) || Number(input.frequencyCapPerDay) < 1 || Number(input.frequencyCapPerDay) > 100)) return false;
   for (const field of ["totalBudgetOmaniRial", "dailyBudgetOmaniRial", "unitRateOmaniRial"] as const) {
     if (input[field] !== undefined && (!Number.isFinite(input[field]) || Number(input[field]) <= 0)) return false;
   }
@@ -153,6 +154,7 @@ function adResponse(campaign: typeof adCampaigns.$inferSelect, owner?: { busines
     mediaUrl: campaign.mediaUrl,
     mediaType: campaign.mediaType,
     audience: campaign.audience,
+    frequencyCapPerDay: campaign.frequencyCapPerDay,
     totalBudgetOmaniRial: total,
     dailyBudgetOmaniRial: Number(campaign.dailyBudgetOmaniRial),
     billingModel: campaign.billingModel,
@@ -1040,8 +1042,9 @@ router.post("/ads/:id/event", async (req, res, next) => {
   try {
     const eventType = req.body?.eventType as AdEventType;
     const eventKey = req.body?.eventKey;
-    if (!adEventTypes.includes(eventType) || typeof eventKey !== "string" || eventKey.length < 8 || eventKey.length > 128) {
-      res.status(400).json({ error: "eventType and a unique eventKey are required" });
+    const actorKey = req.body?.actorKey;
+    if (!adEventTypes.includes(eventType) || typeof eventKey !== "string" || eventKey.length < 8 || eventKey.length > 128 || typeof actorKey !== "string" || actorKey.length < 8 || actorKey.length > 128) {
+      res.status(400).json({ error: "eventType, eventKey, and actorKey are required" });
       return;
     }
     const result = await db.transaction(async (tx) => {
@@ -1059,6 +1062,13 @@ router.post("/ads/:id/event", async (req, res, next) => {
       dayStart.setHours(0, 0, 0, 0);
       const [daily] = await tx.select({ spent: sql<string>`coalesce(sum(${adCampaignEvents.costOmaniRial}), 0)` })
         .from(adCampaignEvents).where(and(eq(adCampaignEvents.campaignId, campaign.id), gte(adCampaignEvents.createdAt, dayStart)));
+      if (eventType === "impression") {
+        const [frequency] = await tx.select({ count: sql<number>`count(*)` }).from(adCampaignEvents)
+          .where(and(eq(adCampaignEvents.campaignId, campaign.id), eq(adCampaignEvents.eventType, "impression"), eq(adCampaignEvents.actorKey, actorKey), gte(adCampaignEvents.createdAt, dayStart)));
+        if (Number(frequency?.count ?? 0) >= campaign.frequencyCapPerDay) {
+          return { accepted: false, reason: "frequency_cap_reached" as const, campaign: adResponse(campaign, undefined, Number(daily?.spent ?? 0)) };
+        }
+      }
       const cost = adCostForEvent(campaign, eventType);
       const totalSpent = Number(campaign.spentOmaniRial);
       const dailySpent = Number(daily?.spent ?? 0);
@@ -1073,6 +1083,7 @@ router.post("/ads/:id/event", async (req, res, next) => {
         campaignId: campaign.id,
         eventType,
         eventKey,
+        actorKey,
         costOmaniRial: cost.toFixed(6),
       }).returning();
       if (!event) return { accepted: false, reason: "event_not_recorded" as const, campaign: adResponse(campaign) };
@@ -1160,6 +1171,7 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
       mediaUrl: existing.mediaUrl,
       mediaType: existing.mediaType,
       audience: existing.audience,
+      frequencyCapPerDay: existing.frequencyCapPerDay,
       totalBudgetOmaniRial: Number(existing.totalBudgetOmaniRial),
       dailyBudgetOmaniRial: Number(existing.dailyBudgetOmaniRial),
       billingModel: existing.billingModel,
@@ -1181,7 +1193,7 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
     const owner = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, contractorId) });
     if (!owner) { res.status(404).json({ error: "Advertiser profile not found" }); return; }
     const updates: Record<string, unknown> = { updatedAt: new Date() };
-    for (const field of ["contractorId", "title", "description", "ctaLabel", "ctaUrl", "mediaUrl", "mediaType", "audience", "billingModel", "status"] as const) {
+    for (const field of ["contractorId", "title", "description", "ctaLabel", "ctaUrl", "mediaUrl", "mediaType", "audience", "billingModel", "status", "frequencyCapPerDay"] as const) {
       if (input[field] !== undefined) updates[field] = field === "title" || field === "description" || field === "ctaLabel" ? String(input[field]).trim() : input[field];
     }
     for (const field of ["totalBudgetOmaniRial", "dailyBudgetOmaniRial", "unitRateOmaniRial"] as const) {

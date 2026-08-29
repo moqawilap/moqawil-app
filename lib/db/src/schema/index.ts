@@ -278,6 +278,7 @@ export const adCampaigns = pgTable("ad_campaigns", {
   mediaUrl: text("media_url").notNull(),
   mediaType: adMediaTypeEnum("media_type").notNull().default("image"),
   audience: jsonb("audience").$type<AdAudience>().notNull().default({}),
+  frequencyCapPerDay: integer("frequency_cap_per_day").notNull().default(3),
   totalBudgetOmaniRial: numeric("total_budget_omani_rial", { precision: 14, scale: 6 }).notNull(),
   dailyBudgetOmaniRial: numeric("daily_budget_omani_rial", { precision: 14, scale: 6 }).notNull(),
   billingModel: adBillingModelEnum("billing_model").notNull(),
@@ -296,6 +297,7 @@ export const adCampaigns = pgTable("ad_campaigns", {
   check("ad_campaigns_total_budget_check", sql`${table.totalBudgetOmaniRial} > 0`),
   check("ad_campaigns_daily_budget_check", sql`${table.dailyBudgetOmaniRial} > 0 and ${table.dailyBudgetOmaniRial} <= ${table.totalBudgetOmaniRial}`),
   check("ad_campaigns_rate_check", sql`${table.unitRateOmaniRial} > 0`),
+  check("ad_campaigns_frequency_cap_check", sql`${table.frequencyCapPerDay} >= 1 and ${table.frequencyCapPerDay} <= 100`),
   check("ad_campaigns_date_check", sql`${table.endAt} > ${table.startAt}`),
 ]);
 
@@ -304,6 +306,7 @@ export const adCampaignEvents = pgTable("ad_campaign_events", {
   campaignId: uuid("campaign_id").notNull().references(() => adCampaigns.id, { onDelete: "cascade" }),
   eventType: adEventTypeEnum("event_type").notNull(),
   eventKey: varchar("event_key", { length: 128 }).notNull(),
+  actorKey: varchar("actor_key", { length: 128 }).notNull(),
   costOmaniRial: numeric("cost_omani_rial", { precision: 14, scale: 6 }).notNull().default("0.000000"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
