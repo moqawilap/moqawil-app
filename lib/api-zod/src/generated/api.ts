@@ -11,6 +11,8 @@ import * as zod from 'zod';
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
+
+
 export const listContractorsQueryMinBudgetMin = 0;
 
 export const listContractorsQueryMaxBudgetMin = 0;
@@ -279,7 +281,7 @@ export const recordContactEventBodySubjectNameMax = 200;
 
 export const RecordContactEventBody = zod.object({
   "category": zod.enum(['property', 'workshop', 'design', 'maintenance', 'contractor']),
-  "channel": zod.enum(['call', 'whatsapp', 'email']),
+  "channel": zod.enum(['call', 'whatsapp']),
   "subjectId": zod.string().min(1).max(recordContactEventBodySubjectIdMax),
   "subjectName": zod.string().min(1).max(recordContactEventBodySubjectNameMax)
 })

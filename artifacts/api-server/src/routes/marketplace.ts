@@ -512,7 +512,7 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
     const user = (req as AuthenticatedRequest).marketplaceUser;
     const input = req.body ?? {};
     const categories = ["property", "workshop", "design", "maintenance", "contractor"] as const;
-    const channels = ["call", "whatsapp", "email"] as const;
+    const channels = ["call", "whatsapp"] as const;
     if (
       !categories.includes(input.category)
       || !channels.includes(input.channel)

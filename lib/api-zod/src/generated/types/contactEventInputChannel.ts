@@ -12,5 +12,4 @@ export type ContactEventInputChannel = typeof ContactEventInputChannel[keyof typ
 export const ContactEventInputChannel = {
   call: 'call',
   whatsapp: 'whatsapp',
-  email: 'email',
 } as const;

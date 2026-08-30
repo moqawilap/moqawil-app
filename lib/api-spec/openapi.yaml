@@ -719,7 +719,7 @@ components:
       type: object
       properties:
         category: { type: string, enum: [property, workshop, design, maintenance, contractor] }
-        channel: { type: string, enum: [call, whatsapp, email] }
+        channel: { type: string, enum: [call, whatsapp] }
         subjectId: { type: string, minLength: 1, maxLength: 100 }
         subjectName: { type: string, minLength: 1, maxLength: 200 }
       required: [category, channel, subjectId, subjectName]
