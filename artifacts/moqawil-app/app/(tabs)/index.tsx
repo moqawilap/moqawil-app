@@ -125,7 +125,7 @@ export default function HomeScreen() {
   };
   const socialLinks = [
     { icon: 'whatsapp' as const, label: isArabic ? 'واتساب' : 'WhatsApp', url: 'https://wa.me/96877224535' },
-    { icon: 'email-outline' as const, label: isArabic ? 'البريد' : 'Email', url: 'mailto:moqawil.ap@gmail.com' },
+    { icon: 'mail' as const, label: isArabic ? 'البريد' : 'Email', url: 'mailto:moqawil.ap@gmail.com' },
     { icon: 'instagram' as const, label: 'Instagram', url: 'https://instagram.com/moqawil.om' },
   ];
 
@@ -160,7 +160,7 @@ export default function HomeScreen() {
              <View style={styles.homeSocialLinks}>
                {socialLinks.map((item) => (
                  <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} hitSlop={8} onPress={() => void Linking.openURL(item.url)} style={({ pressed }) => [styles.homeSocialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
-                   <MaterialCommunityIcons name={item.icon} size={19} color={colors.primary} />
+                    {item.icon === 'mail' ? <Feather name="mail" size={19} color={colors.primary} /> : <MaterialCommunityIcons name={item.icon} size={19} color={colors.primary} />}
                  </Pressable>
                ))}
              </View>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   aboutEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.1 },
   aboutTitle: { fontSize: 18, lineHeight: 25, fontWeight: '800' },
   aboutText: { fontSize: 13, lineHeight: 21 },
-  homeSocialLinks: { flexDirection: 'row', gap: 5, marginTop: 7, justifyContent: 'space-between' },
+  homeSocialLinks: { flexDirection: 'row', gap: 5, marginTop: 7, justifyContent: 'flex-start', direction: 'ltr' },
   homeSocialLink: { width: 40, height: 40, borderWidth: 1.5, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   footer: { alignItems: 'center', gap: 6, marginTop: 40, marginBottom: 8 },
   footerMark: { width: 31, height: 31, borderRadius: 9 },

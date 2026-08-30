@@ -31,7 +31,7 @@ export default function ProfileScreen() {
   ];
    const socialLinks = [
      { icon: 'whatsapp' as const, title: isArabic ? 'واتساب' : 'WhatsApp', onPress: () => Linking.openURL('https://wa.me/96877224535') },
-     { icon: 'email-outline' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', onPress: () => Linking.openURL('mailto:moqawil.ap@gmail.com') },
+     { icon: 'mail' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', onPress: () => Linking.openURL('mailto:moqawil.ap@gmail.com') },
      { icon: 'instagram' as const, title: 'Instagram', onPress: () => Linking.openURL('https://instagram.com/moqawil.om') },
    ];
   const profileName = user?.fullName || (isSignedIn ? user?.primaryEmailAddress?.emailAddress : null) || (isArabic ? 'مستخدم مقاول' : 'Moqawil user');
@@ -54,9 +54,9 @@ export default function ProfileScreen() {
            <View style={styles.socialLinksRow}>
              {socialLinks.map((item) => (
                <Pressable key={item.title} accessibilityRole="button" accessibilityLabel={item.title} hitSlop={8} onPress={item.onPress} style={({ pressed }) => [styles.socialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
-                 <View style={[styles.socialIcon, { backgroundColor: colors.primarySoft }]}>
-                   <MaterialCommunityIcons name={item.icon} size={20} color={colors.primary} />
-                 </View>
+                  <View style={[styles.socialIcon, { backgroundColor: colors.primarySoft }]}>
+                    {item.icon === 'mail' ? <Feather name="mail" size={20} color={colors.primary} /> : <MaterialCommunityIcons name={item.icon} size={20} color={colors.primary} />}
+                  </View>
                </Pressable>
              ))}
            </View>
