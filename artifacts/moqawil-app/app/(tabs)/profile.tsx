@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth, useUser } from '@clerk/expo';
 import { router } from 'expo-router';
 import React from 'react';
@@ -24,14 +24,16 @@ export default function ProfileScreen() {
      { icon: 'map-pin' as const, title: isArabic ? 'موقعك الحالي' : 'Current location', value: location.source === 'default' ? (isArabic ? 'اضغط للسماح بتحديد موقعك' : 'Tap to allow location access') : `${location.area}, ${location.city}`, onPress: refreshLocation },
     { icon: 'bell' as const, title: isArabic ? 'الإشعارات' : 'Notifications', value: isArabic ? 'مفعّلة' : 'On', onPress: () => router.push('/notifications' as never) },
      ...(isSignedIn ? [{ icon: 'edit-3' as const, title: isArabic ? 'أحتاج خدمة' : 'I need a service', value: isArabic ? 'أرسل طلبًا لعدة ورش' : 'Ask multiple workshops', onPress: () => router.push('/service-request' as never) }, { icon: 'clipboard' as const, title: isArabic ? 'طلباتي وعروضي' : 'My requests & quotes', value: isArabic ? 'قارن واختر العرض المناسب' : 'Compare and choose a quote', onPress: () => router.push('/requests' as never) }] : []),
-    { icon: 'message-circle' as const, title: isArabic ? 'واتساب' : 'WhatsApp', value: '+968 77224535', onPress: () => Linking.openURL('https://wa.me/96877224535') },
-    { icon: 'mail' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', value: 'moqawil.ap@gmail.com', onPress: () => Linking.openURL('mailto:moqawil.ap@gmail.com') },
-    { icon: 'instagram' as const, title: 'Instagram', value: '@moqawil.om', onPress: () => Linking.openURL('https://instagram.com/moqawil.om') },
     ...(isSignedIn && isAdmin ? [{ icon: 'shield' as const, title: isArabic ? 'لوحة الإدارة' : 'Admin console', value: isArabic ? 'المقاولون والتقييمات' : 'Contractors & evaluations', onPress: () => router.push('/admin') }] : []),
     ...(isContractor ? [{ icon: 'credit-card' as const, title: isArabic ? 'اشتراكي' : 'My subscription', value: subscription.data ? `${subscription.data.planName} · ${subscription.data.priceOmaniRial} OMR / ${subscription.data.billingMonths === 12 ? (isArabic ? 'سنة' : 'year') : `${subscription.data.billingMonths} ${isArabic ? 'أشهر' : 'months'}`}` : (isArabic ? 'جاري تحميل الخطة…' : 'Plan details loading…'), onPress: () => router.push('/subscription' as never) }] : []),
     ...(isSignedIn && !isAdmin ? [{ icon: 'briefcase' as const, title: isContractor ? (isArabic ? 'إدارة ملف المقاول' : 'Manage contractor profile') : (isArabic ? 'انضم كمقاول' : 'Join as contractor'), value: '', onPress: () => router.push('/contractor-profile' as never) }] : []),
      ...(isSignedIn && isContractor ? [{ icon: 'inbox' as const, title: isArabic ? 'طلبات الورشة' : 'Workshop requests', value: isArabic ? 'استقبل وأرسل عروض الأسعار' : 'Review requests and send quotes', onPress: () => router.push('/workshop-requests' as never) }] : []),
   ];
+   const socialLinks = [
+     { icon: 'whatsapp' as const, title: isArabic ? 'واتساب' : 'WhatsApp', onPress: () => Linking.openURL('https://wa.me/96877224535') },
+     { icon: 'email-outline' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', onPress: () => Linking.openURL('mailto:moqawil.ap@gmail.com') },
+     { icon: 'instagram' as const, title: 'Instagram', onPress: () => Linking.openURL('https://instagram.com/moqawil.om') },
+   ];
   const profileName = user?.fullName || (isSignedIn ? user?.primaryEmailAddress?.emailAddress : null) || (isArabic ? 'مستخدم مقاول' : 'Moqawil user');
 
   return (
@@ -48,6 +50,17 @@ export default function ProfileScreen() {
           <View style={[styles.languageRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {(['en', 'ar'] as const).map((item) => <Pressable key={item} onPress={() => setLocale(item)} style={[styles.languageOption, locale === item && { backgroundColor: colors.primarySoft }]}><Text style={[styles.languageCode, { color: locale === item ? colors.primary : colors.mutedForeground }]}>{item === 'en' ? 'EN' : 'عربي'}</Text><Text style={[styles.languageLabel, { color: locale === item ? colors.foreground : colors.mutedForeground }]}>{item === 'en' ? 'English' : 'العربية'}</Text>{locale === item ? <Feather name="check-circle" size={16} color={colors.primary} /> : null}</Pressable>)}
           </View>
+           <View style={styles.socialHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'روابط التواصل' : 'Social Links'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{isArabic ? 'تواصل معنا مباشرة' : 'Connect with us directly'}</Text></View>
+           <View style={styles.socialLinksRow}>
+             {socialLinks.map((item) => (
+               <Pressable key={item.title} accessibilityRole="button" accessibilityLabel={item.title} onPress={item.onPress} style={({ pressed }) => [styles.socialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
+                 <View style={[styles.socialIcon, { backgroundColor: colors.primarySoft }]}>
+                   <MaterialCommunityIcons name={item.icon} size={29} color={colors.primary} />
+                 </View>
+                 <Text style={[styles.socialLabel, { color: colors.foreground }]}>{item.title}</Text>
+               </Pressable>
+             ))}
+           </View>
           <View style={styles.preferencesHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'التفضيلات' : 'Preferences'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{savedIds.length} {isArabic ? 'محفوظ' : 'saved'}</Text></View>
           <View style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
              {menu.map((item, index) => <Pressable key={item.title} onPress={() => { item.onPress(); }} style={[styles.menuItem, index < menu.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}><View style={[styles.menuIcon, { backgroundColor: colors.primarySoft }]}><Feather name={item.icon} size={17} color={colors.primary} /></View><View style={styles.menuText}><Text style={[styles.menuTitle, { color: colors.foreground }]}>{item.title}</Text>{item.value ? <Text style={[styles.menuValue, { color: colors.mutedForeground }]}>{item.value}</Text> : null}</View><Feather name="chevron-right" size={17} color={colors.mutedForeground} /></Pressable>)}
@@ -70,6 +83,12 @@ const styles = StyleSheet.create({
   profileName: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
   profileSub: { fontSize: 11, color: 'rgba(255,255,255,0.68)' },
   languageHeading: { marginTop: 27, marginBottom: 11 },
+  socialHeading: { marginTop: 27, marginBottom: 11 },
+  socialLinksRow: { flexDirection: 'row', gap: 10 },
+  socialLink: { flex: 1, minHeight: 112, borderWidth: 1.5, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 5 },
+  socialIcon: { width: 54, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  socialLabel: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  pressed: { opacity: 0.78 },
   preferencesHeading: { marginTop: 27, marginBottom: 11, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   sectionTitle: { fontSize: 17, fontWeight: '800' },
   sectionHint: { fontSize: 12, marginTop: 3 },
