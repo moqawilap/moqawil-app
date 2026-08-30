@@ -230,6 +230,16 @@ paths:
       parameters: [ { $ref: "#/components/parameters/RequestId" } ]
       responses:
         "200": { description: Quotes for a request, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Quote" } } } } }
+  /me/service-requests/{id}/cancel:
+    post:
+      operationId: cancelServiceRequest
+      tags: [requests]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { $ref: "#/components/parameters/RequestId" } ]
+      responses:
+        "200": { description: Service request cancelled, content: { application/json: { schema: { $ref: "#/components/schemas/ServiceRequest" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/BadRequest" }
   /me/workshop-requests:
     get:
       operationId: listWorkshopRequests

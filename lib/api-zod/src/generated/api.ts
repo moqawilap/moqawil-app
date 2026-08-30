@@ -24,7 +24,6 @@ export const listContractorsQueryLimitDefault = 20;
 export const listContractorsQueryLimitMax = 50;
 
 
-
 export const ListContractorsQueryParams = zod.object({
   "city": zod.coerce.string().optional(),
   "wilayat": zod.coerce.string().optional(),
@@ -42,7 +41,6 @@ export const ListContractorsQueryParams = zod.object({
 export const listContractorsResponseItemsItemImageUrlsItemMax = 2000000;
 
 export const listContractorsResponseItemsItemImageUrlsMax = 15;
-
 
 
 export const ListContractorsResponse = zod.object({
@@ -79,18 +77,18 @@ export const getListingsEngagementQueryClientIdMin = 8;
 export const getListingsEngagementQueryClientIdMax = 128;
 
 
-
 export const GetListingsEngagementQueryParams = zod.object({
   "ids": zod.coerce.string(),
   "clientId": zod.coerce.string().min(getListingsEngagementQueryClientIdMin).max(getListingsEngagementQueryClientIdMax).optional()
 })
+
+export const listListingsResponseRatingMin = 0;
 
 export const getListingsEngagementResponseLikesMin = 0;
 
 export const getListingsEngagementResponseSavesMin = 0;
 
 export const getListingsEngagementResponseContactsMin = 0;
-
 
 
 export const GetListingsEngagementResponse = zod.record(zod.string(), zod.object({
@@ -121,7 +119,6 @@ export const listListingsResponseLikesMin = 0;
 export const listListingsResponseSavesMin = 0;
 
 export const listListingsResponseContactsMin = 0;
-
 
 
 export const ListListingsResponseItem = zod.object({
@@ -177,7 +174,6 @@ export const getListingResponseSavesMin = 0;
 export const getListingResponseContactsMin = 0;
 
 
-
 export const GetListingResponse = zod.object({
   "id": zod.string(),
   "title": zod.string(),
@@ -214,17 +210,17 @@ export const getListingEngagementQueryClientIdMin = 8;
 export const getListingEngagementQueryClientIdMax = 128;
 
 
-
 export const GetListingEngagementQueryParams = zod.object({
   "clientId": zod.coerce.string().min(getListingEngagementQueryClientIdMin).max(getListingEngagementQueryClientIdMax).optional()
 })
+
+export const listListingsResponseViewsMin = 0;
 
 export const getListingEngagementResponseLikesMin = 0;
 
 export const getListingEngagementResponseSavesMin = 0;
 
 export const getListingEngagementResponseContactsMin = 0;
-
 
 
 export const GetListingEngagementResponse = zod.object({
@@ -248,19 +244,19 @@ export const recordListingEngagementBodyClientIdMin = 8;
 export const recordListingEngagementBodyClientIdMax = 128;
 
 
-
 export const RecordListingEngagementBody = zod.object({
   "action": zod.enum(['view', 'like', 'save', 'contact']),
   "clientId": zod.string().min(recordListingEngagementBodyClientIdMin).max(recordListingEngagementBodyClientIdMax),
   "active": zod.boolean().optional()
 })
 
+export const listListingsResponseLikesMin = 0;
+
 export const recordListingEngagementResponseLikesMin = 0;
 
 export const recordListingEngagementResponseSavesMin = 0;
 
 export const recordListingEngagementResponseContactsMin = 0;
-
 
 
 export const RecordListingEngagementResponse = zod.object({
@@ -277,7 +273,6 @@ export const listAdsQueryLimitDefault = 2;
 export const listAdsQueryLimitMax = 5;
 
 
-
 export const ListAdsQueryParams = zod.object({
   "city": zod.coerce.string().optional(),
   "wilayat": zod.coerce.string().optional(),
@@ -291,7 +286,6 @@ export const listAdsResponseMediaItemUrlMax = 2000000;
 export const listAdsResponseMediaMax = 17;
 
 export const listAdsResponseFrequencyCapPerDayMax = 100;
-
 
 
 export const ListAdsResponseItem = zod.object({
@@ -345,7 +339,6 @@ export const recordAdEventBodyActorKeyMin = 8;
 export const recordAdEventBodyActorKeyMax = 128;
 
 
-
 export const RecordAdEventBody = zod.object({
   "eventType": zod.enum(['impression', 'click', 'conversion']),
   "eventKey": zod.string().min(recordAdEventBodyEventKeyMin).max(recordAdEventBodyEventKeyMax),
@@ -358,7 +351,6 @@ export const recordAdEventResponseCampaignMediaItemUrlMax = 2000000;
 export const recordAdEventResponseCampaignMediaMax = 17;
 
 export const recordAdEventResponseCampaignFrequencyCapPerDayMax = 100;
-
 
 
 export const RecordAdEventResponse = zod.object({
@@ -417,7 +409,6 @@ export const getListingRatingResponseRatingMin = 0;
 export const getListingRatingResponseRatingMax = 5;
 
 
-
 export const GetListingRatingResponse = zod.object({
   "rating": zod.number().min(getListingRatingResponseRatingMin).max(getListingRatingResponseRatingMax)
 })
@@ -433,14 +424,12 @@ export const RateListingParams = zod.object({
 export const rateListingBodyRatingMax = 5;
 
 
-
 export const RateListingBody = zod.object({
   "rating": zod.number().min(1).max(rateListingBodyRatingMax)
 })
 
 export const rateListingResponseRatingMin = 0;
 export const rateListingResponseRatingMax = 5;
-
 
 
 export const RateListingResponse = zod.object({
@@ -457,7 +446,6 @@ export const getContractorResponseOneImageUrlsItemMax = 2000000;
 export const getContractorResponseOneImageUrlsMax = 15;
 
 export const getContractorResponseTwoReviewsItemRatingMax = 5;
-
 
 
 export const GetContractorResponse = zod.object({
@@ -507,7 +495,6 @@ export const getContractorRatingResponseRatingMin = 0;
 export const getContractorRatingResponseRatingMax = 5;
 
 
-
 export const GetContractorRatingResponse = zod.object({
   "rating": zod.number().min(getContractorRatingResponseRatingMin).max(getContractorRatingResponseRatingMax)
 })
@@ -520,14 +507,12 @@ export const RateContractorParams = zod.object({
 export const rateContractorBodyRatingMax = 5;
 
 
-
 export const RateContractorBody = zod.object({
   "rating": zod.number().min(1).max(rateContractorBodyRatingMax)
 })
 
 export const rateContractorResponseRatingMin = 0;
 export const rateContractorResponseRatingMax = 5;
-
 
 
 export const RateContractorResponse = zod.object({
@@ -622,7 +607,6 @@ export const getMyContractorProfileResponsePhoneMax = 32;
 export const getMyContractorProfileResponseAvatarUrlMax = 2048;
 
 
-
 export const GetMyContractorProfileResponse = zod.object({
   "businessName": zod.string().min(getMyContractorProfileResponseBusinessNameMin).max(getMyContractorProfileResponseBusinessNameMax),
   "city": zod.string().min(getMyContractorProfileResponseCityMin).max(getMyContractorProfileResponseCityMax),
@@ -652,7 +636,6 @@ export const upsertMyContractorProfileBodyPhoneMax = 32;
 export const upsertMyContractorProfileBodyAvatarUrlMax = 2048;
 
 
-
 export const UpsertMyContractorProfileBody = zod.object({
   "businessName": zod.string().min(upsertMyContractorProfileBodyBusinessNameMin).max(upsertMyContractorProfileBodyBusinessNameMax),
   "city": zod.string().min(upsertMyContractorProfileBodyCityMin).max(upsertMyContractorProfileBodyCityMax),
@@ -666,7 +649,6 @@ export const UpsertMyContractorProfileBody = zod.object({
 export const upsertMyContractorProfileResponseContractorImageUrlsItemMax = 2000000;
 
 export const upsertMyContractorProfileResponseContractorImageUrlsMax = 15;
-
 
 
 export const UpsertMyContractorProfileResponse = zod.object({
@@ -729,7 +711,6 @@ export const MarkNotificationReadResponse = zod.void()
 export const createServiceRequestBodyRequirementsMin = 8;
 
 export const createServiceRequestBodyBudgetOmaniRialMin = 0;
-
 
 
 export const CreateServiceRequestBody = zod.object({
@@ -796,7 +777,9 @@ export const ListServiceRequestQuotesResponseItem = zod.object({
 })
 export const ListServiceRequestQuotesResponse = zod.array(ListServiceRequestQuotesResponseItem)
 
-
+export const CancelServiceRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
 export const ListWorkshopRequestsResponseItem = zod.object({
   "id": zod.string(),
   "serviceCategory": zod.string(),
@@ -826,7 +809,6 @@ export const createWorkshopQuoteBodyAmountOmaniRialMin = 0;
 export const createWorkshopQuoteBodyEstimatedDaysMax = 365;
 
 export const createWorkshopQuoteBodyDetailsMin = 4;
-
 
 
 export const CreateWorkshopQuoteBody = zod.object({
@@ -884,7 +866,6 @@ export const GetAdminOverviewResponse = zod.object({
 export const listAdminContractorsResponseOneImageUrlsItemMax = 2000000;
 
 export const listAdminContractorsResponseOneImageUrlsMax = 15;
-
 
 
 export const ListAdminContractorsResponseItem = zod.object({
@@ -955,7 +936,6 @@ export const createAdminContractorBodyServiceNamesItemMax = 160;
 export const createAdminContractorBodyServiceNamesMax = 26;
 
 
-
 export const CreateAdminContractorBody = zod.object({
   "businessName": zod.string().min(createAdminContractorBodyBusinessNameMin).max(createAdminContractorBodyBusinessNameMax),
   "businessNameArabic": zod.string().max(createAdminContractorBodyBusinessNameArabicMax).nullish(),
@@ -981,7 +961,6 @@ export const CreateAdminContractorBody = zod.object({
 export const createAdminContractorResponseOneImageUrlsItemMax = 2000000;
 
 export const createAdminContractorResponseOneImageUrlsMax = 15;
-
 
 
 export const CreateAdminContractorResponse = zod.object({
@@ -1033,7 +1012,6 @@ export const listAdminListingsResponseLikesMin = 0;
 export const listAdminListingsResponseSavesMin = 0;
 
 export const listAdminListingsResponseContactsMin = 0;
-
 
 
 export const ListAdminListingsResponseItem = zod.object({
@@ -1089,7 +1067,6 @@ export const createAdminListingBodyContactPhoneMax = 32;
 export const createAdminListingBodyAdminRatingMax = 5;
 
 
-
 export const CreateAdminListingBody = zod.object({
   "title": zod.string().min(1).max(createAdminListingBodyTitleMax),
   "titleArabic": zod.string().min(1).max(createAdminListingBodyTitleArabicMax),
@@ -1125,7 +1102,6 @@ export const createAdminListingResponseLikesMin = 0;
 export const createAdminListingResponseSavesMin = 0;
 
 export const createAdminListingResponseContactsMin = 0;
-
 
 
 export const CreateAdminListingResponse = zod.object({
@@ -1184,7 +1160,6 @@ export const updateAdminListingBodyContactPhoneMax = 32;
 export const updateAdminListingBodyAdminRatingMax = 5;
 
 
-
 export const UpdateAdminListingBody = zod.object({
   "title": zod.string().min(1).max(updateAdminListingBodyTitleMax).optional(),
   "titleArabic": zod.string().min(1).max(updateAdminListingBodyTitleArabicMax).optional(),
@@ -1220,7 +1195,6 @@ export const updateAdminListingResponseLikesMin = 0;
 export const updateAdminListingResponseSavesMin = 0;
 
 export const updateAdminListingResponseContactsMin = 0;
-
 
 
 export const UpdateAdminListingResponse = zod.object({
@@ -1313,7 +1287,6 @@ export const updateAdminContractorBodyServiceNamesItemMax = 160;
 export const updateAdminContractorBodyServiceNamesMax = 26;
 
 
-
 export const UpdateAdminContractorBody = zod.object({
   "businessName": zod.string().min(updateAdminContractorBodyBusinessNameMin).max(updateAdminContractorBodyBusinessNameMax).optional(),
   "businessNameArabic": zod.string().max(updateAdminContractorBodyBusinessNameArabicMax).nullish(),
@@ -1338,7 +1311,6 @@ export const UpdateAdminContractorBody = zod.object({
 export const updateAdminContractorResponseOneImageUrlsItemMax = 2000000;
 
 export const updateAdminContractorResponseOneImageUrlsMax = 15;
-
 
 
 export const UpdateAdminContractorResponse = zod.object({
@@ -1390,7 +1362,6 @@ export const UpdateAdminSubscriptionParams = zod.object({
 export const updateAdminSubscriptionBodyExtendTrialMonthsMax = 24;
 
 
-
 export const UpdateAdminSubscriptionBody = zod.object({
   "status": zod.enum(['free_trial', 'active', 'payment_due', 'expired', 'cancelled', 'suspended']).optional(),
   "extendTrialMonths": zod.number().min(1).max(updateAdminSubscriptionBodyExtendTrialMonthsMax).optional()
@@ -1430,7 +1401,6 @@ export const ListAdminPaymentsResponse = zod.array(ListAdminPaymentsResponseItem
 export const createAdminPaymentBodyAmountOmaniRialMin = 0;
 
 
-
 export const CreateAdminPaymentBody = zod.object({
   "subscriptionId": zod.string(),
   "amountOmaniRial": zod.number().min(createAdminPaymentBodyAmountOmaniRialMin),
@@ -1452,9 +1422,7 @@ export const CreateAdminPaymentResponse = zod.object({
 })
 
 
-
 export const getAdminSettingsResponseDefaultPriceOmaniRialMin = 0;
-
 
 
 export const GetAdminSettingsResponse = zod.object({
@@ -1472,9 +1440,7 @@ export const GetAdminSettingsResponse = zod.object({
 })
 
 
-
 export const updateAdminSettingsBodyDefaultPriceOmaniRialMin = 0;
-
 
 
 export const UpdateAdminSettingsBody = zod.object({
@@ -1493,7 +1459,6 @@ export const UpdateAdminSettingsBody = zod.object({
 
 
 export const updateAdminSettingsResponseDefaultPriceOmaniRialMin = 0;
-
 
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -1517,7 +1482,6 @@ export const listAdminAdCampaignsResponseMediaItemUrlMax = 2000000;
 export const listAdminAdCampaignsResponseMediaMax = 17;
 
 export const listAdminAdCampaignsResponseFrequencyCapPerDayMax = 100;
-
 
 
 export const ListAdminAdCampaignsResponseItem = zod.object({
@@ -1587,7 +1551,6 @@ export const createAdminAdCampaignBodyDailyBudgetOmaniRialExclusiveMin = 0;
 export const createAdminAdCampaignBodyUnitRateOmaniRialExclusiveMin = 0;
 
 
-
 export const CreateAdminAdCampaignBody = zod.object({
   "contractorId": zod.string(),
   "title": zod.string().min(createAdminAdCampaignBodyTitleMin).max(createAdminAdCampaignBodyTitleMax),
@@ -1621,7 +1584,6 @@ export const createAdminAdCampaignResponseMediaItemUrlMax = 2000000;
 export const createAdminAdCampaignResponseMediaMax = 17;
 
 export const createAdminAdCampaignResponseFrequencyCapPerDayMax = 100;
-
 
 
 export const CreateAdminAdCampaignResponse = zod.object({
@@ -1694,7 +1656,6 @@ export const updateAdminAdCampaignBodyOneDailyBudgetOmaniRialExclusiveMin = 0;
 export const updateAdminAdCampaignBodyOneUnitRateOmaniRialExclusiveMin = 0;
 
 
-
 export const UpdateAdminAdCampaignBody = zod.object({
   "contractorId": zod.string(),
   "title": zod.string().min(updateAdminAdCampaignBodyOneTitleMin).max(updateAdminAdCampaignBodyOneTitleMax),
@@ -1728,7 +1689,6 @@ export const updateAdminAdCampaignResponseMediaItemUrlMax = 2000000;
 export const updateAdminAdCampaignResponseMediaMax = 17;
 
 export const updateAdminAdCampaignResponseFrequencyCapPerDayMax = 100;
-
 
 
 export const UpdateAdminAdCampaignResponse = zod.object({
@@ -1782,7 +1742,6 @@ export const getAdminAdCampaignReportResponseCampaignMediaMax = 17;
 export const getAdminAdCampaignReportResponseCampaignFrequencyCapPerDayMax = 100;
 
 
-
 export const GetAdminAdCampaignReportResponse = zod.object({
   "campaign": zod.object({
   "id": zod.string(),
@@ -1831,3 +1790,17 @@ export const GetAdminAdCampaignReportResponse = zod.object({
 })
 
 
+export const CancelServiceRequestResponse = zod.object({
+  "id": zod.string(),
+  "serviceCategory": zod.string(),
+  "serviceName": zod.string(),
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "requirements": zod.string(),
+  "budgetOmaniRial": zod.number().nullish(),
+  "imageUrls": zod.array(zod.string()),
+  "status": zod.string(),
+  "recipientCount": zod.number().optional(),
+  "quoteCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})

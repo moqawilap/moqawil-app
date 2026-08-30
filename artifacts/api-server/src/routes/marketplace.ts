@@ -9,6 +9,7 @@ import {
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getSettings, isDirectoryEligible, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
 type MarketplaceAuthHandlers = {
   requireUser: RequestHandler;
@@ -757,6 +758,45 @@ router.get("/me/service-requests/:id/quotes", requireUser, async (req, res, next
   } catch (error) { next(error); }
 });
 
+router.post("/me/service-requests/:id/cancel", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const request = await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, String(req.params.id)), eq(serviceRequests.customerId, user.id)) });
+    if (!request) { res.status(404).json({ error: "Service request not found" }); return; }
+    if (request.status === "awarded") { res.status(409).json({ error: "Awarded requests cannot be cancelled" }); return; }
+    if (request.status !== "open" && request.status !== "quoted") { res.status(409).json({ error: "Request cannot be cancelled" }); return; }
+
+    const cancelled = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(serviceRequests).set({ status: "cancelled", updatedAt: new Date() }).where(and(
+        eq(serviceRequests.id, request.id),
+        eq(serviceRequests.customerId, user.id),
+        or(eq(serviceRequests.status, "open"), eq(serviceRequests.status, "quoted")),
+      )).returning();
+      if (!updated) return null;
+
+      await tx.update(quotes).set({ status: "rejected", updatedAt: new Date() }).where(and(
+        eq(quotes.requestId, request.id),
+        eq(quotes.status, "submitted"),
+      ));
+      await tx.update(requestRecipients).set({ status: "declined", updatedAt: new Date() }).where(eq(requestRecipients.requestId, request.id));
+
+      const recipients = await tx.select({ userId: contractorProfiles.userId })
+        .from(requestRecipients)
+        .innerJoin(contractorProfiles, eq(contractorProfiles.id, requestRecipients.contractorId))
+        .where(eq(requestRecipients.requestId, request.id));
+      if (recipients.length) {
+        await tx.insert(notifications).values(recipients.map((recipient) => ({
+          userId: recipient.userId, type: "system" as const, channel: "in_app" as const, deliveryStatus: "delivered" as const,
+          title: "Service request cancelled", body: `${request.serviceName} is no longer accepting quotes.`, deliveryMetadata: { requestId: request.id }, deliveredAt: new Date(),
+        })));
+      }
+      return updated;
+    });
+    if (!cancelled) { res.status(409).json({ error: "Request can no longer be cancelled" }); return; }
+    res.json({ ...cancelled, budgetOmaniRial: decimal(cancelled.budgetOmaniRial), imageUrls: cancelled.imageUrls });
+  } catch (error) { next(error); }
+});
+
 router.get("/me/workshop-requests", requireUser, requireContractor, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
@@ -765,7 +805,7 @@ router.get("/me/workshop-requests", requireUser, requireContractor, async (req, 
     await db.update(requestRecipients).set({ status: "viewed", updatedAt: new Date() }).where(and(eq(requestRecipients.contractorId, profile.id), eq(requestRecipients.status, "invited")));
     const rows = await db.select({ request: serviceRequests, recipientId: requestRecipients.id, recipientStatus: requestRecipients.status })
       .from(requestRecipients).innerJoin(serviceRequests, eq(serviceRequests.id, requestRecipients.requestId))
-      .where(eq(requestRecipients.contractorId, profile.id)).orderBy(desc(serviceRequests.createdAt));
+      .where(and(eq(requestRecipients.contractorId, profile.id), ne(serviceRequests.status, "cancelled"))).orderBy(desc(serviceRequests.createdAt));
     res.json(rows.map((row) => ({ ...row.request, budgetOmaniRial: decimal(row.request.budgetOmaniRial), recipientId: row.recipientId, recipientStatus: row.recipientStatus })));
   } catch (error) { next(error); }
 });
@@ -779,14 +819,19 @@ router.post("/me/workshop-requests/:id/quote", requireUser, requireContractor, a
     const request = await db.query.serviceRequests.findFirst({ where: eq(serviceRequests.id, String(req.params.id)) });
     const recipient = request && await db.query.requestRecipients.findFirst({ where: and(eq(requestRecipients.requestId, request.id), eq(requestRecipients.contractorId, profile.id)) });
     if (!request || !recipient || recipient.status === "quoted" || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Request is unavailable" }); return; }
-    const [quote] = await db.transaction(async (tx) => {
-      const created = await tx.insert(quotes).values({ requestId: request.id, contractorId: profile.id, amountOmaniRial: Number(input.amountOmaniRial).toFixed(3), estimatedDays: input.estimatedDays, details: input.details.trim() }).returning();
+    const quote = await db.transaction(async (tx) => {
+      const [available] = await tx.update(serviceRequests).set({ status: "quoted", updatedAt: new Date() }).where(and(
+        eq(serviceRequests.id, request.id),
+        or(eq(serviceRequests.status, "open"), eq(serviceRequests.status, "quoted")),
+      )).returning({ id: serviceRequests.id });
+      if (!available) return null;
+      const [created] = await tx.insert(quotes).values({ requestId: request.id, contractorId: profile.id, amountOmaniRial: Number(input.amountOmaniRial).toFixed(3), estimatedDays: input.estimatedDays, details: input.details.trim() }).returning();
       await tx.update(requestRecipients).set({ status: "quoted", updatedAt: new Date() }).where(eq(requestRecipients.id, recipient.id));
-      await tx.update(serviceRequests).set({ status: "quoted", updatedAt: new Date() }).where(eq(serviceRequests.id, request.id));
-      await tx.insert(notifications).values({ userId: request.customerId, type: "system", channel: "in_app", deliveryStatus: "delivered", title: "New quote received", body: `${profile.businessName} sent a quote for ${request.serviceName}.`, deliveryMetadata: { requestId: request.id, quoteId: created[0]!.id }, deliveredAt: new Date() });
+      await tx.insert(notifications).values({ userId: request.customerId, type: "system", channel: "in_app", deliveryStatus: "delivered", title: "New quote received", body: `${profile.businessName} sent a quote for ${request.serviceName}.`, deliveryMetadata: { requestId: request.id, quoteId: created!.id }, deliveredAt: new Date() });
       return created;
     });
-    res.status(201).json({ ...quote, amountOmaniRial: decimal(quote!.amountOmaniRial) });
+    if (!quote) { res.status(404).json({ error: "Request is unavailable" }); return; }
+    res.status(201).json({ ...quote, amountOmaniRial: decimal(quote.amountOmaniRial) });
   } catch (error) { next(error); }
 });
 

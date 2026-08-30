@@ -32,28 +32,8 @@ const [secondProfile] = await db.insert(contractorProfiles).values({
   isPublished: true,
 }).returning();
 const plan = await db.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.isActive, true) });
-if (!plan) throw new Error("Permission test requires an active subscription plan");
-await db.insert(subscriptions).values({
-  contractorId: profile.id,
-  planId: plan.id,
-  trialEndsAt: new Date(Date.now() + 30 * 86400000),
-});
-const [fixtureListing] = await db.insert(marketplaceListings).values({
-  id: `permission-listing-${tag}`,
-  title: `Permission Test Listing ${tag}`,
-  titleArabic: `عقار اختبار ${tag}`,
-  price: "100000 OMR",
-  location: "Bawshar, Muscat",
-  locationArabic: "بوشر، مسقط",
-  area: "200 m²",
-  isPublished: true,
-}).returning();
-await db.insert(subscriptions).values({
-  contractorId: secondProfile.id,
-  planId: plan.id,
-  trialEndsAt: new Date(Date.now() + 30 * 86400000),
-});
-const [assignedRequest, unassignedRequest, concurrentRequest] = await db.insert(serviceRequests).values([
+
+const [assignedRequest, unassignedRequest, concurrentRequest, cancellableRequest] = await db.insert(serviceRequests).values([
   {
     customerId: customerUser.id,
     serviceCategory: "building",
@@ -79,13 +59,36 @@ const [assignedRequest, unassignedRequest, concurrentRequest] = await db.insert(
     wilayat: "Bawshar",
     requirements: "Two workshops will quote this request for an atomic acceptance test.",
   },
+  {
+    customerId: customerUser.id,
+    serviceCategory: "maintenance",
+    serviceName: `Cancellable workshop request ${tag}`,
+    governorate: "Muscat",
+    wilayat: "Bawshar",
+    requirements: "This request will be cancelled after a workshop submits a quote.",
+  },
 ]).returning();
-await db.insert(requestRecipients).values([
-  { requestId: assignedRequest.id, contractorId: profile.id },
-  { requestId: concurrentRequest.id, contractorId: profile.id },
-  { requestId: concurrentRequest.id, contractorId: secondProfile.id },
-]);
-
+if (!plan) throw new Error("Permission test requires an active subscription plan");
+await db.insert(subscriptions).values({
+  contractorId: profile.id,
+  planId: plan.id,
+  trialEndsAt: new Date(Date.now() + 30 * 86400000),
+});
+const [fixtureListing] = await db.insert(marketplaceListings).values({
+  id: `permission-listing-${tag}`,
+  title: `Permission Test Listing ${tag}`,
+  titleArabic: `عقار اختبار ${tag}`,
+  price: "100000 OMR",
+  location: "Bawshar, Muscat",
+  locationArabic: "بوشر، مسقط",
+  area: "200 m²",
+  isPublished: true,
+}).returning();
+await db.insert(subscriptions).values({
+  contractorId: secondProfile.id,
+  planId: plan.id,
+  trialEndsAt: new Date(Date.now() + 30 * 86400000),
+});
 const app = express();
 app.use(express.json());
 app.use("/api", createMarketplaceRouter({

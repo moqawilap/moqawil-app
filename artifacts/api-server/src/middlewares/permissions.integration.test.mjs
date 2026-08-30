@@ -98,7 +98,7 @@ test("contractor can read only its own lifecycle endpoints", async () => {
 test("workshop receives only assigned requests and can quote once", async () => {
   const inbox = await request("contractor", "/me/workshop-requests");
   assert.equal(inbox.response.status, 200);
-  assert.equal(inbox.body.length, 2);
+  assert.equal(inbox.body.length, 3);
   const assignedRequest = inbox.body.find((item) => /^Assigned workshop request /.test(item.serviceName));
   assert.equal(assignedRequest.recipientStatus, "viewed");
 
@@ -126,6 +126,44 @@ test("workshop receives only assigned requests and can quote once", async () => 
 
   const repeatedAcceptance = await request("customer", `/me/quotes/${quotes.body[0].id}/accept`, { method: "POST" });
   assert.equal(repeatedAcceptance.response.status, 404);
+
+  const cancelAwarded = await request("customer", `/me/service-requests/${assignedRequest.id}/cancel`, { method: "POST" });
+  assert.equal(cancelAwarded.response.status, 409);
+  assert.deepEqual(cancelAwarded.body, { error: "Awarded requests cannot be cancelled" });
+});
+
+test("customer cancellation is owner-only and makes workshop quotes unavailable", async () => {
+  const inboxBefore = await request("contractor", "/me/workshop-requests");
+  const cancellableRequest = inboxBefore.body.find((item) => /^Cancellable workshop request /.test(item.serviceName));
+  assert.ok(cancellableRequest);
+
+  const quoteBody = JSON.stringify({ amountOmaniRial: 75, estimatedDays: 2, details: "Inspection and repair included." });
+  const submitted = await request("contractor", `/me/workshop-requests/${cancellableRequest.id}/quote`, { method: "POST", body: quoteBody });
+  assert.equal(submitted.response.status, 201);
+  assert.equal(submitted.body.status, "submitted");
+
+  const nonOwner = await request("contractor", `/me/service-requests/${cancellableRequest.id}/cancel`, { method: "POST" });
+  assert.equal(nonOwner.response.status, 404);
+  assert.deepEqual(nonOwner.body, { error: "Service request not found" });
+
+  const cancelled = await request("customer", `/me/service-requests/${cancellableRequest.id}/cancel`, { method: "POST" });
+  assert.equal(cancelled.response.status, 200);
+  assert.equal(cancelled.body.status, "cancelled");
+
+  const customerQuotes = await request("customer", `/me/service-requests/${cancellableRequest.id}/quotes`);
+  assert.equal(customerQuotes.response.status, 200);
+  assert.equal(customerQuotes.body.length, 1);
+  assert.equal(customerQuotes.body[0].status, "rejected");
+
+  const inboxAfter = await request("contractor", "/me/workshop-requests");
+  assert.equal(inboxAfter.response.status, 200);
+  assert.equal(inboxAfter.body.some((item) => item.id === cancellableRequest.id), false);
+
+  const quoteAfterCancellation = await request("contractor", `/me/workshop-requests/${cancellableRequest.id}/quote`, { method: "POST", body: quoteBody });
+  assert.equal(quoteAfterCancellation.response.status, 404);
+
+  const repeatedCancellation = await request("customer", `/me/service-requests/${cancellableRequest.id}/cancel`, { method: "POST" });
+  assert.equal(repeatedCancellation.response.status, 409);
 });
 
 test("simultaneous accept attempts award exactly one workshop", async () => {
