@@ -21,7 +21,7 @@ import {
   useListAdminPayments, getListAdminPaymentsQueryKey, useCreateAdminPayment,
   useGetAdminSettings, getGetAdminSettingsQueryKey, useUpdateAdminSettings,
   useListAdminListings, getListAdminListingsQueryKey, useCreateAdminListing, useUpdateAdminListing, useDeleteAdminListing,
-  useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign,
+  useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, processAdminAdVideo,
   type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput
 } from '@workspace/api-client-react';
 
@@ -106,25 +106,27 @@ const pickAdMedia = async (isArabic: boolean, type: AdMediaItem['type'], selecti
       text(isArabic, 'Media access needed', 'نحتاج إذن الوصول للوسائط'),
       text(isArabic, 'Allow access to choose campaign media.', 'اسمح بالوصول لاختيار وسائط الحملة.'),
     );
-    return [] as AdMediaItem[];
+    return { items: [] as AdMediaItem[], trimmedCount: 0 };
   }
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: type === 'image' ? ['images'] : ['videos'],
     allowsMultipleSelection: true,
     selectionLimit,
     quality: type === 'image' ? 0.45 : 1,
-    base64: true,
+    base64: type === 'image',
   });
-  if (result.canceled) return [] as AdMediaItem[];
+  if (result.canceled) return { items: [] as AdMediaItem[], trimmedCount: 0 };
   const selected: AdMediaItem[] = [];
   let rejected = false;
+  let trimmedCount = 0;
   for (const asset of result.assets) {
     const defaultMime = type === 'image' ? 'image/jpeg' : 'video/mp4';
     let base64 = asset.base64;
     if (!base64) {
       try {
         const bytes = new Uint8Array(await (await fetch(asset.uri)).arrayBuffer());
-        if (bytes.byteLength > 1_490_000) {
+        const byteLimit = type === 'video' ? 24_000_000 : 1_490_000;
+        if (bytes.byteLength > byteLimit) {
           rejected = true;
           continue;
         }
@@ -140,6 +142,16 @@ const pickAdMedia = async (isArabic: boolean, type: AdMediaItem['type'], selecti
       }
     }
     const url = `data:${asset.mimeType ?? defaultMime};base64,${base64}`;
+    if (type === 'video') {
+      try {
+        const processed = await processAdminAdVideo({ dataUrl: url });
+        selected.push(processed.media);
+        if (processed.trimmed) trimmedCount += 1;
+      } catch {
+        rejected = true;
+      }
+      continue;
+    }
     if (url.length > 2_000_000) {
       rejected = true;
       continue;
@@ -149,10 +161,12 @@ const pickAdMedia = async (isArabic: boolean, type: AdMediaItem['type'], selecti
   if (rejected) {
     Alert.alert(
       text(isArabic, 'Some files were not added', 'لم تتم إضافة بعض الملفات'),
-      text(isArabic, 'Each image or video must be smaller than 2 MB.', 'يجب أن يكون حجم كل صورة أو فيديو أقل من 2 ميجابايت.'),
+      type === 'video'
+        ? text(isArabic, 'Choose a valid video smaller than 24 MB. Videos are prepared automatically for the campaign.', 'اختر فيديو صالحًا بحجم أقل من 24 ميجابايت. سيتم تجهيز الفيديو تلقائيًا للحملة.')
+        : text(isArabic, 'Each image must be smaller than 2 MB.', 'يجب أن يكون حجم كل صورة أقل من 2 ميجابايت.'),
     );
   }
-  return selected;
+  return { items: selected, trimmedCount };
 };
 
 export default function AdminScreen() {
@@ -921,6 +935,7 @@ function AdvertisingTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<any>(blankAdCampaign);
+  const [processingVideo, setProcessingVideo] = useState(false);
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminAdCampaignsQueryKey() });
   const create = useCreateAdminAdCampaign({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankAdCampaign()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
@@ -1001,8 +1016,19 @@ function AdvertisingTab() {
       );
       return;
     }
-    const selected = await pickAdMedia(isArabic, type, remaining);
-    setForm((current: any) => ({ ...current, media: [...current.media, ...selected] }));
+    if (type === 'video') setProcessingVideo(true);
+    try {
+      const selected = await pickAdMedia(isArabic, type, remaining);
+      setForm((current: any) => ({ ...current, media: [...current.media, ...selected.items] }));
+      if (selected.trimmedCount > 0) {
+        Alert.alert(
+          text(isArabic, 'Video shortened', 'تم قص الفيديو'),
+          text(isArabic, 'Videos longer than five seconds were automatically shortened to five seconds.', 'تم قص الفيديوهات الأطول من خمس ثوانٍ تلقائيًا إلى خمس ثوانٍ.'),
+        );
+      }
+    } finally {
+      if (type === 'video') setProcessingVideo(false);
+    }
   };
   const removeMedia = (index: number) => {
     setForm((current: any) => ({ ...current, media: current.media.filter((_: AdMediaItem, itemIndex: number) => itemIndex !== index) }));
@@ -1084,9 +1110,9 @@ function AdvertisingTab() {
               <Feather name="image" size={16} color={colors.foreground} />
               <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Add images', 'إضافة صور')}</Text>
             </Pressable>
-            <Pressable disabled={videoCount >= 2} onPress={() => void addMedia('video')} style={[styles.denseButton, { borderColor: colors.border, opacity: videoCount >= 2 ? 0.45 : 1 }]}>
-              <Feather name="video" size={16} color={colors.foreground} />
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Add videos', 'إضافة فيديو')}</Text>
+            <Pressable testID="add-ad-video" disabled={videoCount >= 2 || processingVideo} onPress={() => void addMedia('video')} style={[styles.denseButton, { borderColor: colors.border, opacity: videoCount >= 2 || processingVideo ? 0.45 : 1 }]}>
+              {processingVideo ? <ActivityIndicator size="small" color={colors.foreground} /> : <Feather name="video" size={16} color={colors.foreground} />}
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{processingVideo ? text(isArabic, 'Preparing video…', 'جاري تجهيز الفيديو…') : text(isArabic, 'Add videos', 'إضافة فيديو')}</Text>
             </Pressable>
           </View>
           {form.media.length ? (

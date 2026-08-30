@@ -7,6 +7,7 @@
  */
 import * as zod from 'zod';
 
+
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
@@ -1679,6 +1680,33 @@ export const CreateAdminAdCampaignResponse = zod.object({
   "dailySpentOmaniRial": zod.number(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
+})
+
+
+export const processAdminAdVideoBodyDataUrlMin = 20;
+export const processAdminAdVideoBodyDataUrlMax = 32000000;
+
+
+
+export const ProcessAdminAdVideoBody = zod.object({
+  "dataUrl": zod.string().min(processAdminAdVideoBodyDataUrlMin).max(processAdminAdVideoBodyDataUrlMax)
+})
+
+export const processAdminAdVideoResponseMediaUrlMin = 20;
+export const processAdminAdVideoResponseMediaUrlMax = 2000000;
+
+export const processAdminAdVideoResponseDurationSecondsMin = 0;
+export const processAdminAdVideoResponseDurationSecondsMax = 5;
+
+
+
+export const ProcessAdminAdVideoResponse = zod.object({
+  "media": zod.object({
+  "url": zod.string().min(processAdminAdVideoResponseMediaUrlMin).max(processAdminAdVideoResponseMediaUrlMax),
+  "type": zod.enum(['image', 'video'])
+}),
+  "durationSeconds": zod.number().min(processAdminAdVideoResponseDurationSecondsMin).max(processAdminAdVideoResponseDurationSecondsMax),
+  "trimmed": zod.boolean()
 })
 
 

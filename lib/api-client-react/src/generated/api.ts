@@ -18,6 +18,7 @@ import type {
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
+
 import type {
   AdCampaign,
   AdCampaignReport,
@@ -25,6 +26,8 @@ import type {
   AdEventResult,
   AdminAdCampaignInput,
   AdminAdCampaignUpdate,
+  AdminAdVideoProcessInput,
+  AdminAdVideoProcessResult,
   AdminContractor,
   AdminContractorInput,
   AdminContractorUpdate,
@@ -155,6 +158,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getListContractorsUrl = (params?: ListContractorsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -3337,6 +3347,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateAdminAdCampaignMutationOptions(options));
+    }
+
+export const getProcessAdminAdVideoUrl = () => {
+
+
+
+
+  return `/api/admin/ad-campaigns/process-video`
+}
+
+export const processAdminAdVideo = async (adminAdVideoProcessInput: AdminAdVideoProcessInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminAdVideoProcessResult> => {
+
+  return customFetch<AdminAdVideoProcessResult>(getProcessAdminAdVideoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminAdVideoProcessInput)
+  }
+);}
+
+
+
+
+
+export const getProcessAdminAdVideoMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processAdminAdVideo>>, TError,{data: BodyType<AdminAdVideoProcessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof processAdminAdVideo>>, TError,{data: BodyType<AdminAdVideoProcessInput>}, TContext> => {
+
+const mutationKey = ['processAdminAdVideo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof processAdminAdVideo>>, {data: BodyType<AdminAdVideoProcessInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  processAdminAdVideo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProcessAdminAdVideoMutationResult = NonNullable<Awaited<ReturnType<typeof processAdminAdVideo>>>
+    export type ProcessAdminAdVideoMutationBody = BodyType<AdminAdVideoProcessInput>
+    export type ProcessAdminAdVideoMutationError = ErrorType<BadRequestResponse>
+
+    export const useProcessAdminAdVideo = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processAdminAdVideo>>, TError,{data: BodyType<AdminAdVideoProcessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof processAdminAdVideo>>,
+        TError,
+        {data: BodyType<AdminAdVideoProcessInput>},
+        TContext
+      > => {
+      return useMutation(getProcessAdminAdVideoMutationOptions(options));
     }
 
 export const getUpdateAdminAdCampaignUrl = (id: string,) => {

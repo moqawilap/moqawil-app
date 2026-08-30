@@ -1,6 +1,11 @@
 import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
 import { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { execFile } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import {
   adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
@@ -93,6 +98,11 @@ const adEventTypes = ["impression", "click", "conversion"] as const;
 type AdStatus = typeof adStatuses[number];
 type AdBillingModel = typeof adBillingModels[number];
 type AdEventType = typeof adEventTypes[number];
+const execFileAsync = promisify(execFile);
+const MAX_AD_VIDEO_SECONDS = 5;
+const MAX_AD_VIDEO_UPLOAD_BYTES = 24_000_000;
+const MAX_AD_VIDEO_DATA_URL_LENGTH = 32_000_000;
+const MAX_AD_VIDEO_OUTPUT_BYTES = 1_490_000;
 
 const adServiceAliases: Record<string, string> = {
   contractor: "contractors",
@@ -143,6 +153,87 @@ function validAdMedia(value: unknown, expectedType?: AdMediaItem["type"]) {
   } catch {
     return false;
   }
+}
+
+function decodeAdVideoDataUrl(value: unknown) {
+  if (typeof value !== "string" || value.length > MAX_AD_VIDEO_DATA_URL_LENGTH) return null;
+  const match = value.match(/^data:(video\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i);
+  if (!match?.[1] || !match[2]) return null;
+  const bytes = Buffer.from(match[2].replace(/\s/g, ""), "base64");
+  return bytes.length > 0 && bytes.length <= MAX_AD_VIDEO_UPLOAD_BYTES ? { bytes, mimeType: match[1].toLowerCase() } : null;
+}
+
+async function inspectVideoDuration(path: string) {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v", "error",
+    "-show_entries", "format=duration",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    path,
+  ], { maxBuffer: 1_000_000 });
+  const duration = Number(stdout.trim());
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Video duration could not be read");
+  return duration;
+}
+
+async function withTemporaryVideo<T>(dataUrl: string, run: (inputPath: string, directory: string) => Promise<T>) {
+  const decoded = decodeAdVideoDataUrl(dataUrl);
+  if (!decoded) throw new Error("Invalid or oversized video");
+  const directory = await mkdtemp(join(tmpdir(), "moqawil-ad-video-"));
+  const inputPath = join(directory, "input-video");
+  try {
+    await writeFile(inputPath, decoded.bytes);
+    return await run(inputPath, directory);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+async function processAdVideo(dataUrl: string) {
+  return withTemporaryVideo(dataUrl, async (inputPath, directory) => {
+    const originalDuration = await inspectVideoDuration(inputPath);
+    const outputPath = join(directory, "campaign-video.mp4");
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-i", inputPath,
+      "-t", String(MAX_AD_VIDEO_SECONDS),
+      "-map", "0:v:0",
+      "-map", "0:a:0?",
+      "-vf", "scale=w='min(720,iw)':h=-2:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=24",
+      "-c:v", "libx264",
+      "-preset", "veryfast",
+      "-profile:v", "main",
+      "-pix_fmt", "yuv420p",
+      "-b:v", "1200k",
+      "-maxrate", "1200k",
+      "-bufsize", "2400k",
+      "-c:a", "aac",
+      "-b:a", "64k",
+      "-movflags", "+faststart",
+      outputPath,
+    ], { maxBuffer: 4_000_000 });
+    const output = await readFile(outputPath);
+    if (!output.length || output.length > MAX_AD_VIDEO_OUTPUT_BYTES) throw new Error("Processed video exceeds the campaign media limit");
+    const duration = Math.min(MAX_AD_VIDEO_SECONDS, await inspectVideoDuration(outputPath));
+    return {
+      media: { url: `data:video/mp4;base64,${output.toString("base64")}`, type: "video" as const },
+      durationSeconds: Number(duration.toFixed(3)),
+      trimmed: originalDuration > MAX_AD_VIDEO_SECONDS + 0.05,
+    };
+  });
+}
+
+async function campaignVideosWithinDurationLimit(media: AdMediaItem[]) {
+  for (const item of media) {
+    if (item.type !== "video") continue;
+    if (!item.url.startsWith("data:")) return false;
+    try {
+      const duration = await withTemporaryVideo(item.url, (inputPath) => inspectVideoDuration(inputPath));
+      if (duration > MAX_AD_VIDEO_SECONDS + 0.1) return false;
+    } catch {
+      return false;
+    }
+  }
+  return true;
 }
 
 const MAX_AD_IMAGES = 15;
@@ -1244,6 +1335,26 @@ router.get("/admin/ad-campaigns", requireUser, requireAdmin, async (_req, res, n
     res.json(rows.map(({ campaign, owner }) => adResponse(campaign, owner, dailyByCampaign.get(campaign.id) ?? 0)));
   } catch (error) { next(error); }
 });
+router.post("/admin/ad-campaigns/process-video", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const dataUrl = (req.body as Record<string, unknown>)?.dataUrl;
+    if (typeof dataUrl !== "string" || !decodeAdVideoDataUrl(dataUrl)) {
+      res.status(400).json({ error: "Choose a valid video smaller than 24 MB" });
+      return;
+    }
+    res.json(await processAdVideo(dataUrl));
+  } catch (error) {
+    if (error instanceof Error && (
+      error.message.includes("duration")
+      || error.message.includes("video")
+      || error.message.includes("campaign media limit")
+    )) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    next(error);
+  }
+});
 router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body as Record<string, unknown>;
@@ -1257,6 +1368,10 @@ router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, n
     const media = validAdMediaItems(input.media)
       ? input.media
       : [{ url: String(input.mediaUrl), type: input.mediaType as "image" | "video" }];
+    if (!(await campaignVideosWithinDurationLimit(media))) {
+      res.status(400).json({ error: "Campaign videos must be five seconds or shorter" });
+      return;
+    }
     const [created] = await db.insert(adCampaigns).values({
       contractorId,
       title: String(input.title).trim(),
@@ -1311,6 +1426,11 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
     };
     if (!Object.keys(input).length || !validAdCampaignInput(merged, true)) {
       res.status(400).json({ error: "Invalid ad campaign update" });
+      return;
+    }
+    const mediaChanged = input.media !== undefined || input.mediaUrl !== undefined || input.mediaType !== undefined;
+    if (mediaChanged && !(await campaignVideosWithinDurationLimit(nextMedia as AdMediaItem[]))) {
+      res.status(400).json({ error: "Campaign videos must be five seconds or shorter" });
       return;
     }
     const contractorId = merged.contractorId;

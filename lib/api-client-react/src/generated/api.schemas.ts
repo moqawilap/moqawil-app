@@ -774,6 +774,24 @@ export interface AdminAdCampaignInput {
 
 export type AdminAdCampaignUpdate = AdminAdCampaignInput;
 
+export interface AdminAdVideoProcessInput {
+  /**
+     * @minLength 20
+     * @maxLength 32000000
+     */
+  dataUrl: string;
+}
+
+export interface AdminAdVideoProcessResult {
+  media: AdMediaItem;
+  /**
+     * @minimum 0
+     * @maximum 5
+     */
+  durationSeconds: number;
+  trimmed: boolean;
+}
+
 export interface AdCampaignDay {
   date: string;
   impressions: number;

@@ -24,6 +24,8 @@ export * from './adminAdCampaignInputBillingModel';
 export * from './adminAdCampaignInputMediaType';
 export * from './adminAdCampaignInputStatus';
 export * from './adminAdCampaignUpdate';
+export * from './adminAdVideoProcessInput';
+export * from './adminAdVideoProcessResult';
 export * from './adminContractor';
 export * from './adminContractorAccountLinkStatus';
 export * from './adminContractorInput';

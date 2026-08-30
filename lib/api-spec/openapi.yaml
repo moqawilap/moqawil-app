@@ -391,6 +391,15 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAdCampaignInput" } } } }
       responses:
         "201": { description: Ad campaign created, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+  /admin/ad-campaigns/process-video:
+    post:
+      operationId: processAdminAdVideo
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAdVideoProcessInput" } } } }
+      responses:
+        "200": { description: Processed campaign video, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAdVideoProcessResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /admin/ad-campaigns/{id}:
     patch:
       operationId: updateAdminAdCampaign
@@ -595,6 +604,18 @@ components:
       allOf:
         - $ref: "#/components/schemas/AdminAdCampaignInput"
       minProperties: 1
+    AdminAdVideoProcessInput:
+      type: object
+      properties:
+        dataUrl: { type: string, minLength: 20, maxLength: 32000000 }
+      required: [dataUrl]
+    AdminAdVideoProcessResult:
+      type: object
+      properties:
+        media: { $ref: "#/components/schemas/AdMediaItem" }
+        durationSeconds: { type: number, minimum: 0, maximum: 5 }
+        trimmed: { type: boolean }
+      required: [media, durationSeconds, trimmed]
     AdCampaignDay:
       type: object
       properties:
