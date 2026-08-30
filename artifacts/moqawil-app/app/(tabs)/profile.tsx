@@ -53,11 +53,10 @@ export default function ProfileScreen() {
            <View style={styles.socialHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'روابط التواصل' : 'Social Links'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{isArabic ? 'تواصل معنا مباشرة' : 'Connect with us directly'}</Text></View>
            <View style={styles.socialLinksRow}>
              {socialLinks.map((item) => (
-               <Pressable key={item.title} accessibilityRole="button" accessibilityLabel={item.title} onPress={item.onPress} style={({ pressed }) => [styles.socialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
+               <Pressable key={item.title} accessibilityRole="button" accessibilityLabel={item.title} hitSlop={8} onPress={item.onPress} style={({ pressed }) => [styles.socialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
                  <View style={[styles.socialIcon, { backgroundColor: colors.primarySoft }]}>
-                   <MaterialCommunityIcons name={item.icon} size={29} color={colors.primary} />
+                   <MaterialCommunityIcons name={item.icon} size={20} color={colors.primary} />
                  </View>
-                 <Text style={[styles.socialLabel, { color: colors.foreground }]}>{item.title}</Text>
                </Pressable>
              ))}
            </View>
@@ -84,10 +83,9 @@ const styles = StyleSheet.create({
   profileSub: { fontSize: 11, color: 'rgba(255,255,255,0.68)' },
   languageHeading: { marginTop: 27, marginBottom: 11 },
   socialHeading: { marginTop: 27, marginBottom: 11 },
-  socialLinksRow: { flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
-  socialLink: { width: 60, height: 60, borderWidth: 1.5, borderRadius: 11, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 2 },
-  socialIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  socialLabel: { fontSize: 8, fontWeight: '700', textAlign: 'center' },
+  socialLinksRow: { flexDirection: 'row', gap: 5, justifyContent: 'space-between' },
+  socialLink: { width: 40, height: 40, borderWidth: 1.5, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  socialIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.78 },
   preferencesHeading: { marginTop: 27, marginBottom: 11, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   sectionTitle: { fontSize: 17, fontWeight: '800' },

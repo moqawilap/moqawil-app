@@ -159,9 +159,8 @@ export default function HomeScreen() {
              <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>{isArabic ? 'مقاول منصة عُمانية تجمع العملاء بالمقاولين والورش ومقدمي خدمات الصيانة والعقارات، وتساعدك على العثور على الخدمة المناسبة والتواصل مع مقدمي الخدمة الموثوقين بسهولة.' : 'Moqawil is an Omani marketplace that connects customers with trusted contractors, workshops, maintenance providers, and property listings. Discover the right service, compare providers, and get in touch with confidence.'}</Text>
              <View style={styles.homeSocialLinks}>
                {socialLinks.map((item) => (
-                 <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => void Linking.openURL(item.url)} style={({ pressed }) => [styles.homeSocialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
-                   <MaterialCommunityIcons name={item.icon} size={23} color={colors.primary} />
-                   <Text style={[styles.homeSocialLabel, { color: colors.foreground }]}>{item.label}</Text>
+                 <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} hitSlop={8} onPress={() => void Linking.openURL(item.url)} style={({ pressed }) => [styles.homeSocialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
+                   <MaterialCommunityIcons name={item.icon} size={19} color={colors.primary} />
                  </Pressable>
                ))}
              </View>
@@ -225,9 +224,8 @@ const styles = StyleSheet.create({
   aboutEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.1 },
   aboutTitle: { fontSize: 18, lineHeight: 25, fontWeight: '800' },
   aboutText: { fontSize: 13, lineHeight: 21 },
-  homeSocialLinks: { flexDirection: 'row', gap: 8, marginTop: 7, justifyContent: 'space-between' },
-  homeSocialLink: { width: 60, height: 60, borderWidth: 1.5, borderRadius: 11, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 2 },
-  homeSocialLabel: { fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  homeSocialLinks: { flexDirection: 'row', gap: 5, marginTop: 7, justifyContent: 'space-between' },
+  homeSocialLink: { width: 40, height: 40, borderWidth: 1.5, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   footer: { alignItems: 'center', gap: 6, marginTop: 40, marginBottom: 8 },
   footerMark: { width: 31, height: 31, borderRadius: 9 },
   footerText: { fontSize: 10, fontWeight: '600' },
