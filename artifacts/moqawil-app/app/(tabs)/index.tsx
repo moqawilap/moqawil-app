@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   aboutTitle: { fontSize: 18, lineHeight: 25, fontWeight: '800' },
   aboutText: { fontSize: 13, lineHeight: 21 },
   homeSocialLinks: { flexDirection: 'row', gap: 8, marginTop: 7, justifyContent: 'space-between' },
-  homeSocialLink: { width: 78, height: 78, borderWidth: 1.5, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 3 },
+  homeSocialLink: { width: 60, height: 60, borderWidth: 1.5, borderRadius: 11, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 2 },
   homeSocialLabel: { fontSize: 9, fontWeight: '700', textAlign: 'center' },
   footer: { alignItems: 'center', gap: 6, marginTop: 40, marginBottom: 8 },
   footerMark: { width: 31, height: 31, borderRadius: 9 },
