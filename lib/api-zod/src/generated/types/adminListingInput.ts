@@ -49,6 +49,11 @@ export interface AdminListingInput {
      */
   imageUrl?: string | null;
   /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls?: string[];
+  /**
      * @maxLength 32
      * @nullable
      */

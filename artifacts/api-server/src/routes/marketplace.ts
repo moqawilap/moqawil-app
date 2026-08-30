@@ -42,6 +42,10 @@ function parseBudgetQuery(value: unknown) {
 function validImageUrls(value: unknown) {
   return Array.isArray(value) && value.length <= 5 && value.every((item) => typeof item === "string" && item.length <= 2_000_000);
 }
+function validAdminImageUrls(value: unknown) {
+  return Array.isArray(value) && value.length <= 15
+    && value.every((item) => typeof item === "string" && item.length >= 20 && item.length <= 2_000_000);
+}
 async function subscriptionResponse(item: typeof subscriptions.$inferSelect) {
   const [plan, profile, settings] = await Promise.all([
     db.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.id, item.planId) }),
@@ -228,6 +232,7 @@ async function listingResponse(listing: typeof marketplaceListings.$inferSelect)
     bathrooms: listing.bathrooms,
     area: listing.area,
     imageUrl: listing.imageUrl,
+    imageUrls: listing.imageUrls.length ? listing.imageUrls : listing.imageUrl ? [listing.imageUrl] : [],
     contactPhone: listing.contactPhone,
     rating: Number(summary.count) > 0 ? Number(summary.rating) : listing.adminRating ?? 0,
     isPublished: listing.isPublished,
@@ -244,6 +249,7 @@ function validListingInput(input: Record<string, unknown>, partial = false) {
     if (input[field] !== undefined && (!Number.isInteger(input[field]) || Number(input[field]) < 0 || Number(input[field]) > 100)) return false;
   }
   if (input.imageUrl !== undefined && input.imageUrl !== null && !validOptionalText(input.imageUrl, 2_000_000)) return false;
+  if (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls)) return false;
   if (input.contactPhone !== undefined && input.contactPhone !== null && !validOptionalText(input.contactPhone, 32)) return false;
   if (input.isPublished !== undefined && typeof input.isPublished !== "boolean") return false;
   if (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || Number(input.adminRating) < 1 || Number(input.adminRating) > 5)) return false;
@@ -278,7 +284,7 @@ async function contractorSummary(profile: typeof contractorProfiles.$inferSelect
   const activeDays = profile.lastActiveAt ? Math.max(0, 30 - Math.floor((Date.now() - profile.lastActiveAt.getTime()) / 86_400_000)) : 0;
   return {
     id: profile.id, businessName: profile.businessName, city: profile.city, wilayat: profile.wilayat, bio: profile.bio,
-    avatarUrl: profile.avatarUrl, isVerified: profile.isVerified, isPublished: profile.isPublished, rating: Number(review.rating),
+    avatarUrl: profile.avatarUrl, imageUrls: profile.imageUrls.length ? profile.imageUrls : profile.avatarUrl ? [profile.avatarUrl] : [], isVerified: profile.isVerified, isPublished: profile.isPublished, rating: Number(review.rating),
     reviewCount: Number(review.count),
     rankingScore: calculateRanking({ rating: Number(review.rating), reviews: Number(review.count), projects: profile.completedProjectsCount, profile: profile.profileScore, verified: profile.isVerified, activeDays, engagement: profile.engagementScore }, settings.rankingWeights),
     priceOmaniRial: decimal(profile.agreedContractAmountOmaniRial),
@@ -468,7 +474,7 @@ router.get("/contractors", async (req, res, next) => {
       db.select({ count: sql<number>`count(distinct ${contractorProfiles.id})` }).from(contractorProfiles)
         .innerJoin(subscriptions, eq(subscriptions.contractorId, contractorProfiles.id)).where(and(...filters)),
     ]);
-    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore), priceOmaniRial: decimal(row.profile.agreedContractAmountOmaniRial), createdAt: row.profile.createdAt.toISOString() })), page, total: Number(totalRows[0]!.count) });
+    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, imageUrls: row.profile.imageUrls.length ? row.profile.imageUrls : row.profile.avatarUrl ? [row.profile.avatarUrl] : [], isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore), priceOmaniRial: decimal(row.profile.agreedContractAmountOmaniRial), createdAt: row.profile.createdAt.toISOString() })), page, total: Number(totalRows[0]!.count) });
   } catch (error) { next(error); }
 });
 
@@ -605,6 +611,7 @@ router.get("/me/contractor-profile", requireUser, requireContractor, async (req,
       serviceArea: profile.serviceArea,
       phone: profile.phone,
       avatarUrl: profile.avatarUrl,
+      imageUrls: profile.imageUrls.length ? profile.imageUrls : profile.avatarUrl ? [profile.avatarUrl] : [],
     });
   } catch (error) { next(error); }
 });
@@ -860,6 +867,7 @@ router.post("/admin/listings", requireUser, requireAdmin, async (req, res, next)
       bathrooms: Number(input.bathrooms ?? 0),
       area: String(input.area).trim(),
       imageUrl: input.imageUrl ? String(input.imageUrl).trim() : null,
+      imageUrls: validAdminImageUrls(input.imageUrls) ? input.imageUrls as string[] : input.imageUrl ? [String(input.imageUrl).trim()] : [],
       contactPhone: input.contactPhone ? String(input.contactPhone).trim() : null,
       adminRating: input.adminRating === null || input.adminRating === undefined ? null : Number(input.adminRating),
       isPublished: input.isPublished === true,
@@ -875,9 +883,10 @@ router.patch("/admin/listings/:id", requireUser, requireAdmin, async (req, res, 
     }
     const input = req.body as Record<string, unknown>;
     const updates: Record<string, unknown> = {};
-    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "contactPhone", "adminRating", "isPublished", "bedrooms", "bathrooms", "type"]) {
+    for (const field of ["title", "titleArabic", "price", "location", "locationArabic", "area", "imageUrl", "imageUrls", "contactPhone", "adminRating", "isPublished", "bedrooms", "bathrooms", "type"]) {
       if (input[field] !== undefined) updates[field === "titleArabic" ? "titleArabic" : field] = typeof input[field] === "string" ? String(input[field]).trim() : input[field];
     }
+    if (input.imageUrls !== undefined) updates.imageUrl = (input.imageUrls as string[])[0] ?? null;
     if (input.type !== undefined) updates.type = input.type;
     updates.updatedAt = new Date();
     const [updated] = await db.update(marketplaceListings).set(updates as Partial<typeof marketplaceListings.$inferInsert>).where(eq(marketplaceListings.id, req.params.id)).returning();
@@ -910,13 +919,13 @@ router.delete("/admin/listings/:id", requireUser, requireAdmin, async (req, res,
 router.post("/admin/contractors", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls)) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid managed contractor fields" }); return; }
     const managedServiceNames = input.isDesigner === true || input.isMaintenance === true ? (input.serviceNames as string[]).map((name) => name.trim()) : [];
     const managedServiceCategory = input.isDesigner === true ? "consultants" : input.isMaintenance === true ? "maintenance" : null;
     const settings = await getSettings();
     const profile = await db.transaction(async (tx) => {
       const [managedUser] = await tx.insert(users).values({ clerkUserId: `managed:${crypto.randomUUID()}`, email: `managed-${crypto.randomUUID()}@listing.invalid`, displayName: input.businessName.trim(), role: "contractor", identitySource: "managed_listing" }).returning();
-      const [created] = await tx.insert(contractorProfiles).values({ userId: managedUser.id, businessName: input.businessName.trim(), businessNameArabic: input.businessNameArabic ?? null, city: input.city.trim(), wilayat: input.wilayat ?? null, bio: input.bio ?? null, bioArabic: input.bioArabic ?? null, serviceArea: input.serviceArea ?? null, phone: input.phone ?? null, avatarUrl: input.avatarUrl ?? null, evaluationNotes: input.evaluationNotes ?? null, adminRating: input.adminRating ?? null, agreedContractAmountOmaniRial: input.agreedContractAmountOmaniRial?.toFixed(3) ?? null, isVerified: input.isVerified ?? false, isPublished: input.isPublished ?? false }).returning();
+      const [created] = await tx.insert(contractorProfiles).values({ userId: managedUser.id, businessName: input.businessName.trim(), businessNameArabic: input.businessNameArabic ?? null, city: input.city.trim(), wilayat: input.wilayat ?? null, bio: input.bio ?? null, bioArabic: input.bioArabic ?? null, serviceArea: input.serviceArea ?? null, phone: input.phone ?? null, avatarUrl: input.avatarUrl ?? null, imageUrls: input.imageUrls ?? (input.avatarUrl ? [input.avatarUrl] : []), evaluationNotes: input.evaluationNotes ?? null, adminRating: input.adminRating ?? null, agreedContractAmountOmaniRial: input.agreedContractAmountOmaniRial?.toFixed(3) ?? null, isVerified: input.isVerified ?? false, isPublished: input.isPublished ?? false }).returning();
       const plan = await tx.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.isActive, true) });
       if (!plan) throw new Error("No active subscription plan is configured");
       const now = new Date();
@@ -952,11 +961,12 @@ router.get("/admin/payments", requireUser, requireAdmin, async (_req, res, next)
 router.patch("/admin/contractors/:id", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isDesigner", "isMaintenance", "serviceNames"];
-    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
+    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "imageUrls", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isDesigner", "isMaintenance", "serviceNames"];
+    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls)) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
     const changes: Partial<typeof contractorProfiles.$inferInsert> = { updatedAt: new Date() };
     const profileFields = allowed.filter((key) => key !== "isDesigner" && key !== "isMaintenance" && key !== "serviceNames");
     for (const key of profileFields) if (input[key] !== undefined) (changes as Record<string, unknown>)[key] = key === "businessName" || key === "city" ? input[key].trim() : key === "agreedContractAmountOmaniRial" && input[key] !== null ? input[key].toFixed(3) : input[key];
+    if (input.imageUrls !== undefined) changes.avatarUrl = input.imageUrls[0] ?? null;
     const [profile] = await db.update(contractorProfiles).set(changes).where(eq(contractorProfiles.id, String(req.params.id))).returning();
     if (!profile) { res.status(404).json({ error: "Contractor not found" }); return; }
     if (input.isDesigner !== undefined || input.isMaintenance !== undefined || input.serviceNames !== undefined) {

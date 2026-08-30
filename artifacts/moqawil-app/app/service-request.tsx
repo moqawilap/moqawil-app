@@ -41,11 +41,21 @@ export default function ServiceRequestScreen() {
       Alert.alert(isArabic ? 'نحتاج إذن الصور' : 'Photo access needed', isArabic ? 'اسمح بالوصول للصور لإرفاق حالة العمل.' : 'Allow photo access to attach the work details.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.55, base64: true });
-    const asset = result.canceled ? undefined : result.assets[0];
-    if (!asset) return;
-    const image = asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri;
-    setImages((current) => [...current, image]);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - images.length,
+      quality: 0.55,
+      base64: true,
+    });
+    if (result.canceled) return;
+    const selected = result.assets
+      .map((asset) => asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri)
+      .filter((image) => image.length <= 2_000_000);
+    if (selected.length !== result.assets.length) {
+      Alert.alert(isArabic ? 'بعض الصور كبيرة جدًا' : 'Some images were too large', isArabic ? 'يجب أن يكون حجم كل صورة أقل من 2 ميجابايت.' : 'Each image must be smaller than 2 MB.');
+    }
+    setImages((current) => [...current, ...selected].slice(0, 5));
   };
   const valid = requirements.trim().length >= 8;
   const validBudget = !budget.trim() || (Number.isFinite(Number(budget)) && Number(budget) >= 0);

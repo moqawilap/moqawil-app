@@ -19,6 +19,11 @@ export interface Contractor {
   bio?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls: string[];
   isVerified: boolean;
   isPublished: boolean;
   rating: number;
@@ -332,6 +337,11 @@ export interface AdminContractorInput {
      */
   avatarUrl?: string | null;
   /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls?: string[];
+  /**
      * @maxLength 5000
      * @nullable
      */
@@ -406,6 +416,11 @@ export interface AdminContractorUpdate {
      * @nullable
      */
   avatarUrl?: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls?: string[];
   /**
      * @maxLength 5000
      * @nullable
@@ -843,6 +858,11 @@ export interface MarketplaceListing {
   area: string;
   /** @nullable */
   imageUrl: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls: string[];
   /** @nullable */
   contactPhone: string | null;
   /**
@@ -925,6 +945,11 @@ export interface AdminListingInput {
      */
   imageUrl?: string | null;
   /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls?: string[];
+  /**
      * @maxLength 32
      * @nullable
      */
@@ -987,6 +1012,11 @@ export interface AdminListingUpdate {
      * @nullable
      */
   imageUrl?: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls?: string[];
   /**
      * @maxLength 32
      * @nullable

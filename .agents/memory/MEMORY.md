@@ -3,3 +3,4 @@
 - [Moqawil logo source](moqawil-logo-source.md) — preserve the exact attached PDF artwork instead of recreating the building mark in code.
 - [OpenAPI counter compatibility](openapi-counter-compatibility.md) — use number schemas for counters until the workspace Zod version supports generated integer validators.
 - [Mixed marketplace identifiers](mixed-marketplace-identifiers.md) — visible catalog items may use stable slugs while database-managed providers use UUIDs; shared interactions must support both.
+- [Marketplace image galleries](marketplace-image-galleries.md) — managed profiles and property listings keep a gallery while the first image remains the legacy cover.

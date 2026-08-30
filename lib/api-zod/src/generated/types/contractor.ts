@@ -16,6 +16,11 @@ export interface Contractor {
   bio?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls: string[];
   isVerified: boolean;
   isPublished: boolean;
   rating: number;

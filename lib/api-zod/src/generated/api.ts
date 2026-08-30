@@ -39,6 +39,12 @@ export const ListContractorsQueryParams = zod.object({
   "limit": zod.coerce.number().min(1).max(listContractorsQueryLimitMax).default(listContractorsQueryLimitDefault)
 })
 
+export const listContractorsResponseItemsItemImageUrlsItemMax = 2000000;
+
+export const listContractorsResponseItemsItemImageUrlsMax = 15;
+
+
+
 export const ListContractorsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string(),
@@ -47,6 +53,7 @@ export const ListContractorsResponse = zod.object({
   "wilayat": zod.string().nullish(),
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string().max(listContractorsResponseItemsItemImageUrlsItemMax)).max(listContractorsResponseItemsItemImageUrlsMax),
   "isVerified": zod.boolean(),
   "isPublished": zod.boolean(),
   "rating": zod.number(),
@@ -100,6 +107,10 @@ export const listListingsResponseBedroomsMin = 0;
 
 export const listListingsResponseBathroomsMin = 0;
 
+export const listListingsResponseImageUrlsItemMax = 2000000;
+
+export const listListingsResponseImageUrlsMax = 15;
+
 export const listListingsResponseRatingMin = 0;
 export const listListingsResponseRatingMax = 5;
 
@@ -125,6 +136,7 @@ export const ListListingsResponseItem = zod.object({
   "bathrooms": zod.number().min(listListingsResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "imageUrls": zod.array(zod.string().max(listListingsResponseImageUrlsItemMax)).max(listListingsResponseImageUrlsMax),
   "contactPhone": zod.string().nullable(),
   "rating": zod.number().min(listListingsResponseRatingMin).max(listListingsResponseRatingMax),
   "views": zod.number().min(listListingsResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
@@ -148,6 +160,10 @@ export const GetListingParams = zod.object({
 export const getListingResponseBedroomsMin = 0;
 
 export const getListingResponseBathroomsMin = 0;
+
+export const getListingResponseImageUrlsItemMax = 2000000;
+
+export const getListingResponseImageUrlsMax = 15;
 
 export const getListingResponseRatingMin = 0;
 export const getListingResponseRatingMax = 5;
@@ -174,6 +190,7 @@ export const GetListingResponse = zod.object({
   "bathrooms": zod.number().min(getListingResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "imageUrls": zod.array(zod.string().max(getListingResponseImageUrlsItemMax)).max(getListingResponseImageUrlsMax),
   "contactPhone": zod.string().nullable(),
   "rating": zod.number().min(getListingResponseRatingMin).max(getListingResponseRatingMax),
   "views": zod.number().min(getListingResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
@@ -435,6 +452,10 @@ export const GetContractorParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const getContractorResponseOneImageUrlsItemMax = 2000000;
+
+export const getContractorResponseOneImageUrlsMax = 15;
+
 export const getContractorResponseTwoReviewsItemRatingMax = 5;
 
 
@@ -446,6 +467,7 @@ export const GetContractorResponse = zod.object({
   "wilayat": zod.string().nullish(),
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string().max(getContractorResponseOneImageUrlsItemMax)).max(getContractorResponseOneImageUrlsMax),
   "isVerified": zod.boolean(),
   "isPublished": zod.boolean(),
   "rating": zod.number(),
@@ -641,6 +663,12 @@ export const UpsertMyContractorProfileBody = zod.object({
   "avatarUrl": zod.string().max(upsertMyContractorProfileBodyAvatarUrlMax).nullish()
 })
 
+export const upsertMyContractorProfileResponseContractorImageUrlsItemMax = 2000000;
+
+export const upsertMyContractorProfileResponseContractorImageUrlsMax = 15;
+
+
+
 export const UpsertMyContractorProfileResponse = zod.object({
   "contractor": zod.object({
   "id": zod.string(),
@@ -649,6 +677,7 @@ export const UpsertMyContractorProfileResponse = zod.object({
   "wilayat": zod.string().nullish(),
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string().max(upsertMyContractorProfileResponseContractorImageUrlsItemMax)).max(upsertMyContractorProfileResponseContractorImageUrlsMax),
   "isVerified": zod.boolean(),
   "isPublished": zod.boolean(),
   "rating": zod.number(),
@@ -852,6 +881,12 @@ export const GetAdminOverviewResponse = zod.object({
 })
 
 
+export const listAdminContractorsResponseOneImageUrlsItemMax = 2000000;
+
+export const listAdminContractorsResponseOneImageUrlsMax = 15;
+
+
+
 export const ListAdminContractorsResponseItem = zod.object({
   "id": zod.string(),
   "businessName": zod.string(),
@@ -859,6 +894,7 @@ export const ListAdminContractorsResponseItem = zod.object({
   "wilayat": zod.string().nullish(),
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string().max(listAdminContractorsResponseOneImageUrlsItemMax)).max(listAdminContractorsResponseOneImageUrlsMax),
   "isVerified": zod.boolean(),
   "isPublished": zod.boolean(),
   "rating": zod.number(),
@@ -903,6 +939,10 @@ export const createAdminContractorBodyPhoneMax = 32;
 
 export const createAdminContractorBodyAvatarUrlMax = 2000000;
 
+export const createAdminContractorBodyImageUrlsItemMax = 2000000;
+
+export const createAdminContractorBodyImageUrlsMax = 15;
+
 export const createAdminContractorBodyEvaluationNotesMax = 5000;
 
 export const createAdminContractorBodyAdminRatingMax = 5;
@@ -926,6 +966,7 @@ export const CreateAdminContractorBody = zod.object({
   "serviceArea": zod.string().max(createAdminContractorBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(createAdminContractorBodyPhoneMax).nullish(),
   "avatarUrl": zod.string().max(createAdminContractorBodyAvatarUrlMax).nullish(),
+  "imageUrls": zod.array(zod.string().max(createAdminContractorBodyImageUrlsItemMax)).max(createAdminContractorBodyImageUrlsMax).optional(),
   "evaluationNotes": zod.string().max(createAdminContractorBodyEvaluationNotesMax).nullish(),
   "adminRating": zod.number().min(1).max(createAdminContractorBodyAdminRatingMax).nullish(),
   "agreedContractAmountOmaniRial": zod.number().min(createAdminContractorBodyAgreedContractAmountOmaniRialMin).nullish(),
@@ -937,6 +978,12 @@ export const CreateAdminContractorBody = zod.object({
   "serviceNames": zod.array(zod.string().min(createAdminContractorBodyServiceNamesItemMin).max(createAdminContractorBodyServiceNamesItemMax)).max(createAdminContractorBodyServiceNamesMax).optional()
 })
 
+export const createAdminContractorResponseOneImageUrlsItemMax = 2000000;
+
+export const createAdminContractorResponseOneImageUrlsMax = 15;
+
+
+
 export const CreateAdminContractorResponse = zod.object({
   "id": zod.string(),
   "businessName": zod.string(),
@@ -944,6 +991,7 @@ export const CreateAdminContractorResponse = zod.object({
   "wilayat": zod.string().nullish(),
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string().max(createAdminContractorResponseOneImageUrlsItemMax)).max(createAdminContractorResponseOneImageUrlsMax),
   "isVerified": zod.boolean(),
   "isPublished": zod.boolean(),
   "rating": zod.number(),
@@ -971,6 +1019,10 @@ export const listAdminListingsResponseBedroomsMin = 0;
 
 export const listAdminListingsResponseBathroomsMin = 0;
 
+export const listAdminListingsResponseImageUrlsItemMax = 2000000;
+
+export const listAdminListingsResponseImageUrlsMax = 15;
+
 export const listAdminListingsResponseRatingMin = 0;
 export const listAdminListingsResponseRatingMax = 5;
 
@@ -996,6 +1048,7 @@ export const ListAdminListingsResponseItem = zod.object({
   "bathrooms": zod.number().min(listAdminListingsResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "imageUrls": zod.array(zod.string().max(listAdminListingsResponseImageUrlsItemMax)).max(listAdminListingsResponseImageUrlsMax),
   "contactPhone": zod.string().nullable(),
   "rating": zod.number().min(listAdminListingsResponseRatingMin).max(listAdminListingsResponseRatingMax),
   "views": zod.number().min(listAdminListingsResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
@@ -1027,6 +1080,10 @@ export const createAdminListingBodyAreaMax = 50;
 
 export const createAdminListingBodyImageUrlMax = 2000000;
 
+export const createAdminListingBodyImageUrlsItemMax = 2000000;
+
+export const createAdminListingBodyImageUrlsMax = 15;
+
 export const createAdminListingBodyContactPhoneMax = 32;
 
 export const createAdminListingBodyAdminRatingMax = 5;
@@ -1044,6 +1101,7 @@ export const CreateAdminListingBody = zod.object({
   "bathrooms": zod.number().min(createAdminListingBodyBathroomsMin).optional(),
   "area": zod.string().min(1).max(createAdminListingBodyAreaMax),
   "imageUrl": zod.string().max(createAdminListingBodyImageUrlMax).nullish(),
+  "imageUrls": zod.array(zod.string().max(createAdminListingBodyImageUrlsItemMax)).max(createAdminListingBodyImageUrlsMax).optional(),
   "contactPhone": zod.string().max(createAdminListingBodyContactPhoneMax).nullish(),
   "adminRating": zod.number().min(1).max(createAdminListingBodyAdminRatingMax).nullish(),
   "isPublished": zod.boolean().optional()
@@ -1052,6 +1110,10 @@ export const CreateAdminListingBody = zod.object({
 export const createAdminListingResponseBedroomsMin = 0;
 
 export const createAdminListingResponseBathroomsMin = 0;
+
+export const createAdminListingResponseImageUrlsItemMax = 2000000;
+
+export const createAdminListingResponseImageUrlsMax = 15;
 
 export const createAdminListingResponseRatingMin = 0;
 export const createAdminListingResponseRatingMax = 5;
@@ -1078,6 +1140,7 @@ export const CreateAdminListingResponse = zod.object({
   "bathrooms": zod.number().min(createAdminListingResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "imageUrls": zod.array(zod.string().max(createAdminListingResponseImageUrlsItemMax)).max(createAdminListingResponseImageUrlsMax),
   "contactPhone": zod.string().nullable(),
   "rating": zod.number().min(createAdminListingResponseRatingMin).max(createAdminListingResponseRatingMax),
   "views": zod.number().min(createAdminListingResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
@@ -1112,6 +1175,10 @@ export const updateAdminListingBodyAreaMax = 50;
 
 export const updateAdminListingBodyImageUrlMax = 2000000;
 
+export const updateAdminListingBodyImageUrlsItemMax = 2000000;
+
+export const updateAdminListingBodyImageUrlsMax = 15;
+
 export const updateAdminListingBodyContactPhoneMax = 32;
 
 export const updateAdminListingBodyAdminRatingMax = 5;
@@ -1129,6 +1196,7 @@ export const UpdateAdminListingBody = zod.object({
   "bathrooms": zod.number().min(updateAdminListingBodyBathroomsMin).optional(),
   "area": zod.string().min(1).max(updateAdminListingBodyAreaMax).optional(),
   "imageUrl": zod.string().max(updateAdminListingBodyImageUrlMax).nullish(),
+  "imageUrls": zod.array(zod.string().max(updateAdminListingBodyImageUrlsItemMax)).max(updateAdminListingBodyImageUrlsMax).optional(),
   "contactPhone": zod.string().max(updateAdminListingBodyContactPhoneMax).nullish(),
   "adminRating": zod.number().min(1).max(updateAdminListingBodyAdminRatingMax).nullish(),
   "isPublished": zod.boolean().optional()
@@ -1137,6 +1205,10 @@ export const UpdateAdminListingBody = zod.object({
 export const updateAdminListingResponseBedroomsMin = 0;
 
 export const updateAdminListingResponseBathroomsMin = 0;
+
+export const updateAdminListingResponseImageUrlsItemMax = 2000000;
+
+export const updateAdminListingResponseImageUrlsMax = 15;
 
 export const updateAdminListingResponseRatingMin = 0;
 export const updateAdminListingResponseRatingMax = 5;
@@ -1163,6 +1235,7 @@ export const UpdateAdminListingResponse = zod.object({
   "bathrooms": zod.number().min(updateAdminListingResponseBathroomsMin),
   "area": zod.string(),
   "imageUrl": zod.string().nullable(),
+  "imageUrls": zod.array(zod.string().max(updateAdminListingResponseImageUrlsItemMax)).max(updateAdminListingResponseImageUrlsMax),
   "contactPhone": zod.string().nullable(),
   "rating": zod.number().min(updateAdminListingResponseRatingMin).max(updateAdminListingResponseRatingMax),
   "views": zod.number().min(updateAdminListingResponseViewsMin).optional().describe('Admin-only metric; omitted from public listing responses.'),
@@ -1224,6 +1297,10 @@ export const updateAdminContractorBodyPhoneMax = 32;
 
 export const updateAdminContractorBodyAvatarUrlMax = 2000000;
 
+export const updateAdminContractorBodyImageUrlsItemMax = 2000000;
+
+export const updateAdminContractorBodyImageUrlsMax = 15;
+
 export const updateAdminContractorBodyEvaluationNotesMax = 5000;
 
 export const updateAdminContractorBodyAdminRatingMax = 5;
@@ -1247,6 +1324,7 @@ export const UpdateAdminContractorBody = zod.object({
   "serviceArea": zod.string().max(updateAdminContractorBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(updateAdminContractorBodyPhoneMax).nullish(),
   "avatarUrl": zod.string().max(updateAdminContractorBodyAvatarUrlMax).nullish(),
+  "imageUrls": zod.array(zod.string().max(updateAdminContractorBodyImageUrlsItemMax)).max(updateAdminContractorBodyImageUrlsMax).optional(),
   "evaluationNotes": zod.string().max(updateAdminContractorBodyEvaluationNotesMax).nullish(),
   "adminRating": zod.number().min(1).max(updateAdminContractorBodyAdminRatingMax).nullish(),
   "agreedContractAmountOmaniRial": zod.number().min(updateAdminContractorBodyAgreedContractAmountOmaniRialMin).nullish(),
@@ -1257,6 +1335,12 @@ export const UpdateAdminContractorBody = zod.object({
   "serviceNames": zod.array(zod.string().min(updateAdminContractorBodyServiceNamesItemMin).max(updateAdminContractorBodyServiceNamesItemMax)).max(updateAdminContractorBodyServiceNamesMax).optional()
 })
 
+export const updateAdminContractorResponseOneImageUrlsItemMax = 2000000;
+
+export const updateAdminContractorResponseOneImageUrlsMax = 15;
+
+
+
 export const UpdateAdminContractorResponse = zod.object({
   "id": zod.string(),
   "businessName": zod.string(),
@@ -1264,6 +1348,7 @@ export const UpdateAdminContractorResponse = zod.object({
   "wilayat": zod.string().nullish(),
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string().max(updateAdminContractorResponseOneImageUrlsItemMax)).max(updateAdminContractorResponseOneImageUrlsMax),
   "isVerified": zod.boolean(),
   "isPublished": zod.boolean(),
   "rating": zod.number(),

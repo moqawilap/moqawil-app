@@ -22,6 +22,11 @@ export interface MarketplaceListing {
   area: string;
   /** @nullable */
   imageUrl: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls: string[];
   /** @nullable */
   contactPhone: string | null;
   /**

@@ -53,6 +53,11 @@ export interface AdminContractorInput {
      */
   avatarUrl?: string | null;
   /**
+     * @maxItems 15
+     * @items.maxLength 2000000
+     */
+  imageUrls?: string[];
+  /**
      * @maxLength 5000
      * @nullable
      */

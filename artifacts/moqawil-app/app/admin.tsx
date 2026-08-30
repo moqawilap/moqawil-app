@@ -49,22 +49,54 @@ const confirmAction = (title: string, message: string, action: () => void, cance
   }
   Alert.alert(title, message, [{ text: cancelLabel, style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
 };
-const pickAdminImage = async (isArabic: boolean) => {
+const pickAdminImages = async (isArabic: boolean, selectionLimit = 15) => {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    Alert.alert(text(isArabic, 'Photo access needed', 'نحتاج إذن الصور'), text(isArabic, 'Allow access to choose an image.', 'اسمح بالوصول للصور لاختيار صورة.'));
-    return null;
+    Alert.alert(text(isArabic, 'Photo access needed', 'نحتاج إذن الصور'), text(isArabic, 'Allow access to choose images.', 'اسمح بالوصول للصور لاختيار الصور.'));
+    return [] as string[];
   }
-  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.45, base64: true });
-  const asset = result.canceled ? undefined : result.assets[0];
-  if (!asset) return null;
-  const image = asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri;
-  if (image.length > 2_000_000) {
-    Alert.alert(text(isArabic, 'Image is too large', 'الصورة كبيرة جدًا'), text(isArabic, 'Choose a smaller image and try again.', 'اختر صورة أصغر ثم حاول مرة أخرى.'));
-    return null;
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: true,
+    selectionLimit,
+    quality: 0.45,
+    base64: true,
+  });
+  if (result.canceled) return [] as string[];
+  const images = result.assets
+    .map((asset) => asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri)
+    .filter((image) => image.length <= 2_000_000);
+  if (images.length !== result.assets.length) {
+    Alert.alert(text(isArabic, 'Some images were too large', 'بعض الصور كبيرة جدًا'), text(isArabic, 'Each image must be smaller than 2 MB.', 'يجب أن يكون حجم كل صورة أقل من 2 ميجابايت.'));
   }
-  return image;
+  return images;
 };
+
+function AdminImageGallery({ images, label, testID, onAdd, onRemove }: { images: string[]; label: string; testID: string; onAdd: () => void; onRemove: (index: number) => void }) {
+  const colors = useColors();
+  return (
+    <View style={styles.formGroupFull}>
+      <View style={styles.mediaHeader}>
+        <Text style={[styles.label, { color: colors.foreground, marginBottom: 0 }]}>{label}</Text>
+        <Text style={[styles.mediaCounter, { color: colors.mutedForeground }]}>{images.length}/15</Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaStrip}>
+        {images.map((image, index) => (
+          <View key={`${image.slice(0, 24)}-${index}`} style={[styles.mediaPreview, { borderColor: colors.border }]}>
+            <Image source={{ uri: image }} style={styles.mediaPreviewImage} />
+            <Pressable onPress={() => onRemove(index)} style={styles.removeMedia}><Feather name="x" size={16} color="#FFFFFF" /></Pressable>
+          </View>
+        ))}
+        {images.length < 15 ? (
+          <Pressable testID={testID} onPress={onAdd} style={[styles.multiImageButton, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
+            <Feather name="image" size={20} color={colors.primary} />
+            <Text style={[styles.multiImageButtonText, { color: colors.foreground }]}>{images.length ? '＋' : ''}</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+    </View>
+  );
+}
 
 const pickAdMedia = async (isArabic: boolean, type: AdMediaItem['type'], selectionLimit: number) => {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -212,7 +244,7 @@ function OverviewTab() {
   );
 }
 
-const blankContractor = () => ({ businessName: '', city: '', businessNameArabic: '', wilayat: '', bio: '', bioArabic: '', serviceArea: '', phone: '', avatarUrl: '', evaluationNotes: '', adminRating: '', agreedContractAmountOmaniRial: '', isVerified: false, isPublished: false });
+const blankContractor = () => ({ businessName: '', city: '', businessNameArabic: '', wilayat: '', bio: '', bioArabic: '', serviceArea: '', phone: '', avatarUrl: '', imageUrls: [] as string[], evaluationNotes: '', adminRating: '', agreedContractAmountOmaniRial: '', isVerified: false, isPublished: false });
 
 function ContractorsTab() {
   const colors = useColors();
@@ -236,7 +268,7 @@ function ContractorsTab() {
       setForm({
         businessName: c.businessName, businessNameArabic: c.businessNameArabic ?? '',
         city: c.city, wilayat: c.wilayat ?? '', bio: c.bio ?? '', bioArabic: c.bioArabic ?? '',
-        serviceArea: c.serviceArea ?? '', phone: c.phone ?? '', avatarUrl: c.avatarUrl ?? '', evaluationNotes: c.evaluationNotes ?? '',
+        serviceArea: c.serviceArea ?? '', phone: c.phone ?? '', avatarUrl: c.avatarUrl ?? '', imageUrls: c.imageUrls?.length ? c.imageUrls : c.avatarUrl ? [c.avatarUrl] : [], evaluationNotes: c.evaluationNotes ?? '',
         adminRating: c.adminRating ? String(c.adminRating) : '',
         agreedContractAmountOmaniRial: c.agreedContractAmountOmaniRial ? String(c.agreedContractAmountOmaniRial) : '',
         isVerified: c.isVerified, isPublished: c.isPublished
@@ -263,9 +295,16 @@ function ContractorsTab() {
     editing ? update.mutate({ id: editing, data }) : create.mutate({ data });
   };
   const chooseContractorImage = async () => {
-    const image = await pickAdminImage(isArabic);
-    if (image) set('avatarUrl', image);
+    const images = await pickAdminImages(isArabic, 15 - form.imageUrls.length);
+    if (images.length) setForm((current: any) => {
+      const imageUrls = [...current.imageUrls, ...images];
+      return { ...current, imageUrls, avatarUrl: imageUrls[0] };
+    });
   };
+  const removeContractorImage = (index: number) => setForm((current: any) => {
+    const imageUrls = current.imageUrls.filter((_: string, itemIndex: number) => itemIndex !== index);
+    return { ...current, imageUrls, avatarUrl: imageUrls[0] ?? '' };
+  });
 
   return (
     <View testID="admin-contractors" style={styles.tabContainer}>
@@ -288,14 +327,7 @@ function ContractorsTab() {
               </View>
             ))}
           </View>
-          <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Contractor photo', 'صورة المقاول')}</Text>
-            {form.avatarUrl ? <Image source={{ uri: form.avatarUrl }} style={styles.listingImagePreview} /> : null}
-            <Pressable testID="pick-contractor-image" onPress={chooseContractorImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
-              <Feather name="image" size={16} color={colors.primary} />
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.avatarUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
-            </Pressable>
-          </View>
+          <AdminImageGallery images={form.imageUrls} label={text(isArabic, 'Contractor photos', 'صور المقاول')} testID="pick-contractor-image" onAdd={() => void chooseContractorImage()} onRemove={removeContractorImage} />
           <View style={styles.formGroupFull}>
             <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Bio', 'النبذة')}</Text>
             <TextInput testID="contractor-field-bio" value={form.bio ?? ''} onChangeText={v => set('bio', v)} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
@@ -362,7 +394,7 @@ function ContractorsTab() {
   );
 }
 
-const blankWorkshop = () => ({ name: '', nameArabic: '', specialty: '', city: '', wilayat: '', phone: '', avatarUrl: '', isPublished: false });
+const blankWorkshop = () => ({ name: '', nameArabic: '', specialty: '', city: '', wilayat: '', phone: '', avatarUrl: '', imageUrls: [] as string[], isPublished: false });
 
 function WorkshopsTab() {
   const colors = useColors();
@@ -392,6 +424,7 @@ function WorkshopsTab() {
       bioArabic: form.specialty.trim() || 'ورشة بناء',
       phone: form.phone.trim() || null,
       avatarUrl: form.avatarUrl.trim() || null,
+      imageUrls: form.imageUrls,
       isPublished: form.isPublished,
       isVerified: false,
       isWorkshop: true,
@@ -399,9 +432,16 @@ function WorkshopsTab() {
     create.mutate({ data });
   };
   const chooseWorkshopImage = async () => {
-    const image = await pickAdminImage(isArabic);
-    if (image) set('avatarUrl', image);
+    const images = await pickAdminImages(isArabic, 15 - form.imageUrls.length);
+    if (images.length) setForm((current) => {
+      const imageUrls = [...current.imageUrls, ...images];
+      return { ...current, imageUrls, avatarUrl: imageUrls[0] };
+    });
   };
+  const removeWorkshopImage = (index: number) => setForm((current) => {
+    const imageUrls = current.imageUrls.filter((_, itemIndex) => itemIndex !== index);
+    return { ...current, imageUrls, avatarUrl: imageUrls[0] ?? '' };
+  });
   return (
     <View testID="admin-workshops" style={styles.tabContainer}>
       <View style={styles.tabHeader}>
@@ -425,14 +465,7 @@ function WorkshopsTab() {
               </View>
             ))}
           </View>
-          <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Workshop photo', 'صورة الورشة')}</Text>
-            {form.avatarUrl ? <Image source={{ uri: form.avatarUrl }} style={styles.listingImagePreview} /> : null}
-            <Pressable testID="pick-workshop-image" onPress={chooseWorkshopImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
-              <Feather name="image" size={16} color={colors.primary} />
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.avatarUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
-            </Pressable>
-          </View>
+          <AdminImageGallery images={form.imageUrls} label={text(isArabic, 'Workshop photos', 'صور الورشة')} testID="pick-workshop-image" onAdd={() => void chooseWorkshopImage()} onRemove={removeWorkshopImage} />
           <Pressable style={styles.toggleRow} onPress={() => set('isPublished', !form.isPublished)}>
             <Feather name={form.isPublished ? 'check-square' : 'square'} size={18} color={form.isPublished ? colors.primary : colors.mutedForeground} />
             <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Publish immediately', 'نشر فورًا')}</Text>
@@ -475,6 +508,7 @@ type SpecialistForm = {
   bio: string;
   bioArabic: string;
   avatarUrl: string;
+  imageUrls: string[];
   evaluationNotes: string;
   adminRating: string;
   agreedContractAmountOmaniRial: string;
@@ -489,7 +523,7 @@ const specialistOptions = (kind: SpecialistKind) => kind === 'designers'
 
 const blankSpecialist = (): SpecialistForm => ({
   businessName: '', businessNameArabic: '', city: '', wilayat: '', serviceArea: '', phone: '',
-  bio: '', bioArabic: '', avatarUrl: '', evaluationNotes: '', adminRating: '',
+  bio: '', bioArabic: '', avatarUrl: '', imageUrls: [], evaluationNotes: '', adminRating: '',
   agreedContractAmountOmaniRial: '', serviceNames: [], isVerified: false, isPublished: false,
 });
 
@@ -537,6 +571,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
         bio: item.bio ?? '',
         bioArabic: item.bioArabic ?? '',
         avatarUrl: item.avatarUrl ?? '',
+        imageUrls: item.imageUrls?.length ? item.imageUrls : item.avatarUrl ? [item.avatarUrl] : [],
         evaluationNotes: item.evaluationNotes ?? '',
         adminRating: item.adminRating ? String(item.adminRating) : '',
         agreedContractAmountOmaniRial: item.agreedContractAmountOmaniRial ? String(item.agreedContractAmountOmaniRial) : '',
@@ -571,6 +606,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
       bio: form.bio.trim() || firstSpecialty?.name || null,
       bioArabic: form.bioArabic.trim() || firstSpecialty?.nameAr || null,
       avatarUrl: form.avatarUrl.trim() || null,
+      imageUrls: form.imageUrls,
       evaluationNotes: form.evaluationNotes.trim() || null,
       adminRating: form.adminRating === '' ? null : Number(form.adminRating) || null,
       agreedContractAmountOmaniRial: form.agreedContractAmountOmaniRial === '' ? null : Number(form.agreedContractAmountOmaniRial) || null,
@@ -587,9 +623,16 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
     }
   };
   const chooseImage = async () => {
-    const image = await pickAdminImage(isArabic);
-    if (image) set('avatarUrl', image);
+    const images = await pickAdminImages(isArabic, 15 - form.imageUrls.length);
+    if (images.length) setForm((current) => {
+      const imageUrls = [...current.imageUrls, ...images];
+      return { ...current, imageUrls, avatarUrl: imageUrls[0] };
+    });
   };
+  const removeImage = (index: number) => setForm((current) => {
+    const imageUrls = current.imageUrls.filter((_, itemIndex) => itemIndex !== index);
+    return { ...current, imageUrls, avatarUrl: imageUrls[0] ?? '' };
+  });
   const toggleSpecialty = (name: string) => set('serviceNames', form.serviceNames.includes(name)
     ? form.serviceNames.filter((item) => item !== name)
     : [...form.serviceNames, name]);
@@ -645,14 +688,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
               })}
             </ScrollView>
           </View>
-          <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, `${designers ? 'Designer' : 'Provider'} photo`, `صورة ${designers ? 'المصمم' : 'المزود'}`)}</Text>
-            {form.avatarUrl ? <Image source={{ uri: form.avatarUrl }} style={styles.listingImagePreview} /> : null}
-            <Pressable testID={`pick-${kind}-image`} onPress={chooseImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
-              <Feather name="image" size={16} color={colors.primary} />
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.avatarUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
-            </Pressable>
-          </View>
+          <AdminImageGallery images={form.imageUrls} label={text(isArabic, `${designers ? 'Designer' : 'Provider'} photos`, `صور ${designers ? 'المصمم' : 'المزود'}`)} testID={`pick-${kind}-image`} onAdd={() => void chooseImage()} onRemove={removeImage} />
           <View style={styles.formGroupFull}>
             <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Bio', 'النبذة')}</Text>
             <TextInput testID={`${kind}-field-bio`} value={form.bio} onChangeText={(value) => set('bio', value)} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
@@ -723,11 +759,12 @@ type ListingForm = {
   bathrooms: string;
   area: string;
   imageUrl: string;
+  imageUrls: string[];
   contactPhone: string;
   adminRating: string;
   isPublished: boolean;
 };
-const blankListing = (): ListingForm => ({ title: '', titleArabic: '', type: 'sale', price: '', location: '', locationArabic: '', bedrooms: '0', bathrooms: '0', area: '', imageUrl: '', contactPhone: '', adminRating: '', isPublished: false });
+const blankListing = (): ListingForm => ({ title: '', titleArabic: '', type: 'sale', price: '', location: '', locationArabic: '', bedrooms: '0', bathrooms: '0', area: '', imageUrl: '', imageUrls: [], contactPhone: '', adminRating: '', isPublished: false });
 
 function ListingsTab() {
   const colors = useColors();
@@ -744,26 +781,21 @@ function ListingsTab() {
   const remove = useDeleteAdminListing({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)) } });
   const set = <Key extends keyof ListingForm>(key: Key, value: ListingForm[Key]) => setForm((current) => ({ ...current, [key]: value }));
   const pickListingImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(text(isArabic, 'Photo access needed', 'نحتاج إذن الصور'), text(isArabic, 'Allow access to choose a listing photo.', 'اسمح بالوصول للصور لاختيار صورة الإعلان.'));
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.45, base64: true });
-    const asset = result.canceled ? undefined : result.assets[0];
-    if (!asset) return;
-    const image = asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri;
-    if (image.length > 2_000_000) {
-      Alert.alert(text(isArabic, 'Image is too large', 'الصورة كبيرة جدًا'), text(isArabic, 'Choose a smaller image and try again.', 'اختر صورة أصغر ثم حاول مرة أخرى.'));
-      return;
-    }
-    set('imageUrl', image);
+    const images = await pickAdminImages(isArabic, 15 - form.imageUrls.length);
+    if (images.length) setForm((current) => {
+      const imageUrls = [...current.imageUrls, ...images];
+      return { ...current, imageUrls, imageUrl: imageUrls[0] };
+    });
   };
+  const removeListingImage = (index: number) => setForm((current) => {
+    const imageUrls = current.imageUrls.filter((_, itemIndex) => itemIndex !== index);
+    return { ...current, imageUrls, imageUrl: imageUrls[0] ?? '' };
+  });
   const begin = (listing?: MarketplaceListing) => {
     if (!listing) { setForm(blankListing()); setEditing(null); }
     else {
       setEditing(listing.id);
-      setForm({ title: listing.title, titleArabic: listing.titleArabic, type: listing.type, price: listing.price, location: listing.location, locationArabic: listing.locationArabic, bedrooms: String(listing.bedrooms), bathrooms: String(listing.bathrooms), area: listing.area, imageUrl: listing.imageUrl ?? '', contactPhone: listing.contactPhone ?? '', adminRating: listing.rating ? String(listing.rating) : '', isPublished: listing.isPublished });
+      setForm({ title: listing.title, titleArabic: listing.titleArabic, type: listing.type, price: listing.price, location: listing.location, locationArabic: listing.locationArabic, bedrooms: String(listing.bedrooms), bathrooms: String(listing.bathrooms), area: listing.area, imageUrl: listing.imageUrl ?? '', imageUrls: listing.imageUrls?.length ? listing.imageUrls : listing.imageUrl ? [listing.imageUrl] : [], contactPhone: listing.contactPhone ?? '', adminRating: listing.rating ? String(listing.rating) : '', isPublished: listing.isPublished });
     }
     setShowForm(true);
   };
@@ -776,7 +808,7 @@ function ListingsTab() {
       title: form.title.trim(), titleArabic: form.titleArabic.trim(), type: form.type,
       price: form.price.trim(), location: form.location.trim(), locationArabic: form.locationArabic.trim(),
       bedrooms: Math.max(0, Number(form.bedrooms) || 0), bathrooms: Math.max(0, Number(form.bathrooms) || 0),
-      area: form.area.trim(), imageUrl: form.imageUrl.trim() || null, contactPhone: form.contactPhone.trim() || null, adminRating: form.adminRating === '' ? null : Number(form.adminRating), isPublished: form.isPublished,
+      area: form.area.trim(), imageUrl: form.imageUrl.trim() || null, imageUrls: form.imageUrls, contactPhone: form.contactPhone.trim() || null, adminRating: form.adminRating === '' ? null : Number(form.adminRating), isPublished: form.isPublished,
     };
     editing ? update.mutate({ id: editing, data }) : create.mutate({ data });
   };
@@ -804,14 +836,7 @@ function ListingsTab() {
               </View>
             ))}
           </View>
-          <View style={styles.formGroupFull}>
-            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Listing photo', 'صورة الإعلان')}</Text>
-            {form.imageUrl ? <Image source={{ uri: form.imageUrl }} style={styles.listingImagePreview} /> : null}
-            <Pressable testID="pick-listing-image" onPress={pickListingImage} style={[styles.denseButton, { borderColor: colors.border, alignSelf: 'flex-start' }]}>
-              <Feather name="image" size={16} color={colors.primary} />
-              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{form.imageUrl ? text(isArabic, 'Change photo', 'تغيير الصورة') : text(isArabic, 'Choose photo', 'اختيار صورة')}</Text>
-            </Pressable>
-          </View>
+          <AdminImageGallery images={form.imageUrls} label={text(isArabic, 'Listing photos', 'صور الإعلان')} testID="pick-listing-image" onAdd={() => void pickListingImage()} onRemove={removeListingImage} />
           <View style={styles.toggles}>
             {(['sale', 'rent'] as const).map((type) => (
               <Pressable key={type} style={styles.toggleRow} onPress={() => set('type', type)}>
@@ -1440,6 +1465,8 @@ const styles = StyleSheet.create({
   mediaVideoPreview: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
   mediaTypeText: { fontSize: 11, fontWeight: '700' },
   removeMedia: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.8)' },
+  multiImageButton: { width: 116, height: 90, borderWidth: 1, borderStyle: 'dashed', borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  multiImageButtonText: { fontSize: 18, fontWeight: '800' },
 
   inlineForm: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8 },
   statusPill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },
