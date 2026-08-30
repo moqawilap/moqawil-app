@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Deprecated single-media compatibility field; send with mediaUrl.
+ */
 export type AdminAdCampaignInputMediaType = typeof AdminAdCampaignInputMediaType[keyof typeof AdminAdCampaignInputMediaType];
 
 

@@ -35,9 +35,12 @@ function budgetFromInput(value: string) {
 
 function AdBanner({ campaign, isArabic, colors, actorKey }: { campaign: AdCampaign; isArabic: boolean; colors: ReturnType<typeof useColors>; actorKey: string }) {
   const router = useRouter();
+  const [mediaIndex, setMediaIndex] = useState(0);
   const stableActorKey = useRef(actorKey);
   const impressionSent = useRef(false);
   const event = useRecordAdEvent();
+  const media = campaign.media?.length ? campaign.media : [{ url: campaign.mediaUrl, type: campaign.mediaType }];
+  const currentMedia = media[Math.min(mediaIndex, media.length - 1)];
   useEffect(() => {
     if (impressionSent.current) return;
     impressionSent.current = true;
@@ -56,7 +59,27 @@ function AdBanner({ campaign, isArabic, colors, actorKey }: { campaign: AdCampai
         <View style={[adStyles.sponsored, { backgroundColor: `${colors.primary}18` }]}><Text style={[adStyles.sponsoredText, { color: colors.primary }]}>{isArabic ? 'إعلان مدفوع' : 'Sponsored'}</Text></View>
         <Text style={[adStyles.advertiser, { color: colors.mutedForeground }]} numberOfLines={1}>{isArabic ? campaign.advertiserNameArabic || campaign.advertiserName : campaign.advertiserName}</Text>
       </View>
-      {campaign.mediaType === 'image' ? <Image source={{ uri: campaign.mediaUrl }} style={adStyles.media} resizeMode="cover" /> : <View style={[adStyles.videoPlaceholder, { backgroundColor: colors.surfaceMuted }]}><Feather name="play-circle" size={30} color={colors.primary} /><Text style={{ color: colors.mutedForeground }}>{isArabic ? 'فيديو إعلاني' : 'Video ad'}</Text></View>}
+      <View style={adStyles.gallery}>
+        {currentMedia.type === 'image'
+          ? <Image source={{ uri: currentMedia.url }} style={adStyles.media} resizeMode="cover" />
+          : <Pressable onPress={() => void Linking.openURL(currentMedia.url)} style={[adStyles.videoPlaceholder, { backgroundColor: colors.surfaceMuted }]}>
+              <Feather name="play-circle" size={36} color={colors.primary} />
+              <Text style={{ color: colors.mutedForeground, fontWeight: '700' }}>{isArabic ? 'تشغيل الفيديو الإعلاني' : 'Play video ad'}</Text>
+            </Pressable>}
+        {media.length > 1 ? (
+          <View style={adStyles.galleryControls}>
+            <Pressable accessibilityLabel={isArabic ? 'الوسائط السابقة' : 'Previous media'} onPress={() => setMediaIndex((current) => (current - 1 + media.length) % media.length)} style={[adStyles.galleryButton, { backgroundColor: colors.card }]}>
+              <Feather name={isArabic ? 'chevron-right' : 'chevron-left'} size={18} color={colors.foreground} />
+            </Pressable>
+            <View style={[adStyles.galleryCount, { backgroundColor: colors.card }]}>
+              <Text style={[adStyles.galleryCountText, { color: colors.foreground }]}>{mediaIndex + 1} / {media.length}</Text>
+            </View>
+            <Pressable accessibilityLabel={isArabic ? 'الوسائط التالية' : 'Next media'} onPress={() => setMediaIndex((current) => (current + 1) % media.length)} style={[adStyles.galleryButton, { backgroundColor: colors.card }]}>
+              <Feather name={isArabic ? 'chevron-left' : 'chevron-right'} size={18} color={colors.foreground} />
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
       <View style={adStyles.copy}>
         <Text style={[adStyles.title, { color: colors.foreground }]}>{campaign.title}</Text>
         <Text style={[adStyles.description, { color: colors.mutedForeground }]} numberOfLines={2}>{campaign.description}</Text>
@@ -318,8 +341,13 @@ const adStyles = StyleSheet.create({
   sponsored: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 7 },
   sponsoredText: { fontSize: 10, fontWeight: '800' },
   advertiser: { fontSize: 11, flex: 1, textAlign: 'right' },
-  media: { width: '100%', height: 150, marginTop: 10 },
-  videoPlaceholder: { height: 150, marginTop: 10, alignItems: 'center', justifyContent: 'center', gap: 7 },
+  gallery: { marginTop: 10, position: 'relative' },
+  media: { width: '100%', height: 170 },
+  videoPlaceholder: { height: 170, alignItems: 'center', justifyContent: 'center', gap: 7 },
+  galleryControls: { position: 'absolute', left: 10, right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  galleryButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 5, elevation: 3 },
+  galleryCount: { minWidth: 48, height: 28, paddingHorizontal: 9, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  galleryCountText: { fontSize: 11, fontWeight: '800' },
   copy: { padding: 13, gap: 7 },
   title: { fontSize: 16, fontWeight: '800' },
   description: { fontSize: 12, lineHeight: 18 },

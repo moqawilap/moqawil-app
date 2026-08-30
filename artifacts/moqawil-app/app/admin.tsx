@@ -21,7 +21,7 @@ import {
   useGetAdminSettings, getGetAdminSettingsQueryKey, useUpdateAdminSettings,
   useListAdminListings, getListAdminListingsQueryKey, useCreateAdminListing, useUpdateAdminListing, useDeleteAdminListing,
   useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign,
-  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdminAdCampaignInput
+  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput
 } from '@workspace/api-client-react';
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not process this request.';
@@ -64,6 +64,62 @@ const pickAdminImage = async (isArabic: boolean) => {
     return null;
   }
   return image;
+};
+
+const pickAdMedia = async (isArabic: boolean, type: AdMediaItem['type'], selectionLimit: number) => {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert(
+      text(isArabic, 'Media access needed', 'نحتاج إذن الوصول للوسائط'),
+      text(isArabic, 'Allow access to choose campaign media.', 'اسمح بالوصول لاختيار وسائط الحملة.'),
+    );
+    return [] as AdMediaItem[];
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: type === 'image' ? ['images'] : ['videos'],
+    allowsMultipleSelection: true,
+    selectionLimit,
+    quality: type === 'image' ? 0.45 : 1,
+    base64: true,
+  });
+  if (result.canceled) return [] as AdMediaItem[];
+  const selected: AdMediaItem[] = [];
+  let rejected = false;
+  for (const asset of result.assets) {
+    const defaultMime = type === 'image' ? 'image/jpeg' : 'video/mp4';
+    let base64 = asset.base64;
+    if (!base64) {
+      try {
+        const bytes = new Uint8Array(await (await fetch(asset.uri)).arrayBuffer());
+        if (bytes.byteLength > 1_490_000) {
+          rejected = true;
+          continue;
+        }
+        let binary = '';
+        const chunkSize = 32_768;
+        for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+        }
+        base64 = globalThis.btoa(binary);
+      } catch {
+        rejected = true;
+        continue;
+      }
+    }
+    const url = `data:${asset.mimeType ?? defaultMime};base64,${base64}`;
+    if (url.length > 2_000_000) {
+      rejected = true;
+      continue;
+    }
+    selected.push({ url, type });
+  }
+  if (rejected) {
+    Alert.alert(
+      text(isArabic, 'Some files were not added', 'لم تتم إضافة بعض الملفات'),
+      text(isArabic, 'Each image or video must be smaller than 2 MB.', 'يجب أن يكون حجم كل صورة أو فيديو أقل من 2 ميجابايت.'),
+    );
+  }
+  return selected;
 };
 
 export default function AdminScreen() {
@@ -810,8 +866,7 @@ const blankAdCampaign = () => {
     description: '',
     ctaLabel: 'تواصل معنا',
     ctaUrl: '',
-    mediaUrl: '',
-    mediaType: 'image' as const,
+    media: [] as AdMediaItem[],
     audienceCity: '',
     audienceWilayat: '',
     audienceService: '',
@@ -854,8 +909,7 @@ function AdvertisingTab() {
       description: campaign.description,
       ctaLabel: campaign.ctaLabel,
       ctaUrl: campaign.ctaUrl ?? '',
-      mediaUrl: campaign.mediaUrl,
-      mediaType: campaign.mediaType,
+      media: campaign.media?.length ? campaign.media : [{ url: campaign.mediaUrl, type: campaign.mediaType }],
       audienceCity: campaign.audience.cities?.[0] ?? '',
       audienceWilayat: campaign.audience.wilayats?.[0] ?? '',
       audienceService: campaign.audience.serviceCategories?.[0] ?? '',
@@ -875,7 +929,7 @@ function AdvertisingTab() {
     const daily = Number(form.dailyBudgetOmaniRial);
     const rate = Number(form.unitRateOmaniRial);
     const cap = Number(form.frequencyCapPerDay);
-    if (!form.contractorId || form.title.trim().length < 2 || !form.mediaUrl || !Number.isFinite(total) || !Number.isFinite(daily) || daily > total || !Number.isFinite(rate) || !Number.isInteger(cap) || cap < 1 || !form.startAt || !form.endAt) {
+    if (!form.contractorId || form.title.trim().length < 2 || !form.media.length || !Number.isFinite(total) || !Number.isFinite(daily) || daily > total || !Number.isFinite(rate) || !Number.isInteger(cap) || cap < 1 || !form.startAt || !form.endAt) {
       Alert.alert(text(isArabic, 'Missing campaign details', 'بيانات الحملة غير مكتملة'), text(isArabic, 'Choose an advertiser, media, dates, and valid budgets. Daily budget cannot exceed total budget.', 'اختر المعلن والوسائط والتواريخ وأدخل ميزانيات صحيحة. لا يمكن أن تتجاوز الميزانية اليومية الإجمالية.'));
       return;
     }
@@ -885,8 +939,7 @@ function AdvertisingTab() {
       description: form.description.trim() || form.title.trim(),
       ctaLabel: form.ctaLabel.trim() || (isArabic ? 'اعرف المزيد' : 'Learn more'),
       ctaUrl: form.ctaUrl.trim() || null,
-      mediaUrl: form.mediaUrl.trim(),
-      mediaType: form.mediaType,
+      media: form.media,
       audience: {
         ...(form.audienceCity.trim() ? { cities: [form.audienceCity.trim()] } : {}),
         ...(form.audienceWilayat.trim() ? { wilayats: [form.audienceWilayat.trim()] } : {}),
@@ -903,6 +956,25 @@ function AdvertisingTab() {
     } as AdminAdCampaignInput;
     if (editingId) update.mutate({ id: editingId, data: data as any });
     else create.mutate({ data });
+  };
+  const imageCount = form.media.filter((item: AdMediaItem) => item.type === 'image').length;
+  const videoCount = form.media.filter((item: AdMediaItem) => item.type === 'video').length;
+  const addMedia = async (type: AdMediaItem['type']) => {
+    const remaining = type === 'image' ? 15 - imageCount : 2 - videoCount;
+    if (remaining <= 0) {
+      Alert.alert(
+        text(isArabic, 'Media limit reached', 'تم بلوغ حد الوسائط'),
+        type === 'image'
+          ? text(isArabic, 'A campaign can contain up to 15 images.', 'يمكن أن تحتوي الحملة على 15 صورة كحد أقصى.')
+          : text(isArabic, 'A campaign can contain up to 2 videos.', 'يمكن أن تحتوي الحملة على مقطعي فيديو كحد أقصى.'),
+      );
+      return;
+    }
+    const selected = await pickAdMedia(isArabic, type, remaining);
+    setForm((current: any) => ({ ...current, media: [...current.media, ...selected] }));
+  };
+  const removeMedia = (index: number) => {
+    setForm((current: any) => ({ ...current, media: current.media.filter((_: AdMediaItem, itemIndex: number) => itemIndex !== index) }));
   };
 
   if (campaigns.isLoading || contractors.isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
@@ -935,23 +1007,48 @@ function AdvertisingTab() {
               ['title', 'Campaign title', 'عنوان الحملة'],
               ['ctaLabel', 'Button label', 'نص الزر'],
               ['ctaUrl', 'Action URL', 'رابط الإجراء'],
-              ['mediaUrl', 'Media URL or image data', 'رابط الوسائط أو بيانات الصورة'],
               ['audienceCity', 'Target city', 'المدينة المستهدفة'],
               ['audienceWilayat', 'Target wilayat', 'الولاية المستهدفة'],
               ['audienceService', 'Target service', 'الخدمة المستهدفة'],
               ['startAt', 'Start date (YYYY-MM-DD)', 'تاريخ البدء'],
               ['endAt', 'End date (YYYY-MM-DD)', 'تاريخ الانتهاء'],
             ].map(([key, label, labelAr]) => (
-              <View key={key} style={key === 'mediaUrl' ? styles.formGroupFull : styles.formGroup}>
+              <View key={key} style={styles.formGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
-                <TextInput value={String((form as any)[key])} onChangeText={(value) => set(key, value)} multiline={key === 'mediaUrl'} style={[styles.input, key === 'mediaUrl' && { minHeight: 56 }, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+                <TextInput value={String((form as any)[key])} onChangeText={(value) => set(key, value)} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
           </View>
-          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Media type', 'نوع الوسائط')}</Text>
-          <View style={styles.formActions}>
-            {(['image', 'video'] as const).map((type) => <Pressable key={type} onPress={() => setForm((current: any) => ({ ...current, mediaType: type }))} style={[styles.statusPill, form.mediaType === type ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.mediaType === type ? colors.background : colors.foreground }]}>{type === 'image' ? text(isArabic, 'Image', 'صورة') : text(isArabic, 'Video', 'فيديو')}</Text></Pressable>)}
+          <View style={styles.mediaHeader}>
+            <Text style={[styles.label, { color: colors.foreground, marginBottom: 0 }]}>{text(isArabic, 'Campaign gallery', 'معرض الحملة')}</Text>
+            <Text style={[styles.mediaCounter, { color: colors.mutedForeground }]}>
+              {text(isArabic, `Images ${imageCount}/15 · Videos ${videoCount}/2`, `الصور ${imageCount}/15 · الفيديو ${videoCount}/2`)}
+            </Text>
           </View>
+          <View style={styles.formActions}>
+            <Pressable disabled={imageCount >= 15} onPress={() => void addMedia('image')} style={[styles.denseButton, { borderColor: colors.border, opacity: imageCount >= 15 ? 0.45 : 1 }]}>
+              <Feather name="image" size={16} color={colors.foreground} />
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Add images', 'إضافة صور')}</Text>
+            </Pressable>
+            <Pressable disabled={videoCount >= 2} onPress={() => void addMedia('video')} style={[styles.denseButton, { borderColor: colors.border, opacity: videoCount >= 2 ? 0.45 : 1 }]}>
+              <Feather name="video" size={16} color={colors.foreground} />
+              <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Add videos', 'إضافة فيديو')}</Text>
+            </Pressable>
+          </View>
+          {form.media.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaStrip}>
+              {form.media.map((item: AdMediaItem, index: number) => (
+                <View key={`${item.type}-${index}`} style={[styles.mediaPreview, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+                  {item.type === 'image'
+                    ? <Image source={{ uri: item.url }} style={styles.mediaPreviewImage} />
+                    : <View style={styles.mediaVideoPreview}><Feather name="play-circle" size={30} color={colors.primary} /><Text style={[styles.mediaTypeText, { color: colors.mutedForeground }]}>{text(isArabic, 'Video', 'فيديو')}</Text></View>}
+                  <Pressable accessibilityLabel={text(isArabic, 'Remove media', 'حذف الوسائط')} onPress={() => removeMedia(index)} style={styles.removeMedia}>
+                    <Feather name="x" size={16} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+          ) : <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Add at least one image or video. Maximum 15 images and 2 videos.', 'أضف صورة أو فيديو واحدًا على الأقل. الحد الأقصى 15 صورة وفيديوهان.')}</Text>}
           <View style={styles.formGrid}>
             {[
               ['totalBudgetOmaniRial', 'Total budget (OMR)', 'الميزانية الإجمالية (ر.ع.)'],
@@ -1335,6 +1432,14 @@ const styles = StyleSheet.create({
   denseButtonText: { fontSize: 14, fontWeight: '700' },
   listingImagePreview: { width: '100%', height: 190, borderRadius: 12, marginBottom: 10, resizeMode: 'cover' },
   adminCardImage: { width: 72, height: 72, borderRadius: 10, marginBottom: 10, resizeMode: 'cover' },
+  mediaHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  mediaCounter: { fontSize: 11, fontWeight: '700' },
+  mediaStrip: { gap: 10, paddingVertical: 2 },
+  mediaPreview: { width: 116, height: 90, borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
+  mediaPreviewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  mediaVideoPreview: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  mediaTypeText: { fontSize: 11, fontWeight: '700' },
+  removeMedia: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.8)' },
 
   inlineForm: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8 },
   statusPill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },

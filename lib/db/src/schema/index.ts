@@ -268,6 +268,11 @@ export type AdAudience = {
   serviceCategories?: string[];
 };
 
+export type AdMediaItem = {
+  url: string;
+  type: "image" | "video";
+};
+
 export const adCampaigns = pgTable("ad_campaigns", {
   id: uuid("id").defaultRandom().primaryKey(),
   contractorId: uuid("contractor_id").notNull().references(() => contractorProfiles.id, { onDelete: "cascade" }),
@@ -277,6 +282,7 @@ export const adCampaigns = pgTable("ad_campaigns", {
   ctaUrl: text("cta_url"),
   mediaUrl: text("media_url").notNull(),
   mediaType: adMediaTypeEnum("media_type").notNull().default("image"),
+  mediaItems: jsonb("media_items").$type<AdMediaItem[]>().notNull().default([]),
   audience: jsonb("audience").$type<AdAudience>().notNull().default({}),
   frequencyCapPerDay: integer("frequency_cap_per_day").notNull().default(3),
   totalBudgetOmaniRial: numeric("total_budget_omani_rial", { precision: 14, scale: 6 }).notNull(),

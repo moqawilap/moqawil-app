@@ -9,6 +9,7 @@ import type { AdAudience } from './adAudience';
 import type { AdCampaignBillingModel } from './adCampaignBillingModel';
 import type { AdCampaignMediaType } from './adCampaignMediaType';
 import type { AdCampaignStatus } from './adCampaignStatus';
+import type { AdMediaItem } from './adMediaItem';
 
 export interface AdCampaign {
   id: string;
@@ -22,6 +23,11 @@ export interface AdCampaign {
   ctaLabel: string;
   /** @nullable */
   ctaUrl?: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 17
+     */
+  media: AdMediaItem[];
   mediaUrl: string;
   mediaType: AdCampaignMediaType;
   audience: AdAudience;

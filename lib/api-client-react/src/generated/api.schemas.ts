@@ -549,6 +549,23 @@ export interface AdAudience {
   serviceCategories?: string[];
 }
 
+export type AdMediaItemType = typeof AdMediaItemType[keyof typeof AdMediaItemType];
+
+
+export const AdMediaItemType = {
+  image: 'image',
+  video: 'video',
+} as const;
+
+export interface AdMediaItem {
+  /**
+     * @minLength 20
+     * @maxLength 2000000
+     */
+  url: string;
+  type: AdMediaItemType;
+}
+
 export type AdCampaignMediaType = typeof AdCampaignMediaType[keyof typeof AdCampaignMediaType];
 
 
@@ -588,6 +605,11 @@ export interface AdCampaign {
   ctaLabel: string;
   /** @nullable */
   ctaUrl?: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 17
+     */
+  media: AdMediaItem[];
   mediaUrl: string;
   mediaType: AdCampaignMediaType;
   audience: AdAudience;
@@ -653,6 +675,9 @@ export interface AdEventResult {
   campaign?: AdCampaign;
 }
 
+/**
+ * Deprecated single-media compatibility field; send with mediaUrl.
+ */
 export type AdminAdCampaignInputMediaType = typeof AdminAdCampaignInputMediaType[keyof typeof AdminAdCampaignInputMediaType];
 
 
@@ -702,11 +727,18 @@ export interface AdminAdCampaignInput {
      */
   ctaUrl?: string | null;
   /**
+     * Deprecated single-media compatibility field; send with mediaType.
      * @minLength 20
      * @maxLength 2000000
      */
-  mediaUrl: string;
-  mediaType: AdminAdCampaignInputMediaType;
+  mediaUrl?: string;
+  /** Deprecated single-media compatibility field; send with mediaUrl. */
+  mediaType?: AdminAdCampaignInputMediaType;
+  /**
+     * @minItems 1
+     * @maxItems 17
+     */
+  media: AdMediaItem[];
   audience: AdAudience;
   /**
      * @minimum 1

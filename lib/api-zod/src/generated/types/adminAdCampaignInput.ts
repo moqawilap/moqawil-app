@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdAudience } from './adAudience';
+import type { AdMediaItem } from './adMediaItem';
 import type { AdminAdCampaignInputBillingModel } from './adminAdCampaignInputBillingModel';
 import type { AdminAdCampaignInputMediaType } from './adminAdCampaignInputMediaType';
 import type { AdminAdCampaignInputStatus } from './adminAdCampaignInputStatus';
@@ -33,11 +34,18 @@ export interface AdminAdCampaignInput {
      */
   ctaUrl?: string | null;
   /**
+     * Deprecated single-media compatibility field; send with mediaType.
      * @minLength 20
      * @maxLength 2000000
      */
-  mediaUrl: string;
-  mediaType: AdminAdCampaignInputMediaType;
+  mediaUrl?: string;
+  /** Deprecated single-media compatibility field; send with mediaUrl. */
+  mediaType?: AdminAdCampaignInputMediaType;
+  /**
+     * @minItems 1
+     * @maxItems 17
+     */
+  media: AdMediaItem[];
   audience: AdAudience;
   /**
      * @minimum 1

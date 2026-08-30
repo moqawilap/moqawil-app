@@ -17,6 +17,8 @@ export * from './adEventInput';
 export * from './adEventInputEventType';
 export * from './adEventResult';
 export * from './adEventResultEventType';
+export * from './adMediaItem';
+export * from './adMediaItemType';
 export * from './adminAdCampaignInput';
 export * from './adminAdCampaignInputBillingModel';
 export * from './adminAdCampaignInputMediaType';

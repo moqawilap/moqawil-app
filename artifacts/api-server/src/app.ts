@@ -41,6 +41,9 @@ app.use(cors({
     return callback(new Error("CORS origin is not trusted"));
   },
 }));
+// Campaign galleries can contain up to 15 images and 2 videos. Keep their
+// larger parser scoped to campaign writes instead of expanding every endpoint.
+app.use("/api/admin/ad-campaigns", express.json({ limit: "40mb" }));
 app.use(express.json({ limit: "3mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());

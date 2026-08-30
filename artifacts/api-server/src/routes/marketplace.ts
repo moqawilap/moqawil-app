@@ -4,7 +4,7 @@ import { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lte, or, sql } fro
 import {
   adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
-  type AdAudience,
+  type AdAudience, type AdMediaItem,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
@@ -99,9 +99,32 @@ function validAdAudience(value: unknown): value is AdAudience {
   ));
 }
 
-function validAdMedia(value: unknown) {
-  return typeof value === "string" && value.length >= 20 && value.length <= 2_000_000
-    && (/^(data:(image|video)\/[a-z0-9.+-]+;base64,)/i.test(value) || /^https?:\/\//i.test(value));
+function validAdMedia(value: unknown, expectedType?: AdMediaItem["type"]) {
+  if (typeof value !== "string" || value.length < 20 || value.length > 2_000_000) return false;
+  const dataMatch = value.match(/^data:(image|video)\/[a-z0-9.+-]+;base64,/i);
+  if (dataMatch) return expectedType === undefined || dataMatch[1]?.toLowerCase() === expectedType;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const MAX_AD_IMAGES = 15;
+const MAX_AD_VIDEOS = 2;
+function validAdMediaItems(value: unknown): value is AdMediaItem[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_AD_IMAGES + MAX_AD_VIDEOS) return false;
+  const images = value.filter((item) => item && typeof item === "object" && (item as Record<string, unknown>).type === "image").length;
+  const videos = value.filter((item) => item && typeof item === "object" && (item as Record<string, unknown>).type === "video").length;
+  return images <= MAX_AD_IMAGES && videos <= MAX_AD_VIDEOS && images + videos === value.length
+    && value.every((item) => item && typeof item === "object"
+      && ((item as Record<string, unknown>).type === "image" || (item as Record<string, unknown>).type === "video")
+      && validAdMedia((item as Record<string, unknown>).url, (item as Record<string, unknown>).type as AdMediaItem["type"]));
+}
+
+function campaignMedia(campaign: typeof adCampaigns.$inferSelect): AdMediaItem[] {
+  return validAdMediaItems(campaign.mediaItems) ? campaign.mediaItems : [{ url: campaign.mediaUrl, type: campaign.mediaType }];
 }
 
 function validAdUrl(value: unknown) {
@@ -109,8 +132,14 @@ function validAdUrl(value: unknown) {
 }
 
 function validAdCampaignInput(input: Record<string, unknown>, partial = false) {
-  const requiredText = ["title", "description", "ctaLabel", "mediaUrl", "mediaType", "billingModel", "startAt", "endAt"] as const;
+  const requiredText = ["title", "description", "ctaLabel", "billingModel", "startAt", "endAt"] as const;
   if (!partial && requiredText.some((field) => typeof input[field] !== "string" || String(input[field]).trim().length < 1)) return false;
+  const hasStructuredMedia = input.media !== undefined;
+  const hasLegacyMedia = input.mediaUrl !== undefined && input.mediaType !== undefined;
+  const hasIncompleteLegacyMedia = (input.mediaUrl !== undefined) !== (input.mediaType !== undefined);
+  if (!hasStructuredMedia && hasIncompleteLegacyMedia) return false;
+  if (!partial && !hasStructuredMedia && !hasLegacyMedia) return false;
+  if (hasStructuredMedia && !validAdMediaItems(input.media)) return false;
   if (input.title !== undefined && (typeof input.title !== "string" || input.title.trim().length < 2 || input.title.length > 200)) return false;
   if (input.description !== undefined && (typeof input.description !== "string" || input.description.trim().length < 2 || input.description.length > 5_000)) return false;
   if (input.ctaLabel !== undefined && (typeof input.ctaLabel !== "string" || input.ctaLabel.trim().length < 1 || input.ctaLabel.length > 50)) return false;
@@ -151,6 +180,7 @@ function adResponse(campaign: typeof adCampaigns.$inferSelect, owner?: { busines
     description: campaign.description,
     ctaLabel: campaign.ctaLabel,
     ctaUrl: campaign.ctaUrl,
+     media: campaignMedia(campaign),
     mediaUrl: campaign.mediaUrl,
     mediaType: campaign.mediaType,
     audience: campaign.audience,
@@ -1137,14 +1167,18 @@ router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, n
     }
     const owner = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, contractorId) });
     if (!owner) { res.status(404).json({ error: "Advertiser profile not found" }); return; }
+    const media = validAdMediaItems(input.media)
+      ? input.media
+      : [{ url: String(input.mediaUrl), type: input.mediaType as "image" | "video" }];
     const [created] = await db.insert(adCampaigns).values({
       contractorId,
       title: String(input.title).trim(),
       description: String(input.description).trim(),
       ctaLabel: String(input.ctaLabel).trim(),
       ctaUrl: input.ctaUrl ? String(input.ctaUrl).trim() : null,
-      mediaUrl: String(input.mediaUrl),
-      mediaType: input.mediaType as "image" | "video",
+      mediaUrl: media[0].url,
+      mediaType: media[0].type,
+      mediaItems: media,
       audience: input.audience as AdAudience,
       frequencyCapPerDay: Number(input.frequencyCapPerDay),
       totalBudgetOmaniRial: Number(input.totalBudgetOmaniRial).toFixed(6),
@@ -1163,12 +1197,18 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
     const existing = await db.query.adCampaigns.findFirst({ where: eq(adCampaigns.id, String(req.params.id)) });
     if (!existing) { res.status(404).json({ error: "Ad campaign not found" }); return; }
     const input = req.body as Record<string, unknown>;
+    const nextMedia = input.media !== undefined
+      ? input.media
+      : input.mediaUrl !== undefined || input.mediaType !== undefined
+        ? [{ url: input.mediaUrl ?? existing.mediaUrl, type: input.mediaType ?? existing.mediaType }]
+        : campaignMedia(existing);
     const merged: Record<string, unknown> = {
       contractorId: existing.contractorId,
       title: existing.title,
       description: existing.description,
       ctaLabel: existing.ctaLabel,
       ctaUrl: existing.ctaUrl,
+      media: nextMedia,
       mediaUrl: existing.mediaUrl,
       mediaType: existing.mediaType,
       audience: existing.audience,
@@ -1196,6 +1236,12 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     for (const field of ["contractorId", "title", "description", "ctaLabel", "ctaUrl", "mediaUrl", "mediaType", "audience", "billingModel", "status", "frequencyCapPerDay"] as const) {
       if (input[field] !== undefined) updates[field] = field === "title" || field === "description" || field === "ctaLabel" ? String(input[field]).trim() : input[field];
+    }
+    if (input.media !== undefined || input.mediaUrl !== undefined || input.mediaType !== undefined) {
+      const media = nextMedia as AdMediaItem[];
+      updates.mediaItems = media;
+      updates.mediaUrl = media[0].url;
+      updates.mediaType = media[0].type;
     }
     for (const field of ["totalBudgetOmaniRial", "dailyBudgetOmaniRial", "unitRateOmaniRial"] as const) {
       if (input[field] !== undefined) updates[field] = Number(input[field]).toFixed(6);

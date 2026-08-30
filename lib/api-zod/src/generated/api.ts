@@ -268,6 +268,11 @@ export const ListAdsQueryParams = zod.object({
   "limit": zod.coerce.number().min(1).max(listAdsQueryLimitMax).default(listAdsQueryLimitDefault)
 })
 
+export const listAdsResponseMediaItemUrlMin = 20;
+export const listAdsResponseMediaItemUrlMax = 2000000;
+
+export const listAdsResponseMediaMax = 17;
+
 export const listAdsResponseFrequencyCapPerDayMax = 100;
 
 
@@ -281,6 +286,10 @@ export const ListAdsResponseItem = zod.object({
   "description": zod.string(),
   "ctaLabel": zod.string(),
   "ctaUrl": zod.string().nullish(),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(listAdsResponseMediaItemUrlMin).max(listAdsResponseMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(listAdsResponseMediaMax),
   "mediaUrl": zod.string(),
   "mediaType": zod.enum(['image', 'video']),
   "audience": zod.object({
@@ -326,6 +335,11 @@ export const RecordAdEventBody = zod.object({
   "actorKey": zod.string().min(recordAdEventBodyActorKeyMin).max(recordAdEventBodyActorKeyMax)
 })
 
+export const recordAdEventResponseCampaignMediaItemUrlMin = 20;
+export const recordAdEventResponseCampaignMediaItemUrlMax = 2000000;
+
+export const recordAdEventResponseCampaignMediaMax = 17;
+
 export const recordAdEventResponseCampaignFrequencyCapPerDayMax = 100;
 
 
@@ -344,6 +358,10 @@ export const RecordAdEventResponse = zod.object({
   "description": zod.string(),
   "ctaLabel": zod.string(),
   "ctaUrl": zod.string().nullish(),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(recordAdEventResponseCampaignMediaItemUrlMin).max(recordAdEventResponseCampaignMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(recordAdEventResponseCampaignMediaMax),
   "mediaUrl": zod.string(),
   "mediaType": zod.enum(['image', 'video']),
   "audience": zod.object({
@@ -1408,6 +1426,11 @@ export const UpdateAdminSettingsResponse = zod.object({
 })
 
 
+export const listAdminAdCampaignsResponseMediaItemUrlMin = 20;
+export const listAdminAdCampaignsResponseMediaItemUrlMax = 2000000;
+
+export const listAdminAdCampaignsResponseMediaMax = 17;
+
 export const listAdminAdCampaignsResponseFrequencyCapPerDayMax = 100;
 
 
@@ -1421,6 +1444,10 @@ export const ListAdminAdCampaignsResponseItem = zod.object({
   "description": zod.string(),
   "ctaLabel": zod.string(),
   "ctaUrl": zod.string().nullish(),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(listAdminAdCampaignsResponseMediaItemUrlMin).max(listAdminAdCampaignsResponseMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(listAdminAdCampaignsResponseMediaMax),
   "mediaUrl": zod.string(),
   "mediaType": zod.enum(['image', 'video']),
   "audience": zod.object({
@@ -1461,6 +1488,11 @@ export const createAdminAdCampaignBodyCtaUrlMax = 2000;
 export const createAdminAdCampaignBodyMediaUrlMin = 20;
 export const createAdminAdCampaignBodyMediaUrlMax = 2000000;
 
+export const createAdminAdCampaignBodyMediaItemUrlMin = 20;
+export const createAdminAdCampaignBodyMediaItemUrlMax = 2000000;
+
+export const createAdminAdCampaignBodyMediaMax = 17;
+
 export const createAdminAdCampaignBodyFrequencyCapPerDayMax = 100;
 
 export const createAdminAdCampaignBodyTotalBudgetOmaniRialExclusiveMin = 0;
@@ -1477,8 +1509,12 @@ export const CreateAdminAdCampaignBody = zod.object({
   "description": zod.string().min(createAdminAdCampaignBodyDescriptionMin).max(createAdminAdCampaignBodyDescriptionMax),
   "ctaLabel": zod.string().min(1).max(createAdminAdCampaignBodyCtaLabelMax),
   "ctaUrl": zod.string().max(createAdminAdCampaignBodyCtaUrlMax).nullish(),
-  "mediaUrl": zod.string().min(createAdminAdCampaignBodyMediaUrlMin).max(createAdminAdCampaignBodyMediaUrlMax),
-  "mediaType": zod.enum(['image', 'video']),
+  "mediaUrl": zod.string().min(createAdminAdCampaignBodyMediaUrlMin).max(createAdminAdCampaignBodyMediaUrlMax).optional().describe('Deprecated single-media compatibility field; send with mediaType.'),
+  "mediaType": zod.enum(['image', 'video']).optional().describe('Deprecated single-media compatibility field; send with mediaUrl.'),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(createAdminAdCampaignBodyMediaItemUrlMin).max(createAdminAdCampaignBodyMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(createAdminAdCampaignBodyMediaMax),
   "audience": zod.object({
   "cities": zod.array(zod.string()).optional(),
   "wilayats": zod.array(zod.string()).optional(),
@@ -1494,6 +1530,11 @@ export const CreateAdminAdCampaignBody = zod.object({
   "status": zod.enum(['draft', 'active', 'paused']).optional()
 })
 
+export const createAdminAdCampaignResponseMediaItemUrlMin = 20;
+export const createAdminAdCampaignResponseMediaItemUrlMax = 2000000;
+
+export const createAdminAdCampaignResponseMediaMax = 17;
+
 export const createAdminAdCampaignResponseFrequencyCapPerDayMax = 100;
 
 
@@ -1507,6 +1548,10 @@ export const CreateAdminAdCampaignResponse = zod.object({
   "description": zod.string(),
   "ctaLabel": zod.string(),
   "ctaUrl": zod.string().nullish(),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(createAdminAdCampaignResponseMediaItemUrlMin).max(createAdminAdCampaignResponseMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(createAdminAdCampaignResponseMediaMax),
   "mediaUrl": zod.string(),
   "mediaType": zod.enum(['image', 'video']),
   "audience": zod.object({
@@ -1550,6 +1595,11 @@ export const updateAdminAdCampaignBodyOneCtaUrlMax = 2000;
 export const updateAdminAdCampaignBodyOneMediaUrlMin = 20;
 export const updateAdminAdCampaignBodyOneMediaUrlMax = 2000000;
 
+export const updateAdminAdCampaignBodyOneMediaItemUrlMin = 20;
+export const updateAdminAdCampaignBodyOneMediaItemUrlMax = 2000000;
+
+export const updateAdminAdCampaignBodyOneMediaMax = 17;
+
 export const updateAdminAdCampaignBodyOneFrequencyCapPerDayMax = 100;
 
 export const updateAdminAdCampaignBodyOneTotalBudgetOmaniRialExclusiveMin = 0;
@@ -1566,8 +1616,12 @@ export const UpdateAdminAdCampaignBody = zod.object({
   "description": zod.string().min(updateAdminAdCampaignBodyOneDescriptionMin).max(updateAdminAdCampaignBodyOneDescriptionMax),
   "ctaLabel": zod.string().min(1).max(updateAdminAdCampaignBodyOneCtaLabelMax),
   "ctaUrl": zod.string().max(updateAdminAdCampaignBodyOneCtaUrlMax).nullish(),
-  "mediaUrl": zod.string().min(updateAdminAdCampaignBodyOneMediaUrlMin).max(updateAdminAdCampaignBodyOneMediaUrlMax),
-  "mediaType": zod.enum(['image', 'video']),
+  "mediaUrl": zod.string().min(updateAdminAdCampaignBodyOneMediaUrlMin).max(updateAdminAdCampaignBodyOneMediaUrlMax).optional().describe('Deprecated single-media compatibility field; send with mediaType.'),
+  "mediaType": zod.enum(['image', 'video']).optional().describe('Deprecated single-media compatibility field; send with mediaUrl.'),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(updateAdminAdCampaignBodyOneMediaItemUrlMin).max(updateAdminAdCampaignBodyOneMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(updateAdminAdCampaignBodyOneMediaMax),
   "audience": zod.object({
   "cities": zod.array(zod.string()).optional(),
   "wilayats": zod.array(zod.string()).optional(),
@@ -1583,6 +1637,11 @@ export const UpdateAdminAdCampaignBody = zod.object({
   "status": zod.enum(['draft', 'active', 'paused']).optional()
 })
 
+export const updateAdminAdCampaignResponseMediaItemUrlMin = 20;
+export const updateAdminAdCampaignResponseMediaItemUrlMax = 2000000;
+
+export const updateAdminAdCampaignResponseMediaMax = 17;
+
 export const updateAdminAdCampaignResponseFrequencyCapPerDayMax = 100;
 
 
@@ -1596,6 +1655,10 @@ export const UpdateAdminAdCampaignResponse = zod.object({
   "description": zod.string(),
   "ctaLabel": zod.string(),
   "ctaUrl": zod.string().nullish(),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(updateAdminAdCampaignResponseMediaItemUrlMin).max(updateAdminAdCampaignResponseMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(updateAdminAdCampaignResponseMediaMax),
   "mediaUrl": zod.string(),
   "mediaType": zod.enum(['image', 'video']),
   "audience": zod.object({
@@ -1626,6 +1689,11 @@ export const GetAdminAdCampaignReportParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const getAdminAdCampaignReportResponseCampaignMediaItemUrlMin = 20;
+export const getAdminAdCampaignReportResponseCampaignMediaItemUrlMax = 2000000;
+
+export const getAdminAdCampaignReportResponseCampaignMediaMax = 17;
+
 export const getAdminAdCampaignReportResponseCampaignFrequencyCapPerDayMax = 100;
 
 
@@ -1640,6 +1708,10 @@ export const GetAdminAdCampaignReportResponse = zod.object({
   "description": zod.string(),
   "ctaLabel": zod.string(),
   "ctaUrl": zod.string().nullish(),
+  "media": zod.array(zod.object({
+  "url": zod.string().min(getAdminAdCampaignReportResponseCampaignMediaItemUrlMin).max(getAdminAdCampaignReportResponseCampaignMediaItemUrlMax),
+  "type": zod.enum(['image', 'video'])
+})).min(1).max(getAdminAdCampaignReportResponseCampaignMediaMax),
   "mediaUrl": zod.string(),
   "mediaType": zod.enum(['image', 'video']),
   "audience": zod.object({
