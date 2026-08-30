@@ -4,18 +4,30 @@ import React from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, IconButton, PropertyCard, ProviderCard, SearchBar, SectionHeading, ServiceIcon } from '@/components/MoqawilUI';
+import { AdBanner } from '@/components/AdBanner';
 import { listings, maintenanceItems, mergeMarketplaceListings, serviceItems } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getListListingsQueryKey, useListListings } from '@workspace/api-client-react';
+import { getListAdsQueryKey, getListListingsQueryKey, useListAds, useListListings } from '@workspace/api-client-react';
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, location, locationLoading, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders } = useApp();
+  const { isArabic, location, locationLoading, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders, engagementClientId } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
+  const adQuery = { city: location.city, wilayat: location.area, limit: 5 };
+  const ads = useListAds(adQuery, { query: { queryKey: getListAdsQueryKey(adQuery), refetchInterval: 30_000 } });
+  const [activeAdIndex, setActiveAdIndex] = React.useState(0);
   const availableListings = React.useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
+  React.useEffect(() => {
+    setActiveAdIndex(0);
+  }, [location.city, ads.data?.length]);
+  React.useEffect(() => {
+    if (!ads.data || ads.data.length < 2) return;
+    const timer = setInterval(() => setActiveAdIndex((current) => (current + 1) % ads.data!.length), 5000);
+    return () => clearInterval(timer);
+  }, [ads.data]);
 
   const openService = (id: string) => {
     setActiveService(id);
@@ -44,6 +56,7 @@ export default function HomeScreen() {
             </View>
             <SearchBar placeholder={isArabic ? 'ماذا تحتاج اليوم؟' : 'What do you need today?'} onPress={() => router.push('/explore')} />
           </View>
+          {ads.data?.[activeAdIndex] && engagementClientId ? <AdBanner campaign={ads.data[activeAdIndex]} /> : null}
           <View style={styles.sectionBlock}>
             <SectionHeading title={isArabic ? 'ماذا تحتاج؟' : 'What do you need?'} subtitle={isArabic ? 'اختر خدمة للبدء' : 'Choose a service to get started'} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceRow}>

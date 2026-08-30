@@ -10,7 +10,8 @@ import { designServices } from '@/data/designServices';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getListAdsQueryKey, getListListingsQueryKey, useListAds, useListContractors, useListListings, useRecordAdEvent, type AdCampaign } from '@workspace/api-client-react';
+import { AdBanner } from '@/components/AdBanner';
+import { getListAdsQueryKey, getListListingsQueryKey, useListAds, useListContractors, useListListings } from '@workspace/api-client-react';
 
 type SortOption = 'relevance' | 'rating_desc' | 'price_asc' | 'price_desc' | 'oldest' | 'newest';
 
@@ -31,62 +32,6 @@ function budgetFromInput(value: string) {
   if (!value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-}
-
-function AdBanner({ campaign, isArabic, colors, actorKey }: { campaign: AdCampaign; isArabic: boolean; colors: ReturnType<typeof useColors>; actorKey: string }) {
-  const router = useRouter();
-  const [mediaIndex, setMediaIndex] = useState(0);
-  const stableActorKey = useRef(actorKey);
-  const impressionSent = useRef(false);
-  const event = useRecordAdEvent();
-  const media = campaign.media?.length ? campaign.media : [{ url: campaign.mediaUrl, type: campaign.mediaType }];
-  const currentMedia = media[Math.min(mediaIndex, media.length - 1)];
-  useEffect(() => {
-    if (impressionSent.current) return;
-    impressionSent.current = true;
-    event.mutate({ id: campaign.id, data: { eventType: 'impression', eventKey: `imp-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: stableActorKey.current } });
-  }, [campaign.id]);
-  const openAd = () => {
-    event.mutate({ id: campaign.id, data: { eventType: 'click', eventKey: `clk-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: stableActorKey.current } });
-    if (campaign.ctaUrl) {
-      if (campaign.ctaUrl.startsWith('/')) router.push(campaign.ctaUrl as never);
-      else void Linking.openURL(campaign.ctaUrl);
-    }
-  };
-  return (
-    <View testID="sponsored-ad" style={[adStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={adStyles.header}>
-        <View style={[adStyles.sponsored, { backgroundColor: `${colors.primary}18` }]}><Text style={[adStyles.sponsoredText, { color: colors.primary }]}>{isArabic ? 'إعلان مدفوع' : 'Sponsored'}</Text></View>
-        <Text style={[adStyles.advertiser, { color: colors.mutedForeground }]} numberOfLines={1}>{isArabic ? campaign.advertiserNameArabic || campaign.advertiserName : campaign.advertiserName}</Text>
-      </View>
-      <View style={adStyles.gallery}>
-        {currentMedia.type === 'image'
-          ? <Image source={{ uri: currentMedia.url }} style={adStyles.media} resizeMode="cover" />
-          : <Pressable onPress={() => void Linking.openURL(currentMedia.url)} style={[adStyles.videoPlaceholder, { backgroundColor: colors.surfaceMuted }]}>
-              <Feather name="play-circle" size={36} color={colors.primary} />
-              <Text style={{ color: colors.mutedForeground, fontWeight: '700' }}>{isArabic ? 'تشغيل الفيديو الإعلاني' : 'Play video ad'}</Text>
-            </Pressable>}
-        {media.length > 1 ? (
-          <View style={adStyles.galleryControls}>
-            <Pressable accessibilityLabel={isArabic ? 'الوسائط السابقة' : 'Previous media'} onPress={() => setMediaIndex((current) => (current - 1 + media.length) % media.length)} style={[adStyles.galleryButton, { backgroundColor: colors.card }]}>
-              <Feather name={isArabic ? 'chevron-right' : 'chevron-left'} size={18} color={colors.foreground} />
-            </Pressable>
-            <View style={[adStyles.galleryCount, { backgroundColor: colors.card }]}>
-              <Text style={[adStyles.galleryCountText, { color: colors.foreground }]}>{mediaIndex + 1} / {media.length}</Text>
-            </View>
-            <Pressable accessibilityLabel={isArabic ? 'الوسائط التالية' : 'Next media'} onPress={() => setMediaIndex((current) => (current + 1) % media.length)} style={[adStyles.galleryButton, { backgroundColor: colors.card }]}>
-              <Feather name={isArabic ? 'chevron-left' : 'chevron-right'} size={18} color={colors.foreground} />
-            </Pressable>
-          </View>
-        ) : null}
-      </View>
-      <View style={adStyles.copy}>
-        <Text style={[adStyles.title, { color: colors.foreground }]}>{campaign.title}</Text>
-        <Text style={[adStyles.description, { color: colors.mutedForeground }]} numberOfLines={2}>{campaign.description}</Text>
-        <Pressable onPress={openAd} style={[adStyles.cta, { backgroundColor: colors.primary }]}><Text style={{ color: colors.primaryForeground, fontWeight: '800' }}>{campaign.ctaLabel}</Text></Pressable>
-      </View>
-    </View>
-  );
 }
 
 export default function ExploreScreen() {
@@ -207,7 +152,7 @@ export default function ExploreScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'اكتشف الخدمات' : 'Explore services'} subtitle={`${isArabic ? 'حول' : 'Around'} ${location.city}`} />
-      {ads.data?.[0] && engagementClientId ? <AdBanner campaign={ads.data[0]} isArabic={isArabic} colors={colors} actorKey={engagementClientId} /> : null}
+      {ads.data?.[0] && engagementClientId ? <AdBanner campaign={ads.data[0]} /> : null}
            {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'الخدمة غير متاحة مؤقتًا — نعرض الدليل المحفوظ.' : 'The live directory is unavailable — showing the saved directory.'}</Text> : null}
           <View style={[styles.searchInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="search" size={18} color={colors.mutedForeground} />
@@ -334,25 +279,6 @@ export default function ExploreScreen() {
     </View>
   );
 }
-
-const adStyles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 18, overflow: 'hidden', marginBottom: 16 },
-  header: { paddingHorizontal: 13, paddingTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sponsored: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 7 },
-  sponsoredText: { fontSize: 10, fontWeight: '800' },
-  advertiser: { fontSize: 11, flex: 1, textAlign: 'right' },
-  gallery: { marginTop: 10, position: 'relative' },
-  media: { width: '100%', height: 170 },
-  videoPlaceholder: { height: 170, alignItems: 'center', justifyContent: 'center', gap: 7 },
-  galleryControls: { position: 'absolute', left: 10, right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  galleryButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 5, elevation: 3 },
-  galleryCount: { minWidth: 48, height: 28, paddingHorizontal: 9, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  galleryCountText: { fontSize: 11, fontWeight: '800' },
-  copy: { padding: 13, gap: 7 },
-  title: { fontSize: 16, fontWeight: '800' },
-  description: { fontSize: 12, lineHeight: 18 },
-  cta: { alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, marginTop: 3 },
-});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

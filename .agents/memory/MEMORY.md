@@ -4,3 +4,4 @@
 - [OpenAPI counter compatibility](openapi-counter-compatibility.md) — use number schemas for counters until the workspace Zod version supports generated integer validators.
 - [Mixed marketplace identifiers](mixed-marketplace-identifiers.md) — visible catalog items may use stable slugs while database-managed providers use UUIDs; shared interactions must support both.
 - [Marketplace image galleries](marketplace-image-galleries.md) — managed profiles and property listings keep a gallery while the first image remains the legacy cover.
+- [Homepage ad placement](homepage-ad-placement.md) — eligible campaigns appear below the home hero and rotate every five seconds when several match the current location.

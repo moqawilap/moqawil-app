@@ -1,6 +1,6 @@
 import { Router, type IRouter, type RequestHandler } from "express";
 import { clerkClient } from "@clerk/express";
-import { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import {
   adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
@@ -9,7 +9,6 @@ import {
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getSettings, isDirectoryEligible, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
-import { and, asc, desc, eq, gt, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
 type MarketplaceAuthHandlers = {
   requireUser: RequestHandler;
@@ -1114,7 +1113,7 @@ router.get("/ads", async (req, res, next) => {
       const matches = (values: string[] | undefined, selected: string) => !values?.length || (selected && values.includes(selected));
       return matches(audience.cities, city)
         && matches(audience.wilayats, wilayat)
-        && matches(audience.serviceCategories, service)
+        && (!service || matches(audience.serviceCategories, service))
         && Number(campaign.spentOmaniRial) < Number(campaign.totalBudgetOmaniRial)
         && (dailyByCampaign.get(campaign.id) ?? 0) < Number(campaign.dailyBudgetOmaniRial);
     }).slice(0, limit);
