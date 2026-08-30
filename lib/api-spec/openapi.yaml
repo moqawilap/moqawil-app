@@ -87,6 +87,19 @@ paths:
       responses:
         "200": { description: Updated listing engagement, content: { application/json: { schema: { $ref: "#/components/schemas/ListingEngagement" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
+  /contact-events:
+    post:
+      operationId: recordContactEvent
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactEventInput" }
+      responses:
+        "204": { description: Contact attempt recorded and administrators notified }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /ads:
     get:
       operationId: listAds
@@ -702,6 +715,14 @@ components:
         clientId: { type: string, minLength: 8, maxLength: 128 }
         active: { type: boolean }
       required: [action, clientId]
+    ContactEventInput:
+      type: object
+      properties:
+        category: { type: string, enum: [property, workshop, design, maintenance, contractor] }
+        channel: { type: string, enum: [call, whatsapp, email] }
+        subjectId: { type: string, minLength: 1, maxLength: 100 }
+        subjectName: { type: string, minLength: 1, maxLength: 200 }
+      required: [category, channel, subjectId, subjectName]
     RatingInput:
       type: object
       properties:

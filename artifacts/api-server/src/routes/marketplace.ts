@@ -507,6 +507,63 @@ router.post("/listings/:listingId/engagement", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.post("/contact-events", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const input = req.body ?? {};
+    const categories = ["property", "workshop", "design", "maintenance", "contractor"] as const;
+    const channels = ["call", "whatsapp", "email"] as const;
+    if (
+      !categories.includes(input.category)
+      || !channels.includes(input.channel)
+      || !validListingId(input.subjectId)
+      || typeof input.subjectName !== "string"
+      || input.subjectName.trim().length < 1
+      || input.subjectName.length > 200
+    ) {
+      res.status(400).json({ error: "Valid category, channel, subjectId, and subjectName are required" });
+      return;
+    }
+
+    const categoryLabels = {
+      property: "عقار",
+      workshop: "ورشة",
+      design: "تصميم",
+      maintenance: "صيانة",
+      contractor: "مقاول",
+    } as const;
+    const channelLabels = {
+      call: "اتصال هاتفي",
+      whatsapp: "واتساب",
+      email: "بريد إلكتروني",
+    } as const;
+    const admins = await db.select({ id: users.id }).from(users).where(and(eq(users.role, "admin"), eq(users.isActive, true)));
+    if (admins.length) {
+      await db.insert(notifications).values(admins.map((admin) => ({
+        userId: admin.id,
+        type: "system" as const,
+        channel: "in_app" as const,
+        deliveryStatus: "delivered" as const,
+        title: "تواصل جديد عبر تطبيق مقاول",
+        body: `${channelLabels[input.channel as keyof typeof channelLabels]} بخصوص ${categoryLabels[input.category as keyof typeof categoryLabels]}: ${input.subjectName.trim()}`,
+        deliveryMetadata: {
+          contactCategory: input.category,
+          contactChannel: input.channel,
+          subjectId: input.subjectId,
+          subjectName: input.subjectName.trim(),
+          customerId: user.id,
+        },
+        deliveredAt: new Date(),
+      })));
+    }
+    await logAudit(user.id, "contact_attempt", input.category, input.subjectId, {
+      channel: input.channel,
+      subjectName: input.subjectName.trim(),
+    });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
 router.get("/listings/:listingId/rating", async (req, res, next) => {
   try {
     const listingId = req.params.listingId;

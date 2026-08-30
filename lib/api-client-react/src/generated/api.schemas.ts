@@ -913,6 +913,41 @@ export interface ListingEngagementInput {
   active?: boolean;
 }
 
+export type ContactEventInputCategory = typeof ContactEventInputCategory[keyof typeof ContactEventInputCategory];
+
+
+export const ContactEventInputCategory = {
+  property: 'property',
+  workshop: 'workshop',
+  design: 'design',
+  maintenance: 'maintenance',
+  contractor: 'contractor',
+} as const;
+
+export type ContactEventInputChannel = typeof ContactEventInputChannel[keyof typeof ContactEventInputChannel];
+
+
+export const ContactEventInputChannel = {
+  call: 'call',
+  whatsapp: 'whatsapp',
+  email: 'email',
+} as const;
+
+export interface ContactEventInput {
+  category: ContactEventInputCategory;
+  channel: ContactEventInputChannel;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  subjectId: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  subjectName: string;
+}
+
 export interface RatingInput {
   /**
      * @minimum 1

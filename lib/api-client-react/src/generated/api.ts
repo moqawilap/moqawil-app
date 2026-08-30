@@ -37,6 +37,7 @@ import type {
   AdminPaymentCreate,
   AdminSubscriptionUpdate,
   BadRequestResponse,
+  ContactEventInput,
   ContractorDetail,
   ContractorDirectoryPage,
   ContractorProfileUpsert,
@@ -682,6 +683,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRecordListingEngagementMutationOptions(options));
+    }
+
+export const getRecordContactEventUrl = () => {
+
+
+
+
+  return `/api/contact-events`
+}
+
+export const recordContactEvent = async (contactEventInput: ContactEventInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRecordContactEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contactEventInput)
+  }
+);}
+
+
+
+
+
+export const getRecordContactEventMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordContactEvent>>, TError,{data: BodyType<ContactEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordContactEvent>>, TError,{data: BodyType<ContactEventInput>}, TContext> => {
+
+const mutationKey = ['recordContactEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordContactEvent>>, {data: BodyType<ContactEventInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordContactEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordContactEventMutationResult = NonNullable<Awaited<ReturnType<typeof recordContactEvent>>>
+    export type RecordContactEventMutationBody = BodyType<ContactEventInput>
+    export type RecordContactEventMutationError = ErrorType<BadRequestResponse>
+
+    export const useRecordContactEvent = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordContactEvent>>, TError,{data: BodyType<ContactEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordContactEvent>>,
+        TError,
+        {data: BodyType<ContactEventInput>},
+        TContext
+      > => {
+      return useMutation(getRecordContactEventMutationOptions(options));
     }
 
 export const getListAdsUrl = (params?: ListAdsParams,) => {

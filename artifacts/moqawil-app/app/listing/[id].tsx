@@ -8,7 +8,8 @@ import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagement
 import { listings, marketplaceListingToLocal } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useRateListing, useRecordListingEngagement } from '@workspace/api-client-react';
+import { getContactMessage, getWhatsAppUrl } from '@/constants/contactMessages';
+import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useRateListing, useRecordContactEvent, useRecordListingEngagement } from '@workspace/api-client-react';
 
 export default function ListingDetail() {
   const colors = useColors();
@@ -22,6 +23,7 @@ export default function ListingDetail() {
   const persistedRating = useGetListingRating(id ?? '', { query: { queryKey: getGetListingRatingQueryKey(id ?? ''), enabled: Boolean(id) } });
   const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : (localListing ?? listings[0]);
   const contact = useRecordListingEngagement();
+  const contactEvent = useRecordContactEvent();
   const [selectedRating, setSelectedRating] = React.useState(0);
   const rate = useRateListing({ mutation: { onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: getGetListingQueryKey(listing.id) });
@@ -32,11 +34,29 @@ export default function ListingDetail() {
     setSelectedRating(value);
     rate.mutate({ listingId: listing.id, data: { rating: value } });
   };
-  const openContact = () => {
+  const recordContact = (channel: 'call' | 'whatsapp') => {
     if (engagementClientId) {
       contact.mutate({ listingId: listing.id, data: { action: 'contact', clientId: engagementClientId } });
     }
-    Linking.openURL(`tel:${listing.phone ?? '+96877224535'}`);
+    contactEvent.mutate({ data: {
+      category: 'property',
+      channel,
+      subjectId: listing.id,
+      subjectName: isArabic ? listing.titleAr : listing.title,
+    } });
+  };
+  const openContact = () => {
+    const phone = listing.phone ?? '+96877224535';
+    recordContact('call');
+    void Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+  };
+  const openWhatsApp = () => {
+    const phone = listing.phone ?? '+96877224535';
+    const message = getContactMessage('property', isArabic ? listing.titleAr : listing.title, isArabic);
+    const url = getWhatsAppUrl(phone, message);
+    if (!url) return;
+    recordContact('whatsapp');
+    void Linking.openURL(url);
   };
 
   return (
@@ -74,7 +94,7 @@ export default function ListingDetail() {
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <ActionButton label={isArabic ? 'اتصل بالمعلن' : 'Contact agent'} icon="phone" onPress={openContact} style={{ flex: 1 }} />
-        <ActionButton label="Arrange visit" icon="calendar" onPress={() => Linking.openURL('mailto:moqawil.om@gmail.com')} secondary style={{ flex: 1 }} />
+        <ActionButton label={isArabic ? 'واتساب' : 'WhatsApp'} icon="message-circle" onPress={openWhatsApp} secondary style={{ flex: 1 }} />
       </View>
     </View>
   );

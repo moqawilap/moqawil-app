@@ -8,7 +8,8 @@ import { ActionButton, BrandMark, FixedBackButton, IconButton, Rating, StarRatin
 import { providers } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getGetContractorQueryKey, getGetContractorRatingQueryKey, getListContractorsQueryKey, useGetContractor, useGetContractorRating, useRateContractor } from '@workspace/api-client-react';
+import { getContactMessage, getWhatsAppUrl, type ContactCategory } from '@/constants/contactMessages';
+import { getGetContractorQueryKey, getGetContractorRatingQueryKey, getListContractorsQueryKey, useGetContractor, useGetContractorRating, useRateContractor, useRecordContactEvent } from '@workspace/api-client-react';
 
 export default function ProviderDetail() {
   const colors = useColors();
@@ -16,10 +17,11 @@ export default function ProviderDetail() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isArabic, isSaved, toggleSaved, managedProviders } = useApp();
+  const { isArabic, isSaved, toggleSaved, managedProviders, activeService } = useApp();
   const contractor = useGetContractor(id);
   const persistedRating = useGetContractorRating(id, { query: { queryKey: getGetContractorRatingQueryKey(id), enabled: Boolean(id) } });
   const [selectedRating, setSelectedRating] = React.useState(0);
+  const contactEvent = useRecordContactEvent();
   const rate = useRateContractor({ mutation: { onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: getGetContractorQueryKey(id) });
     queryClient.invalidateQueries({ queryKey: getGetContractorRatingQueryKey(id) });
@@ -37,6 +39,31 @@ export default function ProviderDetail() {
     phone: contractor.data.phone ?? '', contractAmount: '', startingPrice: '', role: 'contractor' as const, accent: '',
   } : fallback;
   if (!provider) return <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }]}><Text style={{ color: colors.foreground }}>Provider unavailable.</Text><ActionButton label="Go back" secondary onPress={() => router.back()} /></View>;
+  const contactCategory: ContactCategory =
+    activeService === 'design' || provider.role === 'consultant' ? 'design'
+      : activeService === 'maintenance' || provider.role === 'maintenance' ? 'maintenance'
+        : activeService === 'building' ? 'workshop'
+          : 'contractor';
+  const subjectName = isArabic ? provider.nameAr : provider.name;
+  const recordContact = (channel: 'call' | 'whatsapp') => {
+    contactEvent.mutate({ data: {
+      category: contactCategory,
+      channel,
+      subjectId: provider.id,
+      subjectName,
+    } });
+  };
+  const openCall = () => {
+    if (!provider.phone.trim()) return;
+    recordContact('call');
+    void Linking.openURL(`tel:${provider.phone.replace(/\s/g, '')}`);
+  };
+  const openWhatsApp = () => {
+    const url = getWhatsAppUrl(provider.phone, getContactMessage(contactCategory, subjectName, isArabic));
+    if (!url) return;
+    recordContact('whatsapp');
+    void Linking.openURL(url);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -81,8 +108,8 @@ export default function ProviderDetail() {
         </View>
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
-         {contractor.data && !contractor.data.phone ? <View style={{ flex: 1 }}><ActionButton label="Phone unavailable" icon="phone-off" secondary onPress={() => undefined} /></View> : <ActionButton label="Call provider" icon="phone" onPress={() => Linking.openURL(`tel:${provider.phone.replace(/\s/g, '')}`)} style={{ flex: 1 }} />}
-        <ActionButton label="Message" icon="message-circle" onPress={() => Linking.openURL('mailto:moqawil.om@gmail.com')} secondary style={{ flex: 1 }} />
+         {!provider.phone.trim() ? <View style={{ flex: 1 }}><ActionButton label={isArabic ? 'رقم الهاتف غير متوفر' : 'Phone unavailable'} icon="phone-off" secondary onPress={() => undefined} /></View> : <ActionButton label={isArabic ? 'اتصال' : 'Call provider'} icon="phone" onPress={openCall} style={{ flex: 1 }} />}
+        {!provider.phone.trim() ? <View style={{ flex: 1 }}><ActionButton label={isArabic ? 'واتساب غير متوفر' : 'WhatsApp unavailable'} icon="message-circle" secondary onPress={() => undefined} /></View> : <ActionButton label={isArabic ? 'واتساب' : 'WhatsApp'} icon="message-circle" onPress={openWhatsApp} secondary style={{ flex: 1 }} />}
       </View>
     </View>
   );
