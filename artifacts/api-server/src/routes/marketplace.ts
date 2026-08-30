@@ -94,11 +94,41 @@ type AdStatus = typeof adStatuses[number];
 type AdBillingModel = typeof adBillingModels[number];
 type AdEventType = typeof adEventTypes[number];
 
+const adServiceAliases: Record<string, string> = {
+  contractor: "contractors",
+  contractors: "contractors",
+  "مقاول": "contractors",
+  "المقاولون": "contractors",
+  consultant: "consultants",
+  consultants: "consultants",
+  "الاستشاريون": "consultants",
+  design: "design",
+  "تصميم": "design",
+  "التصميم": "design",
+  building: "building",
+  "بناء": "building",
+  "البناء": "building",
+  "البناء والورش": "building",
+  "building workshops": "building",
+  "real estate": "real-estate",
+  "real-estate": "real-estate",
+  "عقارات": "real-estate",
+  "العقارات": "real-estate",
+  maintenance: "maintenance",
+  "صيانة": "maintenance",
+  "الصيانة": "maintenance",
+};
+
+function normalizeAdService(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return adServiceAliases[normalized] ?? normalized;
+}
+
 function validAdAudience(value: unknown): value is AdAudience {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const audience = value as Record<string, unknown>;
   return ["cities", "wilayats", "serviceCategories"].every((key) => audience[key] === undefined || (
-    Array.isArray(audience[key]) && (audience[key] as unknown[]).length <= 30
+    Array.isArray(audience[key]) && (audience[key] as unknown[]).length <= 100
       && (audience[key] as unknown[]).every((item) => typeof item === "string" && item.trim().length >= 2 && item.trim().length <= 100)
   ));
 }
@@ -1095,6 +1125,7 @@ router.get("/ads", async (req, res, next) => {
     dayStart.setHours(0, 0, 0, 0);
     const city = typeof req.query.city === "string" ? req.query.city.trim() : "";
     const wilayat = typeof req.query.wilayat === "string" ? req.query.wilayat.trim() : "";
+    const requestedWilayats = wilayat.split(",").map((item) => item.trim()).filter(Boolean);
     const service = typeof req.query.service === "string" ? req.query.service.trim() : "";
     const requestedLimit = Number(req.query.limit);
     const limit = Math.min(5, Math.max(1, Number.isInteger(requestedLimit) ? requestedLimit : 2));
@@ -1111,9 +1142,11 @@ router.get("/ads", async (req, res, next) => {
     const eligible = rows.filter(({ campaign }) => {
       const audience = campaign.audience ?? {};
       const matches = (values: string[] | undefined, selected: string) => !values?.length || (selected && values.includes(selected));
+      const matchesWilayat = (values: string[] | undefined) => !values?.length || requestedWilayats.some((item) => values.includes(item));
+      const matchesService = (values: string[] | undefined) => !values?.length || !service || values.some((item) => normalizeAdService(item) === normalizeAdService(service));
       return matches(audience.cities, city)
-        && matches(audience.wilayats, wilayat)
-        && (!service || matches(audience.serviceCategories, service))
+        && matchesWilayat(audience.wilayats)
+        && matchesService(audience.serviceCategories)
         && Number(campaign.spentOmaniRial) < Number(campaign.totalBudgetOmaniRial)
         && (dailyByCampaign.get(campaign.id) ?? 0) < Number(campaign.dailyBudgetOmaniRial);
     }).slice(0, limit);

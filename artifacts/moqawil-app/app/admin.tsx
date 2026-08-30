@@ -11,6 +11,7 @@ import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { designServices } from '@/data/designServices';
 import { maintenanceItems } from '@/data/mockData';
+import { omanGovernorates } from '@/data/omanLocations';
 
 import {
   useGetAdminOverview, getGetAdminOverviewQueryKey,
@@ -893,7 +894,7 @@ const blankAdCampaign = () => {
     ctaUrl: '',
     media: [] as AdMediaItem[],
     audienceCity: '',
-    audienceWilayat: '',
+    audienceWilayats: [] as string[],
     audienceService: '',
     frequencyCapPerDay: '3',
     totalBudgetOmaniRial: '25',
@@ -905,6 +906,11 @@ const blankAdCampaign = () => {
     status: 'draft' as const,
   };
 };
+
+const omanWilayatOptions = omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => ({
+  ...wilayat,
+  governorate: governorate.nameAr,
+})));
 
 function AdvertisingTab() {
   const colors = useColors();
@@ -936,7 +942,7 @@ function AdvertisingTab() {
       ctaUrl: campaign.ctaUrl ?? '',
       media: campaign.media?.length ? campaign.media : [{ url: campaign.mediaUrl, type: campaign.mediaType }],
       audienceCity: campaign.audience.cities?.[0] ?? '',
-      audienceWilayat: campaign.audience.wilayats?.[0] ?? '',
+      audienceWilayats: campaign.audience.wilayats ?? [],
       audienceService: campaign.audience.serviceCategories?.[0] ?? '',
       frequencyCapPerDay: String(campaign.frequencyCapPerDay),
       totalBudgetOmaniRial: String(campaign.totalBudgetOmaniRial),
@@ -967,7 +973,7 @@ function AdvertisingTab() {
       media: form.media,
       audience: {
         ...(form.audienceCity.trim() ? { cities: [form.audienceCity.trim()] } : {}),
-        ...(form.audienceWilayat.trim() ? { wilayats: [form.audienceWilayat.trim()] } : {}),
+        ...(form.audienceWilayats.length ? { wilayats: form.audienceWilayats } : {}),
         ...(form.audienceService.trim() ? { serviceCategories: [form.audienceService.trim()] } : {}),
       },
       frequencyCapPerDay: cap,
@@ -1033,7 +1039,6 @@ function AdvertisingTab() {
               ['ctaLabel', 'Button label', 'نص الزر'],
               ['ctaUrl', 'Action URL', 'رابط الإجراء'],
               ['audienceCity', 'Target city', 'المدينة المستهدفة'],
-              ['audienceWilayat', 'Target wilayat', 'الولاية المستهدفة'],
               ['audienceService', 'Target service', 'الخدمة المستهدفة'],
               ['startAt', 'Start date (YYYY-MM-DD)', 'تاريخ البدء'],
               ['endAt', 'End date (YYYY-MM-DD)', 'تاريخ الانتهاء'],
@@ -1043,6 +1048,30 @@ function AdvertisingTab() {
                 <TextInput value={String((form as any)[key])} onChangeText={(value) => set(key, value)} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
               </View>
             ))}
+          </View>
+          <View style={styles.wilayatPicker}>
+            <View style={styles.mediaHeader}>
+              <Text style={[styles.label, { color: colors.foreground, marginBottom: 0 }]}>{text(isArabic, 'Target wilayats', 'الولايات المستهدفة')}</Text>
+              <Text style={[styles.mediaCounter, { color: colors.mutedForeground }]}>{form.audienceWilayats.length ? `${form.audienceWilayats.length} ${text(isArabic, 'selected', 'محددة')}` : text(isArabic, 'All Oman', 'كل السلطنة')}</Text>
+            </View>
+            <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Select one or more wilayats. Leave empty to target all Oman.', 'اختر ولاية أو أكثر. اتركها فارغة لاستهداف جميع ولايات السلطنة.')}</Text>
+            <ScrollView nestedScrollEnabled style={[styles.wilayatList, { borderColor: colors.border, backgroundColor: colors.background }]}>
+              <View style={styles.wilayatOptions}>
+                {[...new Set([...form.audienceWilayats, ...omanWilayatOptions.map((wilayat) => wilayat.name)])].map((name) => {
+                  const option = omanWilayatOptions.find((wilayat) => wilayat.name === name);
+                  const selected = form.audienceWilayats.includes(name);
+                  return (
+                    <Pressable key={name} onPress={() => setForm((current: any) => ({ ...current, audienceWilayats: selected ? current.audienceWilayats.filter((item: string) => item !== name) : [...current.audienceWilayats, name] }))} style={[styles.wilayatOption, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.surface }]}>
+                      <Feather name={selected ? 'check-square' : 'square'} size={15} color={selected ? colors.primary : colors.mutedForeground} />
+                      <View style={styles.wilayatOptionCopy}>
+                        <Text style={[styles.wilayatName, { color: colors.foreground }]}>{isArabic ? option?.nameAr ?? name : name}</Text>
+                        {option ? <Text style={[styles.wilayatGovernorate, { color: colors.mutedForeground }]}>{option.governorate}</Text> : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </View>
           <View style={styles.mediaHeader}>
             <Text style={[styles.label, { color: colors.foreground, marginBottom: 0 }]}>{text(isArabic, 'Campaign gallery', 'معرض الحملة')}</Text>
@@ -1105,6 +1134,7 @@ function AdvertisingTab() {
             <View style={[styles.badge, { backgroundColor: campaign.status === 'active' ? '#D9F8F2' : campaign.status === 'paused' ? '#FFF2D6' : colors.muted }]}><Text style={[styles.badgeText, { color: campaign.status === 'active' ? '#0B6E6B' : colors.mutedForeground }]}>{statusText(isArabic, campaign.status)}</Text></View>
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.advertiserNameArabic || campaign.advertiserName} • {campaign.billingModel.toUpperCase()} • {campaign.totalBudgetOmaniRial.toFixed(3)} OMR {text(isArabic, 'budget', 'ميزانية')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Target wilayats', 'الولايات المستهدفة')}: {campaign.audience.wilayats?.length ? campaign.audience.wilayats.join('، ') : text(isArabic, 'All Oman', 'كل السلطنة')}</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Spent', 'المصروف')}: {campaign.spentOmaniRial.toFixed(3)} • {text(isArabic, 'Remaining', 'المتبقي')}: {campaign.remainingOmaniRial.toFixed(3)} • {text(isArabic, 'Today', 'اليوم')}: {campaign.dailySpentOmaniRial.toFixed(3)} / {campaign.dailyBudgetOmaniRial.toFixed(3)} OMR</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.impressionCount} {text(isArabic, 'impressions', 'ظهور')} • {campaign.clickCount} {text(isArabic, 'clicks', 'نقرات')} • {campaign.conversionCount} {text(isArabic, 'results', 'نتائج')} • {text(isArabic, 'up to', 'حتى')} {campaign.frequencyCapPerDay} / {text(isArabic, 'customer/day', 'عميل/يوم')}</Text>
           <View style={styles.cardActions}>
@@ -1467,6 +1497,13 @@ const styles = StyleSheet.create({
   removeMedia: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.8)' },
   multiImageButton: { width: 116, height: 90, borderWidth: 1, borderStyle: 'dashed', borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 2 },
   multiImageButtonText: { fontSize: 18, fontWeight: '800' },
+  wilayatPicker: { marginBottom: 14, gap: 7 },
+  wilayatList: { maxHeight: 260, borderWidth: 1, borderRadius: 14, padding: 10 },
+  wilayatOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 10 },
+  wilayatOption: { width: '48%', minHeight: 52, borderWidth: 1, borderRadius: 11, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  wilayatOptionCopy: { flex: 1 },
+  wilayatName: { fontSize: 12, fontWeight: '800' },
+  wilayatGovernorate: { fontSize: 9, marginTop: 2 },
 
   inlineForm: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8 },
   statusPill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },

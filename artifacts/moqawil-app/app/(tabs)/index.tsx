@@ -16,7 +16,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { isArabic, location, locationLoading, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders, engagementClientId } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
-  const adQuery = { city: location.city, wilayat: location.area, limit: 5 };
+  const locationWilayats = location.city === 'Muscat' && location.area === 'Al Khuwair' ? [location.area, 'Bawshar'] : [location.area];
+  const adQuery = { city: location.city, wilayat: locationWilayats.filter(Boolean).join(','), limit: 5 };
   const ads = useListAds(adQuery, { query: { queryKey: getListAdsQueryKey(adQuery), refetchInterval: 30_000 } });
   const [activeAdIndex, setActiveAdIndex] = React.useState(0);
   const availableListings = React.useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
