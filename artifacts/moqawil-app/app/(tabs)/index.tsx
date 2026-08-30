@@ -148,11 +148,6 @@ export default function HomeScreen() {
           </View> : null}
           {homepage.showSponsoredAds && ads.data?.[activeAdIndex] && engagementClientId ? <AdBanner campaign={ads.data[activeAdIndex]} /> : null}
           {homepage.sectionOrder.map(renderSection)}
-           <View style={[styles.aboutCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-             <Text style={[styles.aboutEyebrow, { color: colors.primary }]}>{isArabic ? 'عن مقاول' : 'ABOUT MOQAWIL'}</Text>
-             <Text style={[styles.aboutTitle, { color: colors.foreground }]}>{isArabic ? 'منصة واحدة لكل احتياجات البناء والعقارات.' : 'One platform for all your building and property needs.'}</Text>
-             <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>{isArabic ? 'مقاول منصة عُمانية تجمع العملاء بالمقاولين والورش ومقدمي خدمات الصيانة والعقارات، وتساعدك على العثور على الخدمة المناسبة والتواصل مع مقدمي الخدمة الموثوقين بسهولة.' : 'Moqawil is an Omani marketplace that connects customers with trusted contractors, workshops, maintenance providers, and property listings. Discover the right service, compare providers, and get in touch with confidence.'}</Text>
-           </View>
            <View style={styles.footer}><Image source={require('@/assets/images/moqawil-logo.png')} style={styles.footerMark} /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Moqawil · مقاول</Text></View>
         </View>
       </ScrollView>
@@ -208,10 +203,6 @@ const styles = StyleSheet.create({
   maintenanceCard: { width: 112, padding: 12, borderRadius: 17, borderWidth: 1, gap: 10 },
   maintenanceIcon: { width: 35, height: 35, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   maintenanceLabel: { fontSize: 11, fontWeight: '700' },
-  aboutCard: { marginTop: 34, borderWidth: 1, borderRadius: 20, padding: 18, gap: 8 },
-  aboutEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.1 },
-  aboutTitle: { fontSize: 18, lineHeight: 25, fontWeight: '800' },
-  aboutText: { fontSize: 13, lineHeight: 21 },
   footer: { alignItems: 'center', gap: 6, marginTop: 40, marginBottom: 8 },
   footerMark: { width: 31, height: 31, borderRadius: 9 },
   footerText: { fontSize: 10, fontWeight: '600' },
