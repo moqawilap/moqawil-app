@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   profileSub: { fontSize: 11, color: 'rgba(255,255,255,0.68)' },
   languageHeading: { marginTop: 27, marginBottom: 11 },
   socialHeading: { marginTop: 27, marginBottom: 11 },
-  socialLinksRow: { flexDirection: 'row', gap: 10, justifyContent: 'flex-start', direction: 'ltr' },
+  socialLinksRow: { flexDirection: 'row', gap: 10, justifyContent: 'flex-start' },
   socialLink: { flex: 1, minHeight: 112, borderWidth: 1.5, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 5 },
   socialIcon: { width: 54, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   socialLabel: { fontSize: 11, fontWeight: '700', textAlign: 'center' },

@@ -1,10 +1,11 @@
 import React, { type ReactNode, useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Animated, Easing, Image, View } from 'react-native';
+import { Animated, Easing, Image, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import colors from '@/constants/colors';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -43,19 +44,43 @@ function AuthUserSync() {
 }
 
 function LoadingLogo() {
-  const pulse = useRef(new Animated.Value(0.55)).current;
+  const entrance = useRef(new Animated.Value(0)).current;
+  const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const animation = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: 650, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 0.55, duration: 650, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    const reveal = Animated.timing(entrance, {
+      toValue: 1,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    const breathing = Animated.loop(Animated.sequence([
+      Animated.timing(breathe, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
     ]));
-    animation.start();
-    return () => animation.stop();
-  }, [pulse]);
+    reveal.start();
+    breathing.start();
+    return () => {
+      reveal.stop();
+      breathing.stop();
+    };
+  }, [breathe, entrance]);
+
+  const logoOpacity = entrance.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const logoScale = entrance.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+  const logoTranslateY = entrance.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
+  const ringScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1.08] });
+  const ringOpacity = breathe.interpolate({ inputRange: [0, 1], outputRange: [0.42, 0.08] });
+
   return (
-    <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFC', zIndex: 100 }}>
-      <Animated.View style={{ opacity: pulse }}>
-        <Image source={require('@/assets/images/moqawil-logo.png')} style={{ width: 128, height: 128, resizeMode: 'contain' }} />
+    <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.light.background, zIndex: 100 }}>
+      <Animated.View style={{ position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1.5, borderColor: colors.light.accentForeground, opacity: ringOpacity, transform: [{ scale: ringScale }] }} />
+      <View style={{ width: 174, height: 174, borderRadius: 87, borderWidth: 1, borderColor: colors.light.border, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }, { translateY: logoTranslateY }] }}>
+          <Image source={require('@/assets/images/moqawil-logo.png')} style={{ width: 128, height: 128, resizeMode: 'contain' }} />
+        </Animated.View>
+      </View>
+      <Animated.View style={{ position: 'absolute', top: '63%', opacity: logoOpacity, transform: [{ translateY: logoTranslateY }] }}>
+        <Text style={{ color: colors.light.primary, fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>MOQAWIL · مقاول</Text>
       </Animated.View>
     </View>
   );
@@ -66,12 +91,18 @@ function RootLayoutNav() {
   const { preferencesLoaded } = useApp();
   const segments = useSegments();
   const isAuthRoute = segments[0] === '(auth)';
+  const [introFinished, setIntroFinished] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn && !isAuthRoute) router.replace('/sign-in');
     if (isSignedIn && isAuthRoute) router.replace('/');
   }, [isAuthRoute, isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIntroFinished(true), 1550);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>
@@ -86,7 +117,7 @@ function RootLayoutNav() {
         <Stack.Screen name="requests" options={{ presentation: 'modal' }} />
         <Stack.Screen name="workshop-requests" options={{ presentation: 'modal' }} />
       </Stack>
-      {(!isLoaded || !preferencesLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <LoadingLogo /> : null}
+      {(!introFinished || !isLoaded || !preferencesLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <LoadingLogo /> : null}
     </View>
   );
 }
