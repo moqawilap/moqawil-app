@@ -63,6 +63,13 @@ export default function HomeScreen() {
   };
   const localized = (english: string, arabic: string) => isArabic ? arabic : english;
   const withLocation = (value: string) => value.replaceAll('{area}', location.area).replaceAll('{city}', location.city);
+  const openSocialLink = (url: string) => {
+    if (Platform.OS === 'web') {
+      window.open(url, url.startsWith('mailto:') ? '_self' : '_blank', 'noopener,noreferrer');
+      return;
+    }
+    void Linking.openURL(url);
+  };
   const renderSection = (id: HomepageSectionId) => {
     const section = homepage.sections[id];
     if (!section?.visible) return null;
@@ -159,7 +166,7 @@ export default function HomeScreen() {
              <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>{isArabic ? 'مقاول منصة عُمانية تجمع العملاء بالمقاولين والورش ومقدمي خدمات الصيانة والعقارات، وتساعدك على العثور على الخدمة المناسبة والتواصل مع مقدمي الخدمة الموثوقين بسهولة.' : 'Moqawil is an Omani marketplace that connects customers with trusted contractors, workshops, maintenance providers, and property listings. Discover the right service, compare providers, and get in touch with confidence.'}</Text>
              <View style={styles.homeSocialLinks}>
                {socialLinks.map((item) => (
-                 <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} hitSlop={8} onPress={() => void Linking.openURL(item.url)} style={({ pressed }) => [styles.homeSocialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
+                  <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label} hitSlop={8} onPress={() => openSocialLink(item.url)} style={({ pressed }) => [styles.homeSocialLink, { backgroundColor: colors.surface, borderColor: colors.primary }, pressed && styles.pressed]}>
                     {item.icon === 'mail' ? <Feather name="mail" size={19} color={colors.primary} /> : <MaterialCommunityIcons name={item.icon} size={19} color={colors.primary} />}
                  </Pressable>
                ))}

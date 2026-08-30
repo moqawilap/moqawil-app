@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth, useUser } from '@clerk/expo';
 import { router } from 'expo-router';
 import React from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
@@ -29,10 +29,17 @@ export default function ProfileScreen() {
     ...(isSignedIn && !isAdmin ? [{ icon: 'briefcase' as const, title: isContractor ? (isArabic ? 'إدارة ملف المقاول' : 'Manage contractor profile') : (isArabic ? 'انضم كمقاول' : 'Join as contractor'), value: '', onPress: () => router.push('/contractor-profile' as never) }] : []),
      ...(isSignedIn && isContractor ? [{ icon: 'inbox' as const, title: isArabic ? 'طلبات الورشة' : 'Workshop requests', value: isArabic ? 'استقبل وأرسل عروض الأسعار' : 'Review requests and send quotes', onPress: () => router.push('/workshop-requests' as never) }] : []),
   ];
-   const socialLinks = [
-     { icon: 'whatsapp' as const, title: isArabic ? 'واتساب' : 'WhatsApp', onPress: () => Linking.openURL('https://wa.me/96877224535') },
-     { icon: 'mail' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', onPress: () => Linking.openURL('mailto:moqawil.ap@gmail.com') },
-     { icon: 'instagram' as const, title: 'Instagram', onPress: () => Linking.openURL('https://instagram.com/moqawil.om') },
+    const openSocialLink = (url: string) => {
+      if (Platform.OS === 'web') {
+        window.open(url, url.startsWith('mailto:') ? '_self' : '_blank', 'noopener,noreferrer');
+        return;
+      }
+      void Linking.openURL(url).catch(() => Alert.alert(isArabic ? 'تعذر فتح الرابط' : 'Unable to open link'));
+    };
+    const socialLinks = [
+      { icon: 'whatsapp' as const, title: isArabic ? 'واتساب' : 'WhatsApp', onPress: () => openSocialLink('https://wa.me/96877224535') },
+      { icon: 'mail' as const, title: isArabic ? 'البريد الإلكتروني' : 'Email', onPress: () => openSocialLink('mailto:moqawil.ap@gmail.com') },
+      { icon: 'instagram' as const, title: 'Instagram', onPress: () => openSocialLink('https://instagram.com/moqawil.om') },
    ];
   const profileName = user?.fullName || (isSignedIn ? user?.primaryEmailAddress?.emailAddress : null) || (isArabic ? 'مستخدم مقاول' : 'Moqawil user');
 
@@ -57,6 +64,7 @@ export default function ProfileScreen() {
                   <View style={[styles.socialIcon, { backgroundColor: colors.primarySoft }]}>
                     {item.icon === 'mail' ? <Feather name="mail" size={20} color={colors.primary} /> : <MaterialCommunityIcons name={item.icon} size={20} color={colors.primary} />}
                   </View>
+                 <Text style={[styles.socialLabel, { color: colors.foreground }]}>{item.title}</Text>
                </Pressable>
              ))}
            </View>
@@ -83,9 +91,10 @@ const styles = StyleSheet.create({
   profileSub: { fontSize: 11, color: 'rgba(255,255,255,0.68)' },
   languageHeading: { marginTop: 27, marginBottom: 11 },
   socialHeading: { marginTop: 27, marginBottom: 11 },
-  socialLinksRow: { flexDirection: 'row', gap: 7, justifyContent: 'flex-start', direction: 'ltr' },
-  socialLink: { width: 72, height: 72, borderWidth: 1.5, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  socialIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  socialLinksRow: { flexDirection: 'row', gap: 10, justifyContent: 'flex-start', direction: 'ltr' },
+  socialLink: { flex: 1, minHeight: 112, borderWidth: 1.5, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 5 },
+  socialIcon: { width: 54, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  socialLabel: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
   pressed: { opacity: 0.78 },
   preferencesHeading: { marginTop: 27, marginBottom: 11, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   sectionTitle: { fontSize: 17, fontWeight: '800' },
