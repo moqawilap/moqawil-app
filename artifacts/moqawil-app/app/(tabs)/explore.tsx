@@ -33,18 +33,18 @@ function budgetFromInput(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function AdBanner({ campaign, isArabic, colors }: { campaign: AdCampaign; isArabic: boolean; colors: ReturnType<typeof useColors> }) {
+function AdBanner({ campaign, isArabic, colors, actorKey }: { campaign: AdCampaign; isArabic: boolean; colors: ReturnType<typeof useColors>; actorKey: string }) {
   const router = useRouter();
-  const actorKey = useRef(`customer-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const stableActorKey = useRef(actorKey);
   const impressionSent = useRef(false);
   const event = useRecordAdEvent();
   useEffect(() => {
     if (impressionSent.current) return;
     impressionSent.current = true;
-    event.mutate({ id: campaign.id, data: { eventType: 'impression', eventKey: `imp-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: actorKey.current } });
+    event.mutate({ id: campaign.id, data: { eventType: 'impression', eventKey: `imp-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: stableActorKey.current } });
   }, [campaign.id]);
   const openAd = () => {
-    event.mutate({ id: campaign.id, data: { eventType: 'click', eventKey: `clk-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: actorKey.current } });
+    event.mutate({ id: campaign.id, data: { eventType: 'click', eventKey: `clk-${Date.now()}-${Math.random().toString(36).slice(2)}`, actorKey: stableActorKey.current } });
     if (campaign.ctaUrl) {
       if (campaign.ctaUrl.startsWith('/')) router.push(campaign.ctaUrl as never);
       else void Linking.openURL(campaign.ctaUrl);
@@ -70,7 +70,7 @@ export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
+  const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders, engagementClientId } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
   const availableListings = useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
   const [query, setQuery] = useState('');
@@ -184,7 +184,7 @@ export default function ExploreScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'اكتشف الخدمات' : 'Explore services'} subtitle={`${isArabic ? 'حول' : 'Around'} ${location.city}`} />
-          {ads.data?.[0] ? <AdBanner campaign={ads.data[0]} isArabic={isArabic} colors={colors} /> : null}
+      {ads.data?.[0] && engagementClientId ? <AdBanner campaign={ads.data[0]} isArabic={isArabic} colors={colors} actorKey={engagementClientId} /> : null}
            {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'الخدمة غير متاحة مؤقتًا — نعرض الدليل المحفوظ.' : 'The live directory is unavailable — showing the saved directory.'}</Text> : null}
           <View style={[styles.searchInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="search" size={18} color={colors.mutedForeground} />

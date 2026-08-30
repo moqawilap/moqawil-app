@@ -1146,6 +1146,7 @@ router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, n
       mediaUrl: String(input.mediaUrl),
       mediaType: input.mediaType as "image" | "video",
       audience: input.audience as AdAudience,
+      frequencyCapPerDay: Number(input.frequencyCapPerDay),
       totalBudgetOmaniRial: Number(input.totalBudgetOmaniRial).toFixed(6),
       dailyBudgetOmaniRial: Number(input.dailyBudgetOmaniRial).toFixed(6),
       billingModel: input.billingModel as AdBillingModel,
