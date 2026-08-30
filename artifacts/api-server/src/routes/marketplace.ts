@@ -13,7 +13,7 @@ import {
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
-import { addMonths, calculateRanking, DEFAULT_SETTINGS, getSettings, isDirectoryEligible, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
+import { addMonths, calculateRanking, DEFAULT_SETTINGS, getHomepageSettings, getSettings, isDirectoryEligible, isHomepageSettings, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
 
 type MarketplaceAuthHandlers = {
   requireUser: RequestHandler;
@@ -1479,15 +1479,22 @@ router.get("/admin/ad-campaigns/:id/report", requireUser, requireAdmin, async (r
     res.json({ campaign: adResponse(campaign, owner ?? undefined), days: [...days.values()].map((day) => ({ ...day, spentOmaniRial: Number(day.spentOmaniRial.toFixed(6)) })) });
   } catch (error) { next(error); }
 });
+router.get("/homepage-settings", async (_req, res, next) => { try { res.json(await getHomepageSettings()); } catch (error) { next(error); } });
 router.get("/admin/settings", requireUser, requireAdmin, async (_req, res, next) => { try { res.json(await getSettings()); } catch (error) { next(error); } });
 router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const settings = req.body;
-    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success) {
+    const currentSettings = await getSettings();
+    const homepage = settings?.homepage ?? currentSettings.homepage;
+    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success || !isHomepageSettings(homepage)) {
       res.status(400).json({ error: "Invalid marketplace settings" });
       return;
     }
-    await db.insert(marketplaceSettings).values([{ key: "subscription", value: { trialMonths: settings.trialMonths, defaultPriceOmaniRial: settings.defaultPriceOmaniRial }, description: "Subscription lifecycle configuration" }, { key: "ranking", value: settings.rankingWeights, description: "Directory ranking weights" }]).onConflictDoUpdate({ target: marketplaceSettings.key, set: { value: sql`excluded.value`, updatedAt: new Date() } });
+    await db.insert(marketplaceSettings).values([
+      { key: "subscription", value: { trialMonths: settings.trialMonths, defaultPriceOmaniRial: settings.defaultPriceOmaniRial }, description: "Subscription lifecycle configuration" },
+      { key: "ranking", value: settings.rankingWeights, description: "Directory ranking weights" },
+      { key: "homepage", value: homepage, description: "Public homepage content configuration" },
+    ]).onConflictDoUpdate({ target: marketplaceSettings.key, set: { value: sql`excluded.value`, updatedAt: new Date() } });
     await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "marketplace_settings_updated", "marketplace_settings", "global");
     res.json(await getSettings());
   } catch (error) { next(error); }

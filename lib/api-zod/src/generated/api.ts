@@ -334,6 +334,196 @@ export const ListAdsResponseItem = zod.object({
 export const ListAdsResponse = zod.array(ListAdsResponseItem)
 
 
+export const getHomepageSettingsResponseHeroEyebrowEnMax = 120;
+
+export const getHomepageSettingsResponseHeroEyebrowArMax = 120;
+
+export const getHomepageSettingsResponseHeroTitleEnMax = 240;
+
+export const getHomepageSettingsResponseHeroTitleArMax = 240;
+
+export const getHomepageSettingsResponseHeroSubtitleEnMax = 500;
+
+export const getHomepageSettingsResponseHeroSubtitleArMax = 500;
+
+export const getHomepageSettingsResponseHeroSearchPlaceholderEnMax = 120;
+
+export const getHomepageSettingsResponseHeroSearchPlaceholderArMax = 120;
+
+export const getHomepageSettingsResponseSectionOrderMin = 5;
+export const getHomepageSettingsResponseSectionOrderMax = 5;
+
+export const getHomepageSettingsResponseSectionsServicesTitleEnMax = 160;
+
+export const getHomepageSettingsResponseSectionsServicesTitleArMax = 160;
+
+export const getHomepageSettingsResponseSectionsServicesSubtitleEnMax = 240;
+
+export const getHomepageSettingsResponseSectionsServicesSubtitleArMax = 240;
+
+export const getHomepageSettingsResponseSectionsServicesDetailEnMax = 500;
+
+export const getHomepageSettingsResponseSectionsServicesDetailArMax = 500;
+
+export const getHomepageSettingsResponseSectionsServicesActionEnMax = 80;
+
+export const getHomepageSettingsResponseSectionsServicesActionArMax = 80;
+
+export const getHomepageSettingsResponseSectionsServicesLimitMax = 12;
+
+export const getHomepageSettingsResponseSectionsLocationTitleEnMax = 160;
+
+export const getHomepageSettingsResponseSectionsLocationTitleArMax = 160;
+
+export const getHomepageSettingsResponseSectionsLocationSubtitleEnMax = 240;
+
+export const getHomepageSettingsResponseSectionsLocationSubtitleArMax = 240;
+
+export const getHomepageSettingsResponseSectionsLocationDetailEnMax = 500;
+
+export const getHomepageSettingsResponseSectionsLocationDetailArMax = 500;
+
+export const getHomepageSettingsResponseSectionsLocationActionEnMax = 80;
+
+export const getHomepageSettingsResponseSectionsLocationActionArMax = 80;
+
+export const getHomepageSettingsResponseSectionsLocationLimitMax = 12;
+
+export const getHomepageSettingsResponseSectionsProvidersTitleEnMax = 160;
+
+export const getHomepageSettingsResponseSectionsProvidersTitleArMax = 160;
+
+export const getHomepageSettingsResponseSectionsProvidersSubtitleEnMax = 240;
+
+export const getHomepageSettingsResponseSectionsProvidersSubtitleArMax = 240;
+
+export const getHomepageSettingsResponseSectionsProvidersDetailEnMax = 500;
+
+export const getHomepageSettingsResponseSectionsProvidersDetailArMax = 500;
+
+export const getHomepageSettingsResponseSectionsProvidersActionEnMax = 80;
+
+export const getHomepageSettingsResponseSectionsProvidersActionArMax = 80;
+
+export const getHomepageSettingsResponseSectionsProvidersLimitMax = 12;
+
+export const getHomepageSettingsResponseSectionsPropertiesTitleEnMax = 160;
+
+export const getHomepageSettingsResponseSectionsPropertiesTitleArMax = 160;
+
+export const getHomepageSettingsResponseSectionsPropertiesSubtitleEnMax = 240;
+
+export const getHomepageSettingsResponseSectionsPropertiesSubtitleArMax = 240;
+
+export const getHomepageSettingsResponseSectionsPropertiesDetailEnMax = 500;
+
+export const getHomepageSettingsResponseSectionsPropertiesDetailArMax = 500;
+
+export const getHomepageSettingsResponseSectionsPropertiesActionEnMax = 80;
+
+export const getHomepageSettingsResponseSectionsPropertiesActionArMax = 80;
+
+export const getHomepageSettingsResponseSectionsPropertiesLimitMax = 12;
+
+export const getHomepageSettingsResponseSectionsMaintenanceTitleEnMax = 160;
+
+export const getHomepageSettingsResponseSectionsMaintenanceTitleArMax = 160;
+
+export const getHomepageSettingsResponseSectionsMaintenanceSubtitleEnMax = 240;
+
+export const getHomepageSettingsResponseSectionsMaintenanceSubtitleArMax = 240;
+
+export const getHomepageSettingsResponseSectionsMaintenanceDetailEnMax = 500;
+
+export const getHomepageSettingsResponseSectionsMaintenanceDetailArMax = 500;
+
+export const getHomepageSettingsResponseSectionsMaintenanceActionEnMax = 80;
+
+export const getHomepageSettingsResponseSectionsMaintenanceActionArMax = 80;
+
+export const getHomepageSettingsResponseSectionsMaintenanceLimitMax = 12;
+
+
+
+export const GetHomepageSettingsResponse = zod.object({
+  "showSponsoredAds": zod.boolean(),
+  "hero": zod.object({
+  "visible": zod.boolean(),
+  "eyebrowEn": zod.string().max(getHomepageSettingsResponseHeroEyebrowEnMax),
+  "eyebrowAr": zod.string().max(getHomepageSettingsResponseHeroEyebrowArMax),
+  "titleEn": zod.string().max(getHomepageSettingsResponseHeroTitleEnMax),
+  "titleAr": zod.string().max(getHomepageSettingsResponseHeroTitleArMax),
+  "subtitleEn": zod.string().max(getHomepageSettingsResponseHeroSubtitleEnMax),
+  "subtitleAr": zod.string().max(getHomepageSettingsResponseHeroSubtitleArMax),
+  "searchPlaceholderEn": zod.string().max(getHomepageSettingsResponseHeroSearchPlaceholderEnMax),
+  "searchPlaceholderAr": zod.string().max(getHomepageSettingsResponseHeroSearchPlaceholderArMax)
+}),
+  "sectionOrder": zod.array(zod.enum(['services', 'location', 'providers', 'properties', 'maintenance'])).min(getHomepageSettingsResponseSectionOrderMin).max(getHomepageSettingsResponseSectionOrderMax),
+  "sections": zod.object({
+  "services": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getHomepageSettingsResponseSectionsServicesTitleEnMax),
+  "titleAr": zod.string().max(getHomepageSettingsResponseSectionsServicesTitleArMax),
+  "subtitleEn": zod.string().max(getHomepageSettingsResponseSectionsServicesSubtitleEnMax),
+  "subtitleAr": zod.string().max(getHomepageSettingsResponseSectionsServicesSubtitleArMax),
+  "detailEn": zod.string().max(getHomepageSettingsResponseSectionsServicesDetailEnMax),
+  "detailAr": zod.string().max(getHomepageSettingsResponseSectionsServicesDetailArMax),
+  "actionEn": zod.string().max(getHomepageSettingsResponseSectionsServicesActionEnMax),
+  "actionAr": zod.string().max(getHomepageSettingsResponseSectionsServicesActionArMax),
+  "limit": zod.number().min(1).max(getHomepageSettingsResponseSectionsServicesLimitMax)
+}),
+  "location": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getHomepageSettingsResponseSectionsLocationTitleEnMax),
+  "titleAr": zod.string().max(getHomepageSettingsResponseSectionsLocationTitleArMax),
+  "subtitleEn": zod.string().max(getHomepageSettingsResponseSectionsLocationSubtitleEnMax),
+  "subtitleAr": zod.string().max(getHomepageSettingsResponseSectionsLocationSubtitleArMax),
+  "detailEn": zod.string().max(getHomepageSettingsResponseSectionsLocationDetailEnMax),
+  "detailAr": zod.string().max(getHomepageSettingsResponseSectionsLocationDetailArMax),
+  "actionEn": zod.string().max(getHomepageSettingsResponseSectionsLocationActionEnMax),
+  "actionAr": zod.string().max(getHomepageSettingsResponseSectionsLocationActionArMax),
+  "limit": zod.number().min(1).max(getHomepageSettingsResponseSectionsLocationLimitMax)
+}),
+  "providers": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getHomepageSettingsResponseSectionsProvidersTitleEnMax),
+  "titleAr": zod.string().max(getHomepageSettingsResponseSectionsProvidersTitleArMax),
+  "subtitleEn": zod.string().max(getHomepageSettingsResponseSectionsProvidersSubtitleEnMax),
+  "subtitleAr": zod.string().max(getHomepageSettingsResponseSectionsProvidersSubtitleArMax),
+  "detailEn": zod.string().max(getHomepageSettingsResponseSectionsProvidersDetailEnMax),
+  "detailAr": zod.string().max(getHomepageSettingsResponseSectionsProvidersDetailArMax),
+  "actionEn": zod.string().max(getHomepageSettingsResponseSectionsProvidersActionEnMax),
+  "actionAr": zod.string().max(getHomepageSettingsResponseSectionsProvidersActionArMax),
+  "limit": zod.number().min(1).max(getHomepageSettingsResponseSectionsProvidersLimitMax)
+}),
+  "properties": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getHomepageSettingsResponseSectionsPropertiesTitleEnMax),
+  "titleAr": zod.string().max(getHomepageSettingsResponseSectionsPropertiesTitleArMax),
+  "subtitleEn": zod.string().max(getHomepageSettingsResponseSectionsPropertiesSubtitleEnMax),
+  "subtitleAr": zod.string().max(getHomepageSettingsResponseSectionsPropertiesSubtitleArMax),
+  "detailEn": zod.string().max(getHomepageSettingsResponseSectionsPropertiesDetailEnMax),
+  "detailAr": zod.string().max(getHomepageSettingsResponseSectionsPropertiesDetailArMax),
+  "actionEn": zod.string().max(getHomepageSettingsResponseSectionsPropertiesActionEnMax),
+  "actionAr": zod.string().max(getHomepageSettingsResponseSectionsPropertiesActionArMax),
+  "limit": zod.number().min(1).max(getHomepageSettingsResponseSectionsPropertiesLimitMax)
+}),
+  "maintenance": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceTitleEnMax),
+  "titleAr": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceTitleArMax),
+  "subtitleEn": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceSubtitleEnMax),
+  "subtitleAr": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceSubtitleArMax),
+  "detailEn": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceDetailEnMax),
+  "detailAr": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceDetailArMax),
+  "actionEn": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceActionEnMax),
+  "actionAr": zod.string().max(getHomepageSettingsResponseSectionsMaintenanceActionArMax),
+  "limit": zod.number().min(1).max(getHomepageSettingsResponseSectionsMaintenanceLimitMax)
+})
+})
+})
+
+
 export const RecordAdEventParams = zod.object({
   "id": zod.coerce.string()
 })
@@ -1475,6 +1665,115 @@ export const CreateAdminPaymentResponse = zod.object({
 
 export const getAdminSettingsResponseDefaultPriceOmaniRialMin = 0;
 
+export const getAdminSettingsResponseHomepageHeroEyebrowEnMax = 120;
+
+export const getAdminSettingsResponseHomepageHeroEyebrowArMax = 120;
+
+export const getAdminSettingsResponseHomepageHeroTitleEnMax = 240;
+
+export const getAdminSettingsResponseHomepageHeroTitleArMax = 240;
+
+export const getAdminSettingsResponseHomepageHeroSubtitleEnMax = 500;
+
+export const getAdminSettingsResponseHomepageHeroSubtitleArMax = 500;
+
+export const getAdminSettingsResponseHomepageHeroSearchPlaceholderEnMax = 120;
+
+export const getAdminSettingsResponseHomepageHeroSearchPlaceholderArMax = 120;
+
+export const getAdminSettingsResponseHomepageSectionOrderMin = 5;
+export const getAdminSettingsResponseHomepageSectionOrderMax = 5;
+
+export const getAdminSettingsResponseHomepageSectionsServicesTitleEnMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsServicesTitleArMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsServicesSubtitleEnMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsServicesSubtitleArMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsServicesDetailEnMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsServicesDetailArMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsServicesActionEnMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsServicesActionArMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsServicesLimitMax = 12;
+
+export const getAdminSettingsResponseHomepageSectionsLocationTitleEnMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsLocationTitleArMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsLocationSubtitleEnMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsLocationSubtitleArMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsLocationDetailEnMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsLocationDetailArMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsLocationActionEnMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsLocationActionArMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsLocationLimitMax = 12;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersTitleEnMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersTitleArMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersSubtitleEnMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersSubtitleArMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersDetailEnMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersDetailArMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersActionEnMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersActionArMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsProvidersLimitMax = 12;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesTitleEnMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesTitleArMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesSubtitleEnMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesSubtitleArMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesDetailEnMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesDetailArMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesActionEnMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesActionArMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsPropertiesLimitMax = 12;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceTitleEnMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceTitleArMax = 160;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceSubtitleEnMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceSubtitleArMax = 240;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceDetailEnMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceDetailArMax = 500;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceActionEnMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceActionArMax = 80;
+
+export const getAdminSettingsResponseHomepageSectionsMaintenanceLimitMax = 12;
+
 
 
 export const GetAdminSettingsResponse = zod.object({
@@ -1488,12 +1787,198 @@ export const GetAdminSettingsResponse = zod.object({
   "verification": zod.number(),
   "activity": zod.number(),
   "engagement": zod.number()
+}),
+  "homepage": zod.object({
+  "showSponsoredAds": zod.boolean(),
+  "hero": zod.object({
+  "visible": zod.boolean(),
+  "eyebrowEn": zod.string().max(getAdminSettingsResponseHomepageHeroEyebrowEnMax),
+  "eyebrowAr": zod.string().max(getAdminSettingsResponseHomepageHeroEyebrowArMax),
+  "titleEn": zod.string().max(getAdminSettingsResponseHomepageHeroTitleEnMax),
+  "titleAr": zod.string().max(getAdminSettingsResponseHomepageHeroTitleArMax),
+  "subtitleEn": zod.string().max(getAdminSettingsResponseHomepageHeroSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAdminSettingsResponseHomepageHeroSubtitleArMax),
+  "searchPlaceholderEn": zod.string().max(getAdminSettingsResponseHomepageHeroSearchPlaceholderEnMax),
+  "searchPlaceholderAr": zod.string().max(getAdminSettingsResponseHomepageHeroSearchPlaceholderArMax)
+}),
+  "sectionOrder": zod.array(zod.enum(['services', 'location', 'providers', 'properties', 'maintenance'])).min(getAdminSettingsResponseHomepageSectionOrderMin).max(getAdminSettingsResponseHomepageSectionOrderMax),
+  "sections": zod.object({
+  "services": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesTitleEnMax),
+  "titleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesTitleArMax),
+  "subtitleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesSubtitleArMax),
+  "detailEn": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesDetailEnMax),
+  "detailAr": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesDetailArMax),
+  "actionEn": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesActionEnMax),
+  "actionAr": zod.string().max(getAdminSettingsResponseHomepageSectionsServicesActionArMax),
+  "limit": zod.number().min(1).max(getAdminSettingsResponseHomepageSectionsServicesLimitMax)
+}),
+  "location": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationTitleEnMax),
+  "titleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationTitleArMax),
+  "subtitleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationSubtitleArMax),
+  "detailEn": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationDetailEnMax),
+  "detailAr": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationDetailArMax),
+  "actionEn": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationActionEnMax),
+  "actionAr": zod.string().max(getAdminSettingsResponseHomepageSectionsLocationActionArMax),
+  "limit": zod.number().min(1).max(getAdminSettingsResponseHomepageSectionsLocationLimitMax)
+}),
+  "providers": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersTitleEnMax),
+  "titleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersTitleArMax),
+  "subtitleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersSubtitleArMax),
+  "detailEn": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersDetailEnMax),
+  "detailAr": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersDetailArMax),
+  "actionEn": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersActionEnMax),
+  "actionAr": zod.string().max(getAdminSettingsResponseHomepageSectionsProvidersActionArMax),
+  "limit": zod.number().min(1).max(getAdminSettingsResponseHomepageSectionsProvidersLimitMax)
+}),
+  "properties": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesTitleEnMax),
+  "titleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesTitleArMax),
+  "subtitleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesSubtitleArMax),
+  "detailEn": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesDetailEnMax),
+  "detailAr": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesDetailArMax),
+  "actionEn": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesActionEnMax),
+  "actionAr": zod.string().max(getAdminSettingsResponseHomepageSectionsPropertiesActionArMax),
+  "limit": zod.number().min(1).max(getAdminSettingsResponseHomepageSectionsPropertiesLimitMax)
+}),
+  "maintenance": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceTitleEnMax),
+  "titleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceTitleArMax),
+  "subtitleEn": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceSubtitleArMax),
+  "detailEn": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceDetailEnMax),
+  "detailAr": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceDetailArMax),
+  "actionEn": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceActionEnMax),
+  "actionAr": zod.string().max(getAdminSettingsResponseHomepageSectionsMaintenanceActionArMax),
+  "limit": zod.number().min(1).max(getAdminSettingsResponseHomepageSectionsMaintenanceLimitMax)
+})
+})
 })
 })
 
 
 
 export const updateAdminSettingsBodyDefaultPriceOmaniRialMin = 0;
+
+export const updateAdminSettingsBodyHomepageHeroEyebrowEnMax = 120;
+
+export const updateAdminSettingsBodyHomepageHeroEyebrowArMax = 120;
+
+export const updateAdminSettingsBodyHomepageHeroTitleEnMax = 240;
+
+export const updateAdminSettingsBodyHomepageHeroTitleArMax = 240;
+
+export const updateAdminSettingsBodyHomepageHeroSubtitleEnMax = 500;
+
+export const updateAdminSettingsBodyHomepageHeroSubtitleArMax = 500;
+
+export const updateAdminSettingsBodyHomepageHeroSearchPlaceholderEnMax = 120;
+
+export const updateAdminSettingsBodyHomepageHeroSearchPlaceholderArMax = 120;
+
+export const updateAdminSettingsBodyHomepageSectionOrderMin = 5;
+export const updateAdminSettingsBodyHomepageSectionOrderMax = 5;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesTitleEnMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesTitleArMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesSubtitleEnMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesSubtitleArMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesDetailEnMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesDetailArMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesActionEnMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesActionArMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsServicesLimitMax = 12;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationTitleEnMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationTitleArMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationSubtitleEnMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationSubtitleArMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationDetailEnMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationDetailArMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationActionEnMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationActionArMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsLocationLimitMax = 12;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersTitleEnMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersTitleArMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersSubtitleEnMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersSubtitleArMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersDetailEnMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersDetailArMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersActionEnMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersActionArMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsProvidersLimitMax = 12;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesTitleEnMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesTitleArMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesSubtitleEnMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesSubtitleArMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesDetailEnMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesDetailArMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesActionEnMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesActionArMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsPropertiesLimitMax = 12;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceTitleEnMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceTitleArMax = 160;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceSubtitleEnMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceSubtitleArMax = 240;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceDetailEnMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceDetailArMax = 500;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceActionEnMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceActionArMax = 80;
+
+export const updateAdminSettingsBodyHomepageSectionsMaintenanceLimitMax = 12;
 
 
 
@@ -1508,11 +1993,197 @@ export const UpdateAdminSettingsBody = zod.object({
   "verification": zod.number(),
   "activity": zod.number(),
   "engagement": zod.number()
+}),
+  "homepage": zod.object({
+  "showSponsoredAds": zod.boolean(),
+  "hero": zod.object({
+  "visible": zod.boolean(),
+  "eyebrowEn": zod.string().max(updateAdminSettingsBodyHomepageHeroEyebrowEnMax),
+  "eyebrowAr": zod.string().max(updateAdminSettingsBodyHomepageHeroEyebrowArMax),
+  "titleEn": zod.string().max(updateAdminSettingsBodyHomepageHeroTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsBodyHomepageHeroTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsBodyHomepageHeroSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsBodyHomepageHeroSubtitleArMax),
+  "searchPlaceholderEn": zod.string().max(updateAdminSettingsBodyHomepageHeroSearchPlaceholderEnMax),
+  "searchPlaceholderAr": zod.string().max(updateAdminSettingsBodyHomepageHeroSearchPlaceholderArMax)
+}),
+  "sectionOrder": zod.array(zod.enum(['services', 'location', 'providers', 'properties', 'maintenance'])).min(updateAdminSettingsBodyHomepageSectionOrderMin).max(updateAdminSettingsBodyHomepageSectionOrderMax),
+  "sections": zod.object({
+  "services": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsServicesActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsBodyHomepageSectionsServicesLimitMax)
+}),
+  "location": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsLocationActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsBodyHomepageSectionsLocationLimitMax)
+}),
+  "providers": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsProvidersActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsBodyHomepageSectionsProvidersLimitMax)
+}),
+  "properties": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsPropertiesActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsBodyHomepageSectionsPropertiesLimitMax)
+}),
+  "maintenance": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsBodyHomepageSectionsMaintenanceActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsBodyHomepageSectionsMaintenanceLimitMax)
+})
+})
 })
 })
 
 
 export const updateAdminSettingsResponseDefaultPriceOmaniRialMin = 0;
+
+export const updateAdminSettingsResponseHomepageHeroEyebrowEnMax = 120;
+
+export const updateAdminSettingsResponseHomepageHeroEyebrowArMax = 120;
+
+export const updateAdminSettingsResponseHomepageHeroTitleEnMax = 240;
+
+export const updateAdminSettingsResponseHomepageHeroTitleArMax = 240;
+
+export const updateAdminSettingsResponseHomepageHeroSubtitleEnMax = 500;
+
+export const updateAdminSettingsResponseHomepageHeroSubtitleArMax = 500;
+
+export const updateAdminSettingsResponseHomepageHeroSearchPlaceholderEnMax = 120;
+
+export const updateAdminSettingsResponseHomepageHeroSearchPlaceholderArMax = 120;
+
+export const updateAdminSettingsResponseHomepageSectionOrderMin = 5;
+export const updateAdminSettingsResponseHomepageSectionOrderMax = 5;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesTitleEnMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesTitleArMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesSubtitleEnMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesSubtitleArMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesDetailEnMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesDetailArMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesActionEnMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesActionArMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsServicesLimitMax = 12;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationTitleEnMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationTitleArMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationSubtitleEnMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationSubtitleArMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationDetailEnMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationDetailArMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationActionEnMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationActionArMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsLocationLimitMax = 12;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersTitleEnMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersTitleArMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersSubtitleEnMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersSubtitleArMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersDetailEnMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersDetailArMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersActionEnMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersActionArMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsProvidersLimitMax = 12;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesTitleEnMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesTitleArMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesSubtitleEnMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesSubtitleArMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesDetailEnMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesDetailArMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesActionEnMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesActionArMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsPropertiesLimitMax = 12;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceTitleEnMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceTitleArMax = 160;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceSubtitleEnMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceSubtitleArMax = 240;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceDetailEnMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceDetailArMax = 500;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceActionEnMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceActionArMax = 80;
+
+export const updateAdminSettingsResponseHomepageSectionsMaintenanceLimitMax = 12;
 
 
 
@@ -1527,6 +2198,83 @@ export const UpdateAdminSettingsResponse = zod.object({
   "verification": zod.number(),
   "activity": zod.number(),
   "engagement": zod.number()
+}),
+  "homepage": zod.object({
+  "showSponsoredAds": zod.boolean(),
+  "hero": zod.object({
+  "visible": zod.boolean(),
+  "eyebrowEn": zod.string().max(updateAdminSettingsResponseHomepageHeroEyebrowEnMax),
+  "eyebrowAr": zod.string().max(updateAdminSettingsResponseHomepageHeroEyebrowArMax),
+  "titleEn": zod.string().max(updateAdminSettingsResponseHomepageHeroTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsResponseHomepageHeroTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsResponseHomepageHeroSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsResponseHomepageHeroSubtitleArMax),
+  "searchPlaceholderEn": zod.string().max(updateAdminSettingsResponseHomepageHeroSearchPlaceholderEnMax),
+  "searchPlaceholderAr": zod.string().max(updateAdminSettingsResponseHomepageHeroSearchPlaceholderArMax)
+}),
+  "sectionOrder": zod.array(zod.enum(['services', 'location', 'providers', 'properties', 'maintenance'])).min(updateAdminSettingsResponseHomepageSectionOrderMin).max(updateAdminSettingsResponseHomepageSectionOrderMax),
+  "sections": zod.object({
+  "services": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsServicesActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsResponseHomepageSectionsServicesLimitMax)
+}),
+  "location": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsLocationActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsResponseHomepageSectionsLocationLimitMax)
+}),
+  "providers": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsProvidersActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsResponseHomepageSectionsProvidersLimitMax)
+}),
+  "properties": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsPropertiesActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsResponseHomepageSectionsPropertiesLimitMax)
+}),
+  "maintenance": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceTitleEnMax),
+  "titleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceTitleArMax),
+  "subtitleEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceSubtitleEnMax),
+  "subtitleAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceSubtitleArMax),
+  "detailEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceDetailEnMax),
+  "detailAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceDetailArMax),
+  "actionEn": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceActionEnMax),
+  "actionAr": zod.string().max(updateAdminSettingsResponseHomepageSectionsMaintenanceActionArMax),
+  "limit": zod.number().min(1).max(updateAdminSettingsResponseHomepageSectionsMaintenanceLimitMax)
+})
+})
 })
 })
 
@@ -1876,4 +2624,3 @@ export const GetAdminAdCampaignReportResponse = zod.object({
   "spentOmaniRial": zod.number()
 }))
 })
-

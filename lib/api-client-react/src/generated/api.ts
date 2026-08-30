@@ -47,6 +47,7 @@ import type {
   GetListingsEngagement200,
   GetListingsEngagementParams,
   HealthStatus,
+  HomepageSettings,
   ListAdsParams,
   ListContractorsParams,
   ListingEngagement,
@@ -749,6 +750,77 @@ export function useListAds<TData = Awaited<ReturnType<typeof listAds>>, TError =
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListAdsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHomepageSettingsUrl = () => {
+
+
+
+
+  return `/api/homepage-settings`
+}
+
+export const getHomepageSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<HomepageSettings> => {
+
+  return customFetch<HomepageSettings>(getGetHomepageSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomepageSettingsQueryKey = () => {
+    return [
+    `/api/homepage-settings`
+    ] as const;
+    }
+
+
+export const getGetHomepageSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getHomepageSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHomepageSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomepageSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHomepageSettings>>> = ({ signal }) => getHomepageSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHomepageSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHomepageSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getHomepageSettings>>>
+export type GetHomepageSettingsQueryError = ErrorType<unknown>
+
+
+
+export function useGetHomepageSettings<TData = Awaited<ReturnType<typeof getHomepageSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHomepageSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHomepageSettingsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

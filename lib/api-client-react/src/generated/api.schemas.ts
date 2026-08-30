@@ -543,12 +543,88 @@ export interface RankingWeights {
   engagement: number;
 }
 
+export interface LocalizedHomepageSection {
+  visible: boolean;
+  /** @maxLength 160 */
+  titleEn: string;
+  /** @maxLength 160 */
+  titleAr: string;
+  /** @maxLength 240 */
+  subtitleEn: string;
+  /** @maxLength 240 */
+  subtitleAr: string;
+  /** @maxLength 500 */
+  detailEn: string;
+  /** @maxLength 500 */
+  detailAr: string;
+  /** @maxLength 80 */
+  actionEn: string;
+  /** @maxLength 80 */
+  actionAr: string;
+  /**
+     * @minimum 1
+     * @maximum 12
+     */
+  limit: number;
+}
+
+export interface HomepageHero {
+  visible: boolean;
+  /** @maxLength 120 */
+  eyebrowEn: string;
+  /** @maxLength 120 */
+  eyebrowAr: string;
+  /** @maxLength 240 */
+  titleEn: string;
+  /** @maxLength 240 */
+  titleAr: string;
+  /** @maxLength 500 */
+  subtitleEn: string;
+  /** @maxLength 500 */
+  subtitleAr: string;
+  /** @maxLength 120 */
+  searchPlaceholderEn: string;
+  /** @maxLength 120 */
+  searchPlaceholderAr: string;
+}
+
+export type HomepageSettingsSectionOrderItem = typeof HomepageSettingsSectionOrderItem[keyof typeof HomepageSettingsSectionOrderItem];
+
+
+export const HomepageSettingsSectionOrderItem = {
+  services: 'services',
+  location: 'location',
+  providers: 'providers',
+  properties: 'properties',
+  maintenance: 'maintenance',
+} as const;
+
+export type HomepageSettingsSections = {
+  services: LocalizedHomepageSection;
+  location: LocalizedHomepageSection;
+  providers: LocalizedHomepageSection;
+  properties: LocalizedHomepageSection;
+  maintenance: LocalizedHomepageSection;
+};
+
+export interface HomepageSettings {
+  showSponsoredAds: boolean;
+  hero: HomepageHero;
+  /**
+     * @minItems 5
+     * @maxItems 5
+     */
+  sectionOrder: HomepageSettingsSectionOrderItem[];
+  sections: HomepageSettingsSections;
+}
+
 export interface MarketplaceSettings {
   /** @minimum 1 */
   trialMonths: number;
   /** @minimum 0 */
   defaultPriceOmaniRial: number;
   rankingWeights: RankingWeights;
+  homepage: HomepageSettings;
 }
 
 export interface AdminOverview {

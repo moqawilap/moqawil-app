@@ -1,10 +1,21 @@
 import { Feather } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useRecordAdEvent, type AdCampaign } from '@workspace/api-client-react';
+
+function VideoAdMedia({ url, style }: { url: string; style: object }) {
+  const player = useVideoPlayer(url, (videoPlayer) => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+    videoPlayer.play();
+  });
+
+  return <VideoView player={player} style={style} contentFit="cover" nativeControls={false} allowsFullscreen={false} />;
+}
 
 export function AdBanner({ campaign }: { campaign: AdCampaign }) {
   const colors = useColors();
@@ -43,10 +54,7 @@ export function AdBanner({ campaign }: { campaign: AdCampaign }) {
       <View style={styles.gallery}>
         {currentMedia.type === 'image'
           ? <Image source={{ uri: currentMedia.url }} style={styles.media} resizeMode="cover" />
-          : <Pressable onPress={() => void Linking.openURL(currentMedia.url)} style={[styles.videoPlaceholder, { backgroundColor: colors.surfaceMuted }]}>
-              <Feather name="play-circle" size={36} color={colors.primary} />
-              <Text style={{ color: colors.mutedForeground, fontWeight: '700' }}>{isArabic ? 'تشغيل الفيديو الإعلاني' : 'Play video ad'}</Text>
-            </Pressable>}
+          : <VideoAdMedia url={currentMedia.url} style={styles.media} />}
         {media.length > 1 ? (
           <View style={styles.galleryControls}>
             <Pressable accessibilityLabel={isArabic ? 'الوسائط السابقة' : 'Previous media'} onPress={() => setMediaIndex((current) => (current - 1 + media.length) % media.length)} style={[styles.galleryButton, { backgroundColor: colors.card }]}>

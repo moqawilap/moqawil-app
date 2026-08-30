@@ -8,7 +8,32 @@ import { AdBanner } from '@/components/AdBanner';
 import { listings, maintenanceItems, mergeMarketplaceListings, serviceItems } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getListAdsQueryKey, getListListingsQueryKey, useListAds, useListListings } from '@workspace/api-client-react';
+import { getGetHomepageSettingsQueryKey, getListAdsQueryKey, getListListingsQueryKey, useGetHomepageSettings, useListAds, useListListings, type HomepageSettings } from '@workspace/api-client-react';
+
+type HomepageSectionId = HomepageSettings['sectionOrder'][number];
+
+const DEFAULT_HOMEPAGE_SETTINGS: HomepageSettings = {
+  showSponsoredAds: true,
+  hero: {
+    visible: true,
+    eyebrowEn: 'INTEGRATED PROPERTY SERVICES',
+    eyebrowAr: 'منظومة متكاملة للخدمات العقارية',
+    titleEn: 'Complete solutions to build and manage your property.',
+    titleAr: 'حلول متكاملة لبناء وإدارة عقارك.',
+    subtitleEn: 'Connect with trusted contractors, consultants, and service providers across Oman.',
+    subtitleAr: 'نصل بك إلى نخبة المقاولين والاستشاريين ومقدمي الخدمات الموثوقين في سلطنة عُمان.',
+    searchPlaceholderEn: 'What do you need today?',
+    searchPlaceholderAr: 'ماذا تحتاج اليوم؟',
+  },
+  sectionOrder: ['services', 'location', 'providers', 'properties', 'maintenance'],
+  sections: {
+    services: { visible: true, titleEn: 'What do you need?', titleAr: 'ماذا تحتاج؟', subtitleEn: 'Choose a service to get started', subtitleAr: 'اختر خدمة للبدء', detailEn: '', detailAr: '', actionEn: '', actionAr: '', limit: 6 },
+    location: { visible: true, titleEn: 'OFFICIAL LOCAL DIRECTORY', titleAr: 'الدليل المحلي الرسمي', subtitleEn: 'Trusted services near {area}', subtitleAr: 'خدمات موثوقة بالقرب من {area}', detailEn: 'Verified professionals and selected services in {city}.', detailAr: 'مزودون معتمدون وخدمات مختارة في {city}.', actionEn: 'CURRENT LOCATION', actionAr: 'الموقع الحالي', limit: 1 },
+    providers: { visible: true, titleEn: 'Recommended providers', titleAr: 'مزودون موصى بهم', subtitleEn: 'Trusted teams near you', subtitleAr: 'قريبون منك في مسقط', detailEn: '', detailAr: '', actionEn: 'View all', actionAr: 'عرض الكل', limit: 2 },
+    properties: { visible: true, titleEn: 'Featured properties', titleAr: 'عقارات مختارة', subtitleEn: 'Places worth seeing', subtitleAr: 'أماكن تستحق الزيارة', detailEn: '', detailAr: '', actionEn: 'See all', actionAr: 'كل العقارات', limit: 2 },
+    maintenance: { visible: true, titleEn: 'Quick maintenance', titleAr: 'صيانة سريعة', subtitleEn: 'Fix the small things before they grow', subtitleAr: 'حل المشكلة قبل أن تكبر', detailEn: '', detailAr: '', actionEn: '', actionAr: '', limit: 4 },
+  },
+};
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -16,6 +41,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { isArabic, location, locationLoading, refreshLocation, savedIds, toggleSaved, setActiveService, managedProviders, engagementClientId } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
+  const homepageSettingsQuery = useGetHomepageSettings({ query: { queryKey: getGetHomepageSettingsQueryKey(), staleTime: 30_000 } });
+  const homepage = homepageSettingsQuery.data ?? DEFAULT_HOMEPAGE_SETTINGS;
   const locationWilayats = location.city === 'Muscat' && location.area === 'Al Khuwair' ? [location.area, 'Bawshar'] : [location.area];
   const adQuery = { city: location.city, wilayat: locationWilayats.filter(Boolean).join(','), limit: 5 };
   const ads = useListAds(adQuery, { query: { queryKey: getListAdsQueryKey(adQuery), refetchInterval: 30_000 } });
@@ -34,6 +61,68 @@ export default function HomeScreen() {
     setActiveService(id);
     router.push('/explore');
   };
+  const localized = (english: string, arabic: string) => isArabic ? arabic : english;
+  const withLocation = (value: string) => value.replaceAll('{area}', location.area).replaceAll('{city}', location.city);
+  const renderSection = (id: HomepageSectionId) => {
+    const section = homepage.sections[id];
+    if (!section?.visible) return null;
+    if (id === 'services') {
+      return (
+        <View key={id} style={styles.sectionBlock}>
+          <SectionHeading title={localized(section.titleEn, section.titleAr)} subtitle={localized(section.subtitleEn, section.subtitleAr)} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceRow}>
+            {serviceItems.slice(0, section.limit).map((service) => <Pressable accessibilityRole="button" key={service.id} onPress={() => openService(service.id)} style={({ pressed }) => [styles.serviceCard, { backgroundColor: service.color }, pressed && styles.pressed]}><View style={styles.serviceIcon}><ServiceIcon icon={service.icon} color="#FFFFFF" size={24} /></View><Text style={styles.serviceLabel}>{isArabic ? service.labelAr : service.label}</Text><Text style={styles.serviceSubtitle}>{isArabic ? service.subtitleAr : service.subtitle}</Text><Feather name="arrow-up-right" size={16} color="rgba(255,255,255,0.75)" style={styles.serviceArrow} /></Pressable>)}
+          </ScrollView>
+        </View>
+      );
+    }
+    if (id === 'location') {
+      return (
+        <View key={id} style={[styles.locationBanner, { backgroundColor: colors.navy, borderColor: `${colors.primary}66` }, isArabic && styles.locationBannerArabic]}>
+          <View style={styles.bannerTopline}>
+            <View style={[styles.bannerToplineRule, { backgroundColor: colors.accentForeground }]} />
+            <Text style={[styles.bannerEyebrow, { color: colors.accentForeground }]}>{localized(section.titleEn, section.titleAr)}</Text>
+            <View style={[styles.bannerToplineRule, { backgroundColor: colors.accentForeground }]} />
+          </View>
+          <View style={styles.bannerMain}>
+            <View style={[styles.bannerCopy, isArabic && styles.bannerCopyArabic]}>
+              <View style={[styles.bannerStatus, isArabic && styles.bannerStatusArabic]}>
+                <View style={[styles.liveDot, { backgroundColor: `${colors.accentForeground}2E` }]}><View style={[styles.liveDotInner, { backgroundColor: colors.accentForeground }]} /></View>
+                <Text style={[styles.bannerStatusText, { color: colors.surfaceMuted }]}>{localized(section.actionEn, section.actionAr)}</Text>
+              </View>
+              <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86} style={styles.bannerTitle}>{withLocation(localized(section.subtitleEn, section.subtitleAr))}</Text>
+              <Text numberOfLines={2} style={styles.bannerSubtitle}>{withLocation(localized(section.detailEn, section.detailAr))}</Text>
+            </View>
+            <View style={[styles.bannerEmblem, { borderColor: `${colors.accentForeground}70`, backgroundColor: `${colors.primary}26` }]}>
+              <View style={[styles.bannerEmblemInner, { borderColor: `${colors.accentForeground}45` }]}><Feather name="navigation" size={25} color={colors.accentForeground} /></View>
+            </View>
+          </View>
+        </View>
+      );
+    }
+    if (id === 'providers') {
+      return (
+        <View key={id} style={styles.sectionBlock}>
+          <SectionHeading title={localized(section.titleEn, section.titleAr)} subtitle={localized(section.subtitleEn, section.subtitleAr)} action={localized(section.actionEn, section.actionAr) || undefined} onAction={() => router.push('/explore')} />
+          {managedProviders.slice(0, section.limit).map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
+        </View>
+      );
+    }
+    if (id === 'properties') {
+      return (
+        <View key={id} style={styles.sectionBlock}>
+          <SectionHeading title={localized(section.titleEn, section.titleAr)} subtitle={localized(section.subtitleEn, section.subtitleAr)} action={localized(section.actionEn, section.actionAr) || undefined} onAction={() => openService('real-estate')} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyRow}>{availableListings.slice(0, section.limit).map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} featured={listing.featured} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { listing: true })} />)}</ScrollView>
+        </View>
+      );
+    }
+    return (
+      <View key={id} style={styles.sectionBlock}>
+        <SectionHeading title={localized(section.titleEn, section.titleAr)} subtitle={localized(section.subtitleEn, section.subtitleAr)} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.maintenanceRow}>{maintenanceItems.slice(0, section.limit).map((item) => <Pressable key={item.id} onPress={() => openService('maintenance')} style={[styles.maintenanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={[styles.maintenanceIcon, { backgroundColor: `${item.color}18` }]}><ServiceIcon icon={item.icon} color={item.color} size={21} /></View><Text style={[styles.maintenanceLabel, { color: colors.foreground }]}>{isArabic ? item.labelAr : item.label}</Text></Pressable>)}</ScrollView>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -48,56 +137,17 @@ export default function HomeScreen() {
             <View style={styles.locationText}><Text style={[styles.locationEyebrow, { color: colors.mutedForeground }]}>{locationLoading ? (isArabic ? 'جارٍ تحديد موقعك…' : 'Detecting your location…') : location.source === 'default' ? (isArabic ? 'اضغط لتحديد موقعك الحالي' : 'Tap to detect your location') : (isArabic ? 'تبحث في موقعك الحالي' : 'You are browsing in your location')}</Text><Text style={[styles.locationName, { color: colors.foreground }]}>{location.area}, {location.city}</Text></View>
             <View style={[styles.locationAction, { backgroundColor: colors.primarySoft }]}><Feather name={locationLoading ? 'loader' : 'navigation'} size={13} color={colors.primary} /><Text style={[styles.locationActionText, { color: colors.primary }]}>{locationLoading ? (isArabic ? 'انتظر' : 'Wait') : location.source === 'default' ? (isArabic ? 'حدد موقعي' : 'Detect') : (isArabic ? 'تحديث' : 'Update')}</Text></View>
           </Pressable>
-          <View style={[styles.heroCard, { backgroundColor: colors.navy, borderColor: '#C8A66A' }]}>
+          {homepage.hero.visible ? <View style={[styles.heroCard, { backgroundColor: colors.navy, borderColor: '#C8A66A' }]}>
             <View style={[styles.heroRule, { backgroundColor: '#C8A66A' }]} />
             <View style={styles.greeting}>
-              <Text style={[styles.eyebrow, { color: '#E0BD7A' }]}>{isArabic ? 'منظومة متكاملة للخدمات العقارية' : 'INTEGRATED PROPERTY SERVICES'}</Text>
-              <Text style={[styles.title, isArabic && styles.arabicTitle, { color: '#FFFFFF' }]}>{isArabic ? 'حلول متكاملة لبناء وإدارة عقارك.' : 'Complete solutions to build and manage your property.'}</Text>
-              <Text style={[styles.subtitle, isArabic && styles.arabicSubtitle, { color: '#D9E3EC' }]}>{isArabic ? 'نصل بك إلى نخبة المقاولين والاستشاريين ومقدمي الخدمات الموثوقين في سلطنة عُمان.' : 'Connect with trusted contractors, consultants, and service providers across Oman.'}</Text>
+              <Text style={[styles.eyebrow, { color: '#E0BD7A' }]}>{localized(homepage.hero.eyebrowEn, homepage.hero.eyebrowAr)}</Text>
+              <Text style={[styles.title, isArabic && styles.arabicTitle, { color: '#FFFFFF' }]}>{localized(homepage.hero.titleEn, homepage.hero.titleAr)}</Text>
+              <Text style={[styles.subtitle, isArabic && styles.arabicSubtitle, { color: '#D9E3EC' }]}>{localized(homepage.hero.subtitleEn, homepage.hero.subtitleAr)}</Text>
             </View>
-            <SearchBar placeholder={isArabic ? 'ماذا تحتاج اليوم؟' : 'What do you need today?'} onPress={() => router.push('/explore')} />
-          </View>
-          {ads.data?.[activeAdIndex] && engagementClientId ? <AdBanner campaign={ads.data[activeAdIndex]} /> : null}
-          <View style={styles.sectionBlock}>
-            <SectionHeading title={isArabic ? 'ماذا تحتاج؟' : 'What do you need?'} subtitle={isArabic ? 'اختر خدمة للبدء' : 'Choose a service to get started'} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceRow}>
-               {serviceItems.map((service) => <Pressable accessibilityRole="button" key={service.id} onPress={() => openService(service.id)} style={({ pressed }) => [styles.serviceCard, { backgroundColor: service.color }, pressed && styles.pressed]}><View style={styles.serviceIcon}><ServiceIcon icon={service.icon} color="#FFFFFF" size={24} /></View><Text style={styles.serviceLabel}>{isArabic ? service.labelAr : service.label}</Text><Text style={styles.serviceSubtitle}>{isArabic ? service.subtitleAr : service.subtitle}</Text><Feather name="arrow-up-right" size={16} color="rgba(255,255,255,0.75)" style={styles.serviceArrow} /></Pressable>)}
-            </ScrollView>
-          </View>
-          <View style={[styles.locationBanner, { backgroundColor: colors.navy, borderColor: `${colors.primary}66` }, isArabic && styles.locationBannerArabic]}>
-            <View style={styles.bannerTopline}>
-              <View style={[styles.bannerToplineRule, { backgroundColor: colors.accentForeground }]} />
-              <Text style={[styles.bannerEyebrow, { color: colors.accentForeground }]}>{isArabic ? 'الدليل المحلي الرسمي' : 'OFFICIAL LOCAL DIRECTORY'}</Text>
-              <View style={[styles.bannerToplineRule, { backgroundColor: colors.accentForeground }]} />
-            </View>
-            <View style={styles.bannerMain}>
-              <View style={[styles.bannerCopy, isArabic && styles.bannerCopyArabic]}>
-                <View style={[styles.bannerStatus, isArabic && styles.bannerStatusArabic]}>
-                  <View style={[styles.liveDot, { backgroundColor: `${colors.accentForeground}2E` }]}><View style={[styles.liveDotInner, { backgroundColor: colors.accentForeground }]} /></View>
-                  <Text style={[styles.bannerStatusText, { color: colors.surfaceMuted }]}>{isArabic ? 'الموقع الحالي' : 'CURRENT LOCATION'}</Text>
-                </View>
-                <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86} style={styles.bannerTitle}>{isArabic ? `خدمات موثوقة بالقرب من ${location.area}` : `Trusted services near ${location.area}`}</Text>
-                <Text numberOfLines={2} style={styles.bannerSubtitle}>{isArabic ? `مزودون معتمدون وخدمات مختارة في ${location.city}.` : `Verified professionals and selected services in ${location.city}.`}</Text>
-              </View>
-              <View style={[styles.bannerEmblem, { borderColor: `${colors.accentForeground}70`, backgroundColor: `${colors.primary}26` }]}>
-                <View style={[styles.bannerEmblemInner, { borderColor: `${colors.accentForeground}45` }]}>
-                  <Feather name="navigation" size={25} color={colors.accentForeground} />
-                </View>
-              </View>
-            </View>
-          </View>
-          <View style={styles.sectionBlock}>
-            <SectionHeading title={isArabic ? 'مزودون موصى بهم' : 'Recommended providers'} subtitle={isArabic ? 'قريبون منك في مسقط' : 'Trusted teams near you'} action={isArabic ? 'عرض الكل' : 'View all'} onAction={() => router.push('/explore')} />
-            {managedProviders.slice(0, 2).map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
-          </View>
-          <View style={styles.sectionBlock}>
-            <SectionHeading title={isArabic ? 'عقارات مختارة' : 'Featured properties'} subtitle={isArabic ? 'أماكن تستحق الزيارة' : 'Places worth seeing'} action={isArabic ? 'كل العقارات' : 'See all'} onAction={() => openService('real-estate')} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyRow}>{availableListings.slice(0, 2).map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} featured={listing.featured} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { listing: true })} />)}</ScrollView>
-          </View>
-          <View style={styles.sectionBlock}>
-            <SectionHeading title={isArabic ? 'صيانة سريعة' : 'Quick maintenance'} subtitle={isArabic ? 'حل المشكلة قبل أن تكبر' : 'Fix the small things before they grow'} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.maintenanceRow}>{maintenanceItems.map((item) => <Pressable key={item.id} onPress={() => openService('maintenance')} style={[styles.maintenanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={[styles.maintenanceIcon, { backgroundColor: `${item.color}18` }]}><ServiceIcon icon={item.icon} color={item.color} size={21} /></View><Text style={[styles.maintenanceLabel, { color: colors.foreground }]}>{isArabic ? item.labelAr : item.label}</Text></Pressable>)}</ScrollView>
-          </View>
+            <SearchBar placeholder={localized(homepage.hero.searchPlaceholderEn, homepage.hero.searchPlaceholderAr)} onPress={() => router.push('/explore')} />
+          </View> : null}
+          {homepage.showSponsoredAds && ads.data?.[activeAdIndex] && engagementClientId ? <AdBanner campaign={ads.data[activeAdIndex]} /> : null}
+          {homepage.sectionOrder.map(renderSection)}
           <View style={styles.footer}><Image source={require('@/assets/images/moqawil-logo.png')} style={styles.footerMark} /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Moqawil · مقاول</Text></View>
         </View>
       </ScrollView>

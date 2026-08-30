@@ -1,5 +1,7 @@
 import { and, eq, gt, lte, sql } from "drizzle-orm";
 import { db, marketplaceSettings, payments, subscriptionPlans, subscriptions, type RankingWeights } from "@workspace/db";
+import { DEFAULT_HOMEPAGE_SETTINGS, normalizeHomepageSettings } from "./homepageSettings";
+export { DEFAULT_HOMEPAGE_SETTINGS, HOMEPAGE_SECTION_IDS, isHomepageSettings, normalizeHomepageSettings } from "./homepageSettings";
 
 export const DEFAULT_SETTINGS = {
   trialMonths: 4,
@@ -36,6 +38,11 @@ export async function ensureMarketplaceDefaults() {
         value: DEFAULT_SETTINGS.rankingWeights,
         description: "Directory ranking weights",
       },
+      {
+        key: "homepage",
+        value: DEFAULT_HOMEPAGE_SETTINGS,
+        description: "Public homepage content configuration",
+      },
     ]).onConflictDoNothing({ target: marketplaceSettings.key });
   });
 }
@@ -52,14 +59,19 @@ export function addMonths(date: Date, months: number) {
 }
 
 export async function getSettings() {
-  const rows = await db.select().from(marketplaceSettings).where(sql`${marketplaceSettings.key} in ('subscription', 'ranking')`);
+  const rows = await db.select().from(marketplaceSettings).where(sql`${marketplaceSettings.key} in ('subscription', 'ranking', 'homepage')`);
   const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   const subscription = values.subscription as Partial<typeof DEFAULT_SETTINGS> | undefined;
   return {
     trialMonths: Number(subscription?.trialMonths ?? DEFAULT_SETTINGS.trialMonths),
     defaultPriceOmaniRial: Number(subscription?.defaultPriceOmaniRial ?? DEFAULT_SETTINGS.defaultPriceOmaniRial),
     rankingWeights: (values.ranking as RankingWeights | undefined) ?? DEFAULT_SETTINGS.rankingWeights,
+    homepage: normalizeHomepageSettings(values.homepage),
   };
+}
+
+export async function getHomepageSettings() {
+  return (await getSettings()).homepage;
 }
 
 export async function refreshSubscriptionStatus(subscriptionId: string) {

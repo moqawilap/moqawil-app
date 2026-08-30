@@ -98,6 +98,12 @@ paths:
         - { name: limit, in: query, schema: { type: number, minimum: 1, maximum: 5, default: 2 } }
       responses:
         "200": { description: Active advertisements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdCampaign" } } } } }
+  /homepage-settings:
+    get:
+      operationId: getHomepageSettings
+      tags: [marketplace]
+      responses:
+        "200": { description: Public homepage content configuration, content: { application/json: { schema: { $ref: "#/components/schemas/HomepageSettings" } } } }
   /ads/{id}/event:
     post:
       operationId: recordAdEvent
@@ -502,7 +508,55 @@ components:
     ContractorProfileUpsert: { type: object, properties: { businessName: { type: string, minLength: 2, maxLength: 200 }, city: { type: string, minLength: 2, maxLength: 100 }, wilayat: { type: string, minLength: 2, maxLength: 100 }, bio: { type: [string, "null"], maxLength: 5000 }, serviceArea: { type: [string, "null"], maxLength: 255 }, phone: { type: [string, "null"], maxLength: 32 }, avatarUrl: { type: [string, "null"], maxLength: 2048 } }, required: [businessName, city, wilayat] }
     ContractorProvisioning: { type: object, properties: { contractor: { $ref: "#/components/schemas/Contractor" }, subscription: { $ref: "#/components/schemas/Subscription" } }, required: [contractor, subscription] }
     RankingWeights: { type: object, properties: { rating: { type: number }, reviews: { type: number }, projects: { type: number }, profile: { type: number }, verification: { type: number }, activity: { type: number }, engagement: { type: number } }, required: [rating, reviews, projects, profile, verification, activity, engagement] }
-    MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights] }
+    LocalizedHomepageSection:
+      type: object
+      properties:
+        visible: { type: boolean }
+        titleEn: { type: string, maxLength: 160 }
+        titleAr: { type: string, maxLength: 160 }
+        subtitleEn: { type: string, maxLength: 240 }
+        subtitleAr: { type: string, maxLength: 240 }
+        detailEn: { type: string, maxLength: 500 }
+        detailAr: { type: string, maxLength: 500 }
+        actionEn: { type: string, maxLength: 80 }
+        actionAr: { type: string, maxLength: 80 }
+        limit: { type: number, minimum: 1, maximum: 12 }
+      required: [visible, titleEn, titleAr, subtitleEn, subtitleAr, detailEn, detailAr, actionEn, actionAr, limit]
+    HomepageHero:
+      type: object
+      properties:
+        visible: { type: boolean }
+        eyebrowEn: { type: string, maxLength: 120 }
+        eyebrowAr: { type: string, maxLength: 120 }
+        titleEn: { type: string, maxLength: 240 }
+        titleAr: { type: string, maxLength: 240 }
+        subtitleEn: { type: string, maxLength: 500 }
+        subtitleAr: { type: string, maxLength: 500 }
+        searchPlaceholderEn: { type: string, maxLength: 120 }
+        searchPlaceholderAr: { type: string, maxLength: 120 }
+      required: [visible, eyebrowEn, eyebrowAr, titleEn, titleAr, subtitleEn, subtitleAr, searchPlaceholderEn, searchPlaceholderAr]
+    HomepageSettings:
+      type: object
+      properties:
+        showSponsoredAds: { type: boolean }
+        hero: { $ref: "#/components/schemas/HomepageHero" }
+        sectionOrder:
+          type: array
+          minItems: 5
+          maxItems: 5
+          uniqueItems: true
+          items: { type: string, enum: [services, location, providers, properties, maintenance] }
+        sections:
+          type: object
+          properties:
+            services: { $ref: "#/components/schemas/LocalizedHomepageSection" }
+            location: { $ref: "#/components/schemas/LocalizedHomepageSection" }
+            providers: { $ref: "#/components/schemas/LocalizedHomepageSection" }
+            properties: { $ref: "#/components/schemas/LocalizedHomepageSection" }
+            maintenance: { $ref: "#/components/schemas/LocalizedHomepageSection" }
+          required: [services, location, providers, properties, maintenance]
+      required: [showSponsoredAds, hero, sectionOrder, sections]
+    MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" }, homepage: { $ref: "#/components/schemas/HomepageSettings" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights, homepage] }
     AdminOverview: { type: object, properties: { contractors: { type: number }, activeSubscriptions: { type: number }, paymentDueSubscriptions: { type: number }, paymentsRecorded: { type: number } }, required: [contractors, activeSubscriptions, paymentDueSubscriptions, paymentsRecorded] }
     AdAudience:
       type: object

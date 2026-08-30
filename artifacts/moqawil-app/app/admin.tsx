@@ -19,10 +19,10 @@ import {
   useCreateAdminContractor, useUpdateAdminContractor, useDeleteAdminContractor,
   useListAdminSubscriptions, getListAdminSubscriptionsQueryKey, useUpdateAdminSubscription,
   useListAdminPayments, getListAdminPaymentsQueryKey, useCreateAdminPayment,
-  useGetAdminSettings, getGetAdminSettingsQueryKey, useUpdateAdminSettings,
+  useGetAdminSettings, getGetAdminSettingsQueryKey, getGetHomepageSettingsQueryKey, useUpdateAdminSettings,
   useListAdminListings, getListAdminListingsQueryKey, useCreateAdminListing, useUpdateAdminListing, useDeleteAdminListing,
   useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, processAdminAdVideo,
-  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput
+  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings
 } from '@workspace/api-client-react';
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not process this request.';
@@ -177,7 +177,7 @@ export default function AdminScreen() {
   const { isArabic } = useApp();
   const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
 
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Workshops' | 'Designers' | 'Maintenance' | 'Listings' | 'Advertising' | 'Subscriptions' | 'Payments' | 'Settings'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Workshops' | 'Designers' | 'Maintenance' | 'Listings' | 'Advertising' | 'Subscriptions' | 'Payments' | 'Homepage' | 'Settings'>('Overview');
 
   if (!isLoaded) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator color={colors.primary} /></View>;
   if (!isSignedIn || !isAdmin) return (
@@ -202,9 +202,9 @@ export default function AdminScreen() {
         </View>
         <Text style={[styles.screenTitle, { color: colors.foreground }]}>{text(isArabic, 'Admin Console', 'لوحة الإدارة')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabScrollContent}>
-           {(['Overview', 'Contractors', 'Workshops', 'Designers', 'Maintenance', 'Listings', 'Advertising', 'Subscriptions', 'Payments', 'Settings'] as const).map(tab => (
+           {(['Overview', 'Contractors', 'Workshops', 'Designers', 'Maintenance', 'Listings', 'Advertising', 'Subscriptions', 'Payments', 'Homepage', 'Settings'] as const).map(tab => (
             <Pressable key={tab} testID={`tab-${tab}`} style={[styles.tab, activeTab === tab && [styles.activeTab, { backgroundColor: colors.foreground }]]} onPress={() => setActiveTab(tab)}>
-               <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Contractors: 'المقاولون', Workshops: 'الورش', Designers: 'المصممون', Maintenance: 'الصيانة', Listings: 'العقارات', Advertising: 'الإعلانات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
+               <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Contractors: 'المقاولون', Workshops: 'الورش', Designers: 'المصممون', Maintenance: 'الصيانة', Listings: 'العقارات', Advertising: 'الإعلانات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Homepage: 'الصفحة الرئيسية', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -219,6 +219,7 @@ export default function AdminScreen() {
         {activeTab === 'Advertising' && <AdvertisingTab />}
         {activeTab === 'Subscriptions' && <SubscriptionsTab />}
         {activeTab === 'Payments' && <PaymentsTab />}
+        {activeTab === 'Homepage' && <HomepageSettingsTab />}
         {activeTab === 'Settings' && <SettingsTab />}
       </ScrollView>
     </View>
@@ -1356,6 +1357,175 @@ function PaymentsTab() {
   );
 }
 
+type HomepageSectionId = HomepageSettings['sectionOrder'][number];
+
+function HomepageSettingsTab() {
+  const colors = useColors();
+  const { isArabic } = useApp();
+  const client = useQueryClient();
+  const { data: settings, isLoading, isError } = useGetAdminSettings();
+  const [form, setForm] = useState<HomepageSettings | null>(null);
+  const updateSettings = useUpdateAdminSettings({
+    mutation: {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getGetAdminSettingsQueryKey() });
+        client.invalidateQueries({ queryKey: getGetHomepageSettingsQueryKey() });
+        Alert.alert(text(isArabic, 'Homepage updated', 'تم تحديث الصفحة الرئيسية'), text(isArabic, 'Visitors will see the new content when the homepage refreshes.', 'سيظهر المحتوى الجديد للزوار عند تحديث الصفحة الرئيسية.'));
+      },
+      onError: (e) => Alert.alert(text(isArabic, 'Unable to save', 'تعذر الحفظ'), errorMessage(e)),
+    },
+  });
+
+  useEffect(() => {
+    if (settings?.homepage) setForm(JSON.parse(JSON.stringify(settings.homepage)) as HomepageSettings);
+  }, [settings?.homepage]);
+
+  if (isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
+  if (isError || !settings) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load homepage settings.', 'تعذر تحميل إعدادات الصفحة الرئيسية.')}</Text>;
+  if (!form) return null;
+
+  const updateHero = (key: keyof HomepageSettings['hero'], value: string | boolean) => setForm((current) => current ? ({ ...current, hero: { ...current.hero, [key]: value } }) : current);
+  const updateSection = (id: HomepageSectionId, key: keyof HomepageSettings['sections'][HomepageSectionId], value: string | number | boolean) => setForm((current) => current ? ({
+    ...current,
+    sections: { ...current.sections, [id]: { ...current.sections[id], [key]: value } },
+  }) : current);
+  const moveSection = (id: HomepageSectionId, direction: -1 | 1) => setForm((current) => {
+    if (!current) return current;
+    const order = [...current.sectionOrder];
+    const index = order.indexOf(id);
+    const destination = index + direction;
+    if (index < 0 || destination < 0 || destination >= order.length) return current;
+    [order[index], order[destination]] = [order[destination]!, order[index]!];
+    return { ...current, sectionOrder: order };
+  });
+  const sectionNames: Record<HomepageSectionId, [string, string]> = {
+    services: ['Services', 'الخدمات'],
+    location: ['Location banner', 'بانر الموقع'],
+    providers: ['Recommended providers', 'المزودون الموصى بهم'],
+    properties: ['Featured properties', 'العقارات المختارة'],
+    maintenance: ['Quick maintenance', 'الصيانة السريعة'],
+  };
+  const save = () => updateSettings.mutate({ data: { ...settings, homepage: form } });
+
+  return (
+    <View testID="admin-homepage-settings" style={styles.tabContainer}>
+      <View>
+        <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Homepage content', 'محتوى الصفحة الرئيسية')}</Text>
+        <Text style={[styles.cardMeta, { color: colors.mutedForeground, marginTop: 5 }]}>{text(isArabic, 'Edit both languages, hide sections, and use the arrows to change their order.', 'عدّل اللغتين، أخفِ الأقسام، واستخدم الأسهم لتغيير ترتيبها.')}</Text>
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Visibility', 'الظهور')}</Text>
+        <Pressable testID="homepage-toggle-ads" style={styles.toggleRow} onPress={() => setForm({ ...form, showSponsoredAds: !form.showSponsoredAds })}>
+          <Feather name={form.showSponsoredAds ? 'check-square' : 'square'} size={19} color={form.showSponsoredAds ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Show sponsored campaigns below the hero', 'عرض الحملات الإعلانية أسفل البانر الرئيسي')}</Text>
+        </Pressable>
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.homepageSectionHeader}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Main hero and search', 'البانر الرئيسي والبحث')}</Text>
+          <Pressable testID="homepage-toggle-hero" style={styles.toggleRow} onPress={() => updateHero('visible', !form.hero.visible)}>
+            <Feather name={form.hero.visible ? 'eye' : 'eye-off'} size={18} color={form.hero.visible ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.toggleText, { color: colors.foreground }]}>{form.hero.visible ? text(isArabic, 'Visible', 'ظاهر') : text(isArabic, 'Hidden', 'مخفي')}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.formGrid}>
+          {([
+            ['eyebrowEn', 'Eyebrow (English)', 'العنوان العلوي (إنجليزي)'],
+            ['eyebrowAr', 'Eyebrow (Arabic)', 'العنوان العلوي (عربي)'],
+            ['titleEn', 'Main title (English)', 'العنوان الرئيسي (إنجليزي)'],
+            ['titleAr', 'Main title (Arabic)', 'العنوان الرئيسي (عربي)'],
+            ['searchPlaceholderEn', 'Search text (English)', 'نص البحث (إنجليزي)'],
+            ['searchPlaceholderAr', 'Search text (Arabic)', 'نص البحث (عربي)'],
+          ] as const).map(([key, label, labelAr]) => (
+            <View key={key} style={styles.formGroup}>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+              <TextInput testID={`homepage-hero-${key}`} value={String(form.hero[key])} onChangeText={(value) => updateHero(key, value)} textAlign={key.endsWith('Ar') ? 'right' : 'left'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+            </View>
+          ))}
+        </View>
+        {([
+          ['subtitleEn', 'Description (English)', 'الوصف (إنجليزي)'],
+          ['subtitleAr', 'Description (Arabic)', 'الوصف (عربي)'],
+        ] as const).map(([key, label, labelAr]) => (
+          <View key={key} style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+            <TextInput testID={`homepage-hero-${key}`} value={form.hero[key]} onChangeText={(value) => updateHero(key, value)} multiline textAlign={key.endsWith('Ar') ? 'right' : 'left'} style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+        ))}
+      </View>
+
+      {form.sectionOrder.map((id, index) => {
+        const section = form.sections[id];
+        const isLocation = id === 'location';
+        return (
+          <View key={id} testID={`homepage-section-${id}`} style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.homepageSectionHeader}>
+              <View style={styles.homepageSectionTitle}>
+                <Text style={[styles.homepageOrderNumber, { color: colors.primary, backgroundColor: colors.primarySoft }]}>{index + 1}</Text>
+                <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, ...sectionNames[id])}</Text>
+              </View>
+              <View style={styles.homepageSectionActions}>
+                <Pressable accessibilityLabel={text(isArabic, 'Move up', 'تحريك للأعلى')} disabled={index === 0} onPress={() => moveSection(id, -1)} style={[styles.homepageMoveButton, { borderColor: colors.border, opacity: index === 0 ? 0.35 : 1 }]}><Feather name="arrow-up" size={16} color={colors.foreground} /></Pressable>
+                <Pressable accessibilityLabel={text(isArabic, 'Move down', 'تحريك للأسفل')} disabled={index === form.sectionOrder.length - 1} onPress={() => moveSection(id, 1)} style={[styles.homepageMoveButton, { borderColor: colors.border, opacity: index === form.sectionOrder.length - 1 ? 0.35 : 1 }]}><Feather name="arrow-down" size={16} color={colors.foreground} /></Pressable>
+                <Pressable testID={`homepage-toggle-${id}`} accessibilityLabel={text(isArabic, 'Toggle section', 'إظهار أو إخفاء القسم')} onPress={() => updateSection(id, 'visible', !section.visible)} style={styles.homepageVisibilityButton}><Feather name={section.visible ? 'eye' : 'eye-off'} size={19} color={section.visible ? colors.primary : colors.mutedForeground} /></Pressable>
+              </View>
+            </View>
+            <View style={styles.formGrid}>
+              {([
+                ['titleEn', 'Title (English)', 'العنوان (إنجليزي)'],
+                ['titleAr', 'Title (Arabic)', 'العنوان (عربي)'],
+                ['subtitleEn', isLocation ? 'Main line (English)' : 'Subtitle (English)', isLocation ? 'النص الرئيسي (إنجليزي)' : 'الوصف (إنجليزي)'],
+                ['subtitleAr', isLocation ? 'Main line (Arabic)' : 'Subtitle (Arabic)', isLocation ? 'النص الرئيسي (عربي)' : 'الوصف (عربي)'],
+              ] as const).map(([key, label, labelAr]) => (
+                <View key={key} style={styles.formGroup}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+                  <TextInput value={section[key]} onChangeText={(value) => updateSection(id, key, value)} textAlign={key.endsWith('Ar') ? 'right' : 'left'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+                </View>
+              ))}
+              {(isLocation || id === 'providers' || id === 'properties') ? ([
+                ['actionEn', isLocation ? 'Status (English)' : 'Action (English)', isLocation ? 'حالة الموقع (إنجليزي)' : 'زر العرض (إنجليزي)'],
+                ['actionAr', isLocation ? 'Status (Arabic)' : 'Action (Arabic)', isLocation ? 'حالة الموقع (عربي)' : 'زر العرض (عربي)'],
+              ] as const).map(([key, label, labelAr]) => (
+                <View key={key} style={styles.formGroup}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+                  <TextInput value={section[key]} onChangeText={(value) => updateSection(id, key, value)} textAlign={key.endsWith('Ar') ? 'right' : 'left'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+                </View>
+              )) : null}
+              {!isLocation ? (
+                <View style={styles.formGroup}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Items shown (1-12)', 'عدد العناصر (1-12)')}</Text>
+                  <TextInput testID={`homepage-limit-${id}`} value={String(section.limit)} onChangeText={(value) => updateSection(id, 'limit', Math.min(12, Math.max(1, Number(value) || 1)))} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+                </View>
+              ) : null}
+            </View>
+            {isLocation ? (
+              <>
+                <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Use {area} and {city} to insert the visitor’s current location.', 'استخدم {area} و{city} لإظهار منطقة ومدينة الزائر الحالية.')}</Text>
+                {([
+                  ['detailEn', 'Supporting text (English)', 'النص الإضافي (إنجليزي)'],
+                  ['detailAr', 'Supporting text (Arabic)', 'النص الإضافي (عربي)'],
+                ] as const).map(([key, label, labelAr]) => (
+                  <View key={key} style={styles.formGroupFull}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
+                    <TextInput value={section[key]} onChangeText={(value) => updateSection(id, key, value)} multiline textAlign={key.endsWith('Ar') ? 'right' : 'left'} style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+                  </View>
+                ))}
+              </>
+            ) : null}
+          </View>
+        );
+      })}
+
+      <Pressable testID="save-homepage-settings" disabled={updateSettings.isPending} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, opacity: updateSettings.isPending ? 0.6 : 1 }]} onPress={save}>
+        <Feather name="save" size={16} color={colors.background} />
+        <Text style={[styles.denseButtonText, { color: colors.background }]}>{updateSettings.isPending ? text(isArabic, 'Saving…', 'جارٍ الحفظ…') : text(isArabic, 'Save homepage', 'حفظ الصفحة الرئيسية')}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function SettingsTab() {
   const colors = useColors();
   const { isArabic } = useApp();
@@ -1406,7 +1576,8 @@ function SettingsTab() {
           verification: Number(form.wVerification) || 0,
           activity: Number(form.wActivity) || 0,
           engagement: Number(form.wEngagement) || 0,
-        }
+        },
+        homepage: settings!.homepage,
       }
     });
   };
@@ -1506,6 +1677,12 @@ const styles = StyleSheet.create({
   toggles: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginVertical: 8 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   toggleText: { fontSize: 14, fontWeight: '600' },
+  homepageSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  homepageSectionTitle: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 },
+  homepageOrderNumber: { width: 28, height: 28, borderRadius: 14, textAlign: 'center', textAlignVertical: 'center', lineHeight: 28, fontSize: 12, fontWeight: '800' },
+  homepageSectionActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  homepageMoveButton: { width: 34, height: 34, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  homepageVisibilityButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
 
   formActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   denseButtonPrimary: { height: 44, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 16 },

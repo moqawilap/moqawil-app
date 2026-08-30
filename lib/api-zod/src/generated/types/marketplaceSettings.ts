@@ -5,6 +5,7 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
+import type { HomepageSettings } from './homepageSettings';
 import type { RankingWeights } from './rankingWeights';
 
 export interface MarketplaceSettings {
@@ -13,4 +14,5 @@ export interface MarketplaceSettings {
   /** @minimum 0 */
   defaultPriceOmaniRial: number;
   rankingWeights: RankingWeights;
+  homepage: HomepageSettings;
 }
