@@ -1,6 +1,7 @@
 import { useSignIn } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BrandMark } from '@/components/MoqawilUI';
@@ -9,7 +10,8 @@ import { useColors } from '@/hooks/useColors';
 export default function SignInScreen() {
   const colors = useColors();
   const { signIn, fetchStatus } = useSignIn();
-  const [email, setEmail] = useState('');
+  const params = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(typeof params.email === 'string' ? params.email : '');
   const [password, setPassword] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');

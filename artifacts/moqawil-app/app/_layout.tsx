@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PushNotificationsBridge } from '@/components/PushNotificationsBridge';
 import colors from '@/constants/colors';
 import {
   Inter_400Regular,
@@ -146,6 +147,7 @@ export default function RootLayout() {
             <AppProvider>
               <QueryClientProvider client={queryClient}>
                 <AuthUserSync />
+                <PushNotificationsBridge />
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <KeyboardProvider>
                     <RootLayoutNav />

@@ -947,6 +947,73 @@ export interface ContactEventInput {
   subjectName: string;
 }
 
+export type PushDeviceInputPlatform = typeof PushDeviceInputPlatform[keyof typeof PushDeviceInputPlatform];
+
+
+export const PushDeviceInputPlatform = {
+  ios: 'ios',
+  android: 'android',
+} as const;
+
+export interface PushDeviceInput {
+  /**
+     * @minLength 20
+     * @maxLength 255
+     */
+  expoPushToken: string;
+  platform: PushDeviceInputPlatform;
+}
+
+export interface PushNotificationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  body: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  imageUrl?: string | null;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  targetUrl?: string | null;
+}
+
+export type PushNotificationStatus = typeof PushNotificationStatus[keyof typeof PushNotificationStatus];
+
+
+export const PushNotificationStatus = {
+  sending: 'sending',
+  sent: 'sent',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
+export interface PushNotification {
+  id: string;
+  title: string;
+  body: string;
+  /** @nullable */
+  imageUrl: string | null;
+  /** @nullable */
+  targetUrl: string | null;
+  status: PushNotificationStatus;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  /** @nullable */
+  sentAt: string | null;
+  createdAt: string;
+}
+
 export interface RatingInput {
   /**
      * @minimum 1

@@ -29,6 +29,8 @@ export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "f
 export const notificationTypeEnum = pgEnum("notification_type", ["subscription", "payment", "system", "review"]);
 export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email", "push"]);
 export const notificationDeliveryStatusEnum = pgEnum("notification_delivery_status", ["pending", "sent", "delivered", "failed"]);
+export const pushBroadcastStatusEnum = pgEnum("push_broadcast_status", ["sending", "sent", "partial", "failed"]);
+export const pushDeliveryStatusEnum = pgEnum("push_delivery_status", ["pending", "sent", "failed"]);
 export const serviceRequestStatusEnum = pgEnum("service_request_status", ["open", "quoted", "awarded", "closed", "cancelled"]);
 export const requestRecipientStatusEnum = pgEnum("request_recipient_status", ["invited", "viewed", "quoted", "declined"]);
 export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "accepted", "rejected", "withdrawn"]);
@@ -167,6 +169,46 @@ export const notifications = pgTable("notifications", {
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
   ...timestamps,
 }, (table) => [index("notifications_user_idx").on(table.userId, table.readAt, table.createdAt)]);
+
+export const pushDevices = pgTable("push_devices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expoPushToken: varchar("expo_push_token", { length: 255 }).notNull().unique(),
+  platform: varchar("platform", { length: 20 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+  ...timestamps,
+}, (table) => [index("push_devices_user_idx").on(table.userId, table.isActive), index("push_devices_last_seen_idx").on(table.isActive, table.lastSeenAt)]);
+
+export const pushBroadcasts = pgTable("push_broadcasts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 120 }).notNull(),
+  body: text("body").notNull(),
+  imageUrl: text("image_url"),
+  targetUrl: text("target_url"),
+  status: pushBroadcastStatusEnum("status").notNull().default("sending"),
+  recipientCount: integer("recipient_count").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  ...timestamps,
+}, (table) => [index("push_broadcasts_created_idx").on(table.createdAt)]);
+
+export const pushBroadcastDeliveries = pgTable("push_broadcast_deliveries", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  broadcastId: uuid("broadcast_id").notNull().references(() => pushBroadcasts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expoPushToken: varchar("expo_push_token", { length: 255 }).notNull(),
+  status: pushDeliveryStatusEnum("status").notNull().default("pending"),
+  expoTicketId: varchar("expo_ticket_id", { length: 255 }),
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("push_broadcast_deliveries_recipient_idx").on(table.broadcastId, table.userId),
+  index("push_broadcast_deliveries_broadcast_idx").on(table.broadcastId, table.status),
+]);
 
 export const serviceRequests = pgTable("service_requests", {
   id: uuid("id").defaultRandom().primaryKey(),

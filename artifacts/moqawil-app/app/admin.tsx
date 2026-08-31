@@ -22,6 +22,7 @@ import {
   useGetAdminSettings, getGetAdminSettingsQueryKey, getGetHomepageSettingsQueryKey, useUpdateAdminSettings,
   useListAdminListings, getListAdminListingsQueryKey, useCreateAdminListing, useUpdateAdminListing, useDeleteAdminListing,
   useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, processAdminAdVideo,
+  useListAdminPushNotifications, getListAdminPushNotificationsQueryKey, useCreateAdminPushNotification,
   type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings
 } from '@workspace/api-client-react';
 
@@ -927,6 +928,87 @@ const omanWilayatOptions = omanGovernorates.flatMap((governorate) => governorate
   governorate: governorate.nameAr,
 })));
 
+function PushNotificationPanel() {
+  const colors = useColors();
+  const { isArabic } = useApp();
+  const client = useQueryClient();
+  const notifications = useListAdminPushNotifications({ query: { queryKey: getListAdminPushNotificationsQueryKey() } });
+  const [form, setForm] = useState({ title: '', body: '', imageUrl: '', targetUrl: '' });
+  const send = useCreateAdminPushNotification({
+    mutation: {
+      onSuccess: (result) => {
+        client.invalidateQueries({ queryKey: getListAdminPushNotificationsQueryKey() });
+        setForm({ title: '', body: '', imageUrl: '', targetUrl: '' });
+        Alert.alert(
+          text(isArabic, 'Notification sent', 'تم إرسال الإشعار'),
+          text(isArabic, `Sent to ${result.sentCount} customers; ${result.failedCount} failed.`, `تم الإرسال إلى ${result.sentCount} عميل، وتعذر الإرسال إلى ${result.failedCount}.`),
+        );
+      },
+      onError: (error) => Alert.alert(text(isArabic, 'Send failed', 'تعذر الإرسال'), errorMessage(error)),
+    },
+  });
+  const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const submit = () => {
+    if (!form.title.trim() || !form.body.trim()) {
+      Alert.alert(text(isArabic, 'Missing content', 'المحتوى غير مكتمل'), text(isArabic, 'Enter a title and message.', 'أدخل عنوانًا ونصًا للإشعار.'));
+      return;
+    }
+    confirmAction(
+      text(isArabic, 'Send to all customers', 'إرسال لجميع العملاء'),
+      text(isArabic, 'Each registered customer will receive this notification once.', 'سيصل هذا الإشعار مرة واحدة لكل عميل مسجل.'),
+      () => send.mutate({ data: {
+        title: form.title.trim(),
+        body: form.body.trim(),
+        imageUrl: form.imageUrl.trim() || null,
+        targetUrl: form.targetUrl.trim() || null,
+      } }),
+      text(isArabic, 'Cancel', 'إلغاء'),
+    );
+  };
+
+  return (
+    <View testID="admin-push-notifications" style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.tabHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Phone notification', 'إشعار على هواتف العملاء')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Send a special offer, investment opportunity, property, or announcement once to every registered customer.', 'أرسل عرضًا خاصًا أو فرصة استثمارية أو عقارًا أو إعلانًا مرة واحدة لكل عميل مسجل.')}</Text>
+        </View>
+      </View>
+      <View style={styles.formGrid}>
+        <View style={styles.formGroup}>
+          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Notification title', 'عنوان الإشعار')}</Text>
+          <TextInput testID="push-title" value={form.title} onChangeText={(value) => update('title', value)} maxLength={120} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+        </View>
+        <View style={styles.formGroup}>
+          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Open link (optional)', 'رابط الفتح (اختياري)')}</Text>
+          <TextInput testID="push-target-url" value={form.targetUrl} onChangeText={(value) => update('targetUrl', value)} autoCapitalize="none" keyboardType="url" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+        </View>
+      </View>
+      <View style={styles.formGroupFull}>
+        <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Message', 'نص الإشعار')}</Text>
+        <TextInput testID="push-body" value={form.body} onChangeText={(value) => update('body', value)} maxLength={1000} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+      </View>
+      <View style={styles.formGroupFull}>
+        <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Image URL (optional)', 'رابط الصورة (اختياري)')}</Text>
+        <TextInput testID="push-image-url" value={form.imageUrl} onChangeText={(value) => update('imageUrl', value)} autoCapitalize="none" keyboardType="url" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+        <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'The Moqawil app icon appears automatically with the notification.', 'يظهر شعار تطبيق مقاول تلقائيًا مع الإشعار.')}</Text>
+      </View>
+      <Pressable testID="send-push-notification" disabled={send.isPending} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, alignSelf: 'flex-start', opacity: send.isPending ? 0.6 : 1 }]} onPress={submit}>
+        <Feather name="send" size={14} color={colors.background} />
+        <Text style={[styles.denseButtonText, { color: colors.background }]}>{send.isPending ? text(isArabic, 'Sending...', 'جارٍ الإرسال...') : text(isArabic, 'Send to all customers', 'إرسال لجميع العملاء')}</Text>
+      </Pressable>
+      {notifications.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
+      {notifications.data?.slice(0, 5).map((item) => (
+        <View key={item.id} style={[styles.denseCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{item.body}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{statusText(isArabic, item.status)} • {item.sentCount}/{item.recipientCount} {text(isArabic, 'sent', 'تم إرسالها')} • {item.failedCount} {text(isArabic, 'failed', 'تعذر')}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function AdvertisingTab() {
   const colors = useColors();
   const { isArabic } = useApp();
@@ -1040,6 +1122,7 @@ function AdvertisingTab() {
 
   return (
     <View testID="admin-advertising" style={styles.tabContainer}>
+      <PushNotificationPanel />
       <View style={styles.tabHeader}>
         <View>
           <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Advertising campaigns', 'الحملات الإعلانية')}</Text>

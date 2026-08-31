@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
-  adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, pushBroadcastDeliveries, pushBroadcasts, pushDevices, quotes, rankingWeightsSchema, requestRecipients, reviews,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
   type AdAudience, type AdMediaItem,
 } from "@workspace/db";
@@ -38,6 +38,42 @@ async function logAudit(actorUserId: string, action: string, entityType: string,
 }
 async function createInAppNotification(userId: string, title: string, body: string, metadata: Record<string, unknown> = {}) {
   await db.insert(notifications).values({ userId, type: "system", channel: "in_app", deliveryStatus: "delivered", title, body, deliveryMetadata: metadata, deliveredAt: new Date() });
+}
+async function sendExpoPushMessages(messages: Array<{ to: string; title: string; body: string; imageUrl?: string | null; targetUrl?: string | null }>) {
+  const tickets: Array<{ status: string; id?: string; message?: string }> = [];
+  for (let offset = 0; offset < messages.length; offset += 100) {
+    const chunk = messages.slice(offset, offset + 100);
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(chunk.map((message) => ({
+        to: message.to,
+        title: message.title,
+        body: message.body,
+        ...(message.imageUrl ? { richContent: { image: message.imageUrl } } : {}),
+        ...(message.targetUrl ? { data: { url: message.targetUrl } } : {}),
+      }))),
+    });
+    if (!response.ok) throw new Error(`Expo push service returned ${response.status}`);
+    const payload = await response.json() as { data?: Array<{ status: string; id?: string; message?: string }> };
+    tickets.push(...(Array.isArray(payload.data) ? payload.data : []));
+  }
+  return tickets;
+}
+function pushNotificationResponse(item: typeof pushBroadcasts.$inferSelect) {
+  return {
+    id: item.id,
+    title: item.title,
+    body: item.body,
+    imageUrl: item.imageUrl,
+    targetUrl: item.targetUrl,
+    status: item.status,
+    recipientCount: item.recipientCount,
+    sentCount: item.sentCount,
+    failedCount: item.failedCount,
+    sentAt: item.sentAt?.toISOString() ?? null,
+    createdAt: item.createdAt.toISOString(),
+  };
 }
 function parseBudgetQuery(value: unknown) {
   if (value === undefined) return null;
@@ -561,6 +597,119 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
       subjectName: input.subjectName.trim(),
     });
     res.status(204).end();
+  } catch (error) { next(error); }
+});
+
+router.post("/push-devices", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const { expoPushToken, platform } = req.body ?? {};
+    if (
+      typeof expoPushToken !== "string"
+      || expoPushToken.length < 20
+      || expoPushToken.length > 255
+      || !/^(Expo|Exponent)PushToken\[[^\]]+\]$/.test(expoPushToken)
+      || (platform !== "ios" && platform !== "android")
+    ) {
+      res.status(400).json({ error: "A valid Expo push token and platform are required" });
+      return;
+    }
+    await db.insert(pushDevices).values({
+      userId: user.id,
+      expoPushToken,
+      platform,
+      isActive: true,
+      lastSeenAt: new Date(),
+    }).onConflictDoUpdate({
+      target: pushDevices.expoPushToken,
+      set: { userId: user.id, platform, isActive: true, lastSeenAt: new Date(), updatedAt: new Date() },
+    });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
+router.get("/admin/push-notifications", requireUser, requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await db.select().from(pushBroadcasts).orderBy(desc(pushBroadcasts.createdAt)).limit(50);
+    res.json(rows.map(pushNotificationResponse));
+  } catch (error) { next(error); }
+});
+
+router.post("/admin/push-notifications", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const actor = (req as AuthenticatedRequest).marketplaceUser;
+    const input = req.body ?? {};
+    const title = typeof input.title === "string" ? input.title.trim() : "";
+    const body = typeof input.body === "string" ? input.body.trim() : "";
+    const imageUrl = input.imageUrl === null || input.imageUrl === undefined ? null : typeof input.imageUrl === "string" ? input.imageUrl.trim() : null;
+    const targetUrl = input.targetUrl === null || input.targetUrl === undefined ? null : typeof input.targetUrl === "string" ? input.targetUrl.trim() : null;
+    if (!title || title.length > 120 || !body || body.length > 1000 || (imageUrl !== null && imageUrl.length > 2_000) || (targetUrl !== null && targetUrl.length > 2_000)) {
+      res.status(400).json({ error: "Title and body are required; optional links must be valid text" });
+      return;
+    }
+
+    const [campaign] = await db.insert(pushBroadcasts).values({
+      createdBy: actor.id,
+      title,
+      body,
+      imageUrl: imageUrl || null,
+      targetUrl: targetUrl || null,
+      status: "sending",
+    }).returning();
+    const devices = await db.select({
+      userId: pushDevices.userId,
+      expoPushToken: pushDevices.expoPushToken,
+    }).from(pushDevices)
+      .where(eq(pushDevices.isActive, true))
+      .orderBy(desc(pushDevices.lastSeenAt));
+    const recipients = [...new Map(devices.map((device) => [device.userId, device])).values()];
+    if (!recipients.length) {
+      const [updated] = await db.update(pushBroadcasts).set({ status: "sent", sentAt: new Date(), updatedAt: new Date() }).where(eq(pushBroadcasts.id, campaign.id)).returning();
+      res.status(201).json(pushNotificationResponse(updated));
+      return;
+    }
+
+    const deliveries = await db.insert(pushBroadcastDeliveries).values(recipients.map((recipient) => ({
+      broadcastId: campaign.id,
+      userId: recipient.userId,
+      expoPushToken: recipient.expoPushToken,
+    }))).returning();
+    let sentCount = 0;
+    let failedCount = 0;
+    try {
+      const tickets = await sendExpoPushMessages(recipients.map((recipient) => ({
+        to: recipient.expoPushToken,
+        title,
+        body,
+        imageUrl,
+        targetUrl,
+      })));
+      for (let index = 0; index < deliveries.length; index += 1) {
+        const ticket = tickets[index];
+        if (ticket?.status === "ok") {
+          sentCount += 1;
+          await db.update(pushBroadcastDeliveries).set({ status: "sent", expoTicketId: ticket.id ?? null, sentAt: new Date(), updatedAt: new Date() }).where(eq(pushBroadcastDeliveries.id, deliveries[index]!.id));
+        } else {
+          failedCount += 1;
+          await db.update(pushBroadcastDeliveries).set({ status: "failed", errorMessage: ticket?.message ?? "Expo did not return a successful ticket", updatedAt: new Date() }).where(eq(pushBroadcastDeliveries.id, deliveries[index]!.id));
+        }
+      }
+    } catch (error) {
+      failedCount = deliveries.length;
+      const message = error instanceof Error ? error.message.slice(0, 1000) : "Push provider unavailable";
+      await db.update(pushBroadcastDeliveries).set({ status: "failed", errorMessage: message, updatedAt: new Date() }).where(eq(pushBroadcastDeliveries.broadcastId, campaign.id));
+    }
+    const status = sentCount && failedCount ? "partial" : sentCount ? "sent" : "failed";
+    const [updated] = await db.update(pushBroadcasts).set({
+      status,
+      recipientCount: recipients.length,
+      sentCount,
+      failedCount,
+      sentAt: new Date(),
+      updatedAt: new Date(),
+    }).where(eq(pushBroadcasts.id, campaign.id)).returning();
+    await logAudit(actor.id, "push_notification_sent", "push_broadcast", campaign.id, { recipientCount: recipients.length, sentCount, failedCount });
+    res.status(201).json(pushNotificationResponse(updated));
   } catch (error) { next(error); }
 });
 

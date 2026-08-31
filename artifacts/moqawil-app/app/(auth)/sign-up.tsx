@@ -1,13 +1,14 @@
-import { useSignUp } from '@clerk/expo';
+import { useAuth, useSignUp } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BrandMark } from '@/components/MoqawilUI';
 import { useColors } from '@/hooks/useColors';
 
 export default function SignUpScreen() {
   const colors = useColors();
+  const { isLoaded, isSignedIn } = useAuth();
   const { signUp, fetchStatus } = useSignUp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +17,10 @@ export default function SignUpScreen() {
   const [verificationStarted, setVerificationStarted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) router.replace('/');
+  }, [isLoaded, isSignedIn]);
 
   const submit = async () => {
     if (busy) return;
@@ -61,9 +66,13 @@ export default function SignUpScreen() {
        const rawMessage = error instanceof Error ? error.message : '';
        const message = /online data breach|compromised|password.*breach/i.test(rawMessage)
          ? 'هذه كلمة المرور ظهرت في تسريب بيانات. اختر كلمة مرور جديدة وفريدة من 15 حرفًا أو أكثر.'
-         : clerkCode === 'form_identifier_exists' || clerkCode === 'identifier_exists'
-         ? 'This email already has an account. Use Sign in instead.'
+          : clerkCode === 'form_identifier_exists' || clerkCode === 'identifier_exists'
+          ? 'This email already has an account. Opening sign in…'
          : rawMessage || 'Check your details and try again.';
+       if (clerkCode === 'form_identifier_exists' || clerkCode === 'identifier_exists') {
+         router.replace({ pathname: '/sign-in', params: { email: email.trim() } });
+         return;
+       }
       setErrorMessage(message);
       if (Platform.OS !== 'web') Alert.alert('Unable to create account', message);
     } finally {

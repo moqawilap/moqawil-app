@@ -58,6 +58,9 @@ import type {
   NotFoundResponse,
   Notification,
   Payment,
+  PushDeviceInput,
+  PushNotification,
+  PushNotificationInput,
   Quote,
   QuoteCreate,
   RatingInput,
@@ -748,6 +751,207 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRecordContactEventMutationOptions(options));
+    }
+
+export const getRegisterPushDeviceUrl = () => {
+
+
+
+
+  return `/api/push-devices`
+}
+
+export const registerPushDevice = async (pushDeviceInput: PushDeviceInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRegisterPushDeviceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushDeviceInput)
+  }
+);}
+
+
+
+
+
+export const getRegisterPushDeviceMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext> => {
+
+const mutationKey = ['registerPushDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerPushDevice>>, {data: BodyType<PushDeviceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerPushDevice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterPushDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof registerPushDevice>>>
+    export type RegisterPushDeviceMutationBody = BodyType<PushDeviceInput>
+    export type RegisterPushDeviceMutationError = ErrorType<BadRequestResponse>
+
+    export const useRegisterPushDevice = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushDevice>>, TError,{data: BodyType<PushDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerPushDevice>>,
+        TError,
+        {data: BodyType<PushDeviceInput>},
+        TContext
+      > => {
+      return useMutation(getRegisterPushDeviceMutationOptions(options));
+    }
+
+export const getListAdminPushNotificationsUrl = () => {
+
+
+
+
+  return `/api/admin/push-notifications`
+}
+
+export const listAdminPushNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<PushNotification[]> => {
+
+  return customFetch<PushNotification[]>(getListAdminPushNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminPushNotificationsQueryKey = () => {
+    return [
+    `/api/admin/push-notifications`
+    ] as const;
+    }
+
+
+export const getListAdminPushNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminPushNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminPushNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminPushNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminPushNotifications>>> = ({ signal }) => listAdminPushNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminPushNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminPushNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminPushNotifications>>>
+export type ListAdminPushNotificationsQueryError = ErrorType<unknown>
+
+
+
+export function useListAdminPushNotifications<TData = Awaited<ReturnType<typeof listAdminPushNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminPushNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminPushNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminPushNotificationUrl = () => {
+
+
+
+
+  return `/api/admin/push-notifications`
+}
+
+export const createAdminPushNotification = async (pushNotificationInput: PushNotificationInput, options?: Parameters<typeof customFetch>[1]): Promise<PushNotification> => {
+
+  return customFetch<PushNotification>(getCreateAdminPushNotificationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushNotificationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminPushNotificationMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminPushNotification>>, TError,{data: BodyType<PushNotificationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminPushNotification>>, TError,{data: BodyType<PushNotificationInput>}, TContext> => {
+
+const mutationKey = ['createAdminPushNotification'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminPushNotification>>, {data: BodyType<PushNotificationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminPushNotification(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminPushNotificationMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminPushNotification>>>
+    export type CreateAdminPushNotificationMutationBody = BodyType<PushNotificationInput>
+    export type CreateAdminPushNotificationMutationError = ErrorType<BadRequestResponse>
+
+    export const useCreateAdminPushNotification = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminPushNotification>>, TError,{data: BodyType<PushNotificationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminPushNotification>>,
+        TError,
+        {data: BodyType<PushNotificationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminPushNotificationMutationOptions(options));
     }
 
 export const getListAdsUrl = (params?: ListAdsParams,) => {

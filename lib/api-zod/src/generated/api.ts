@@ -289,6 +289,67 @@ export const RecordContactEventBody = zod.object({
 export const RecordContactEventResponse = zod.void()
 
 
+export const registerPushDeviceBodyExpoPushTokenMin = 20;
+export const registerPushDeviceBodyExpoPushTokenMax = 255;
+
+
+
+export const RegisterPushDeviceBody = zod.object({
+  "expoPushToken": zod.string().min(registerPushDeviceBodyExpoPushTokenMin).max(registerPushDeviceBodyExpoPushTokenMax),
+  "platform": zod.enum(['ios', 'android'])
+})
+
+export const RegisterPushDeviceResponse = zod.void()
+
+
+export const ListAdminPushNotificationsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "targetUrl": zod.string().nullable(),
+  "status": zod.enum(['sending', 'sent', 'partial', 'failed']),
+  "recipientCount": zod.number(),
+  "sentCount": zod.number(),
+  "failedCount": zod.number(),
+  "sentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminPushNotificationsResponse = zod.array(ListAdminPushNotificationsResponseItem)
+
+
+export const createAdminPushNotificationBodyTitleMax = 120;
+
+export const createAdminPushNotificationBodyBodyMax = 1000;
+
+export const createAdminPushNotificationBodyImageUrlMax = 2000;
+
+export const createAdminPushNotificationBodyTargetUrlMax = 2000;
+
+
+
+export const CreateAdminPushNotificationBody = zod.object({
+  "title": zod.string().min(1).max(createAdminPushNotificationBodyTitleMax),
+  "body": zod.string().min(1).max(createAdminPushNotificationBodyBodyMax),
+  "imageUrl": zod.string().max(createAdminPushNotificationBodyImageUrlMax).nullish(),
+  "targetUrl": zod.string().max(createAdminPushNotificationBodyTargetUrlMax).nullish()
+})
+
+export const CreateAdminPushNotificationResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "targetUrl": zod.string().nullable(),
+  "status": zod.enum(['sending', 'sent', 'partial', 'failed']),
+  "recipientCount": zod.number(),
+  "sentCount": zod.number(),
+  "failedCount": zod.number(),
+  "sentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
 export const listAdsQueryLimitDefault = 2;
 export const listAdsQueryLimitMax = 5;
 

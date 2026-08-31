@@ -100,6 +100,38 @@ paths:
       responses:
         "204": { description: Contact attempt recorded and administrators notified }
         "400": { $ref: "#/components/responses/BadRequest" }
+  /push-devices:
+    post:
+      operationId: registerPushDevice
+      tags: [account]
+      security: [ { clerkAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushDeviceInput" }
+      responses:
+        "204": { description: Push device registered }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /admin/push-notifications:
+    get:
+      operationId: listAdminPushNotifications
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      responses:
+        "200": { description: Push notification history, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PushNotification" } } } } }
+    post:
+      operationId: createAdminPushNotification
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushNotificationInput" }
+      responses:
+        "201": { description: Push notification created and sent, content: { application/json: { schema: { $ref: "#/components/schemas/PushNotification" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /ads:
     get:
       operationId: listAds
@@ -723,6 +755,35 @@ components:
         subjectId: { type: string, minLength: 1, maxLength: 100 }
         subjectName: { type: string, minLength: 1, maxLength: 200 }
       required: [category, channel, subjectId, subjectName]
+    PushDeviceInput:
+      type: object
+      properties:
+        expoPushToken: { type: string, minLength: 20, maxLength: 255 }
+        platform: { type: string, enum: [ios, android] }
+      required: [expoPushToken, platform]
+    PushNotificationInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        body: { type: string, minLength: 1, maxLength: 1000 }
+        imageUrl: { type: [string, "null"], maxLength: 2000 }
+        targetUrl: { type: [string, "null"], maxLength: 2000 }
+      required: [title, body]
+    PushNotification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        imageUrl: { type: [string, "null"] }
+        targetUrl: { type: [string, "null"] }
+        status: { type: string, enum: [sending, sent, partial, failed] }
+        recipientCount: { type: number }
+        sentCount: { type: number }
+        failedCount: { type: number }
+        sentAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+      required: [id, title, body, imageUrl, targetUrl, status, recipientCount, sentCount, failedCount, sentAt, createdAt]
     RatingInput:
       type: object
       properties:
