@@ -17,7 +17,13 @@ export async function getPushDeviceRegistration(requestPermission: boolean): Pro
   }
   let permission = await Notifications.getPermissionsAsync();
   if (!permission.granted && requestPermission && permission.canAskAgain) {
-    permission = await Notifications.requestPermissionsAsync();
+    permission = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
   }
   if (!permission.granted) return null;
   const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;

@@ -33,6 +33,10 @@ export function PushNotificationsBridge() {
       const url = response.notification.request.content.data?.url;
       if (typeof url === 'string' && url.length > 0) void Linking.openURL(url);
     });
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      const url = response?.notification.request.content.data?.url;
+      if (typeof url === 'string' && url.length > 0) void Linking.openURL(url);
+    }).catch(() => undefined);
     return () => subscription.remove();
   }, []);
 
