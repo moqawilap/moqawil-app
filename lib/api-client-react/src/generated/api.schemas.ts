@@ -650,6 +650,9 @@ export type ServiceRegistrationStatus = typeof ServiceRegistrationStatus[keyof t
 
 export const ServiceRegistrationStatus = {
   pending_review: 'pending_review',
+  approved: 'approved',
+  changes_requested: 'changes_requested',
+  rejected: 'rejected',
 } as const;
 
 export interface ServiceRegistration {
@@ -661,7 +664,108 @@ export interface ServiceRegistration {
   description: string;
   mediaUrls: string[];
   status: ServiceRegistrationStatus;
+  /** @nullable */
+  reviewNote?: string | null;
   createdAt: string;
+}
+
+export type MyServiceReviewKind = typeof MyServiceReviewKind[keyof typeof MyServiceReviewKind];
+
+
+export const MyServiceReviewKind = {
+  project: 'project',
+  registration: 'registration',
+} as const;
+
+export type MyServiceReviewStatus = typeof MyServiceReviewStatus[keyof typeof MyServiceReviewStatus];
+
+
+export const MyServiceReviewStatus = {
+  pending_review: 'pending_review',
+  approved: 'approved',
+  changes_requested: 'changes_requested',
+  rejected: 'rejected',
+} as const;
+
+export interface MyServiceReview {
+  id: string;
+  kind: MyServiceReviewKind;
+  category: string;
+  title: string;
+  /** @nullable */
+  specialty?: string | null;
+  /** @nullable */
+  city?: string | null;
+  description: string;
+  mediaUrls: string[];
+  status: MyServiceReviewStatus;
+  /** @nullable */
+  reviewNote?: string | null;
+  createdAt: string;
+}
+
+export interface ServiceReviewResubmit {
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  specialty?: string | null;
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  city: string;
+  /**
+     * @minLength 20
+     * @maxLength 5000
+     */
+  description: string;
+  /**
+     * @minItems 1
+     * @maxItems 15
+     * @items.maxLength 8000000
+     */
+  mediaUrls: string[];
+}
+
+export type AdminServiceReview = MyServiceReview & ({
+  /** @nullable */
+  ownerName: string | null;
+  /** @nullable */
+  ownerEmail: string | null;
+});
+
+export interface AdminServiceReviewCategory {
+  category: string;
+  pendingCount: number;
+}
+
+export interface AdminServiceReviewPage {
+  categories: AdminServiceReviewCategory[];
+  items: AdminServiceReview[];
+}
+
+export type AdminServiceReviewUpdateAction = typeof AdminServiceReviewUpdateAction[keyof typeof AdminServiceReviewUpdateAction];
+
+
+export const AdminServiceReviewUpdateAction = {
+  approve: 'approve',
+  reject: 'reject',
+  changes_requested: 'changes_requested',
+} as const;
+
+export interface AdminServiceReviewUpdate {
+  action: AdminServiceReviewUpdateAction;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  note?: string | null;
 }
 
 export interface RankingWeights {
@@ -1438,6 +1542,22 @@ service?: string;
  */
 limit?: number;
 };
+
+export type ListAdminServiceReviewsParams = {
+category?: ListAdminServiceReviewsCategory;
+};
+
+export type ListAdminServiceReviewsCategory = typeof ListAdminServiceReviewsCategory[keyof typeof ListAdminServiceReviewsCategory];
+
+
+export const ListAdminServiceReviewsCategory = {
+  contractors: 'contractors',
+  consultants: 'consultants',
+  design: 'design',
+  building: 'building',
+  'real-estate': 'real-estate',
+  maintenance: 'maintenance',
+} as const;
 
 export type DeleteAdminContractorParams = {
 confirm: boolean;

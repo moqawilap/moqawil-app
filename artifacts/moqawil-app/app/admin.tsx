@@ -23,7 +23,8 @@ import {
   useListAdminListings, getListAdminListingsQueryKey, useCreateAdminListing, useUpdateAdminListing, useDeleteAdminListing,
   useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, processAdminAdVideo,
   useListAdminPushNotifications, getListAdminPushNotificationsQueryKey, useCreateAdminPushNotification,
-  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings
+  useListAdminServiceReviews, getListAdminServiceReviewsQueryKey, useUpdateAdminServiceReview,
+  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings, type AdminServiceReview
 } from '@workspace/api-client-react';
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not process this request.';
@@ -178,7 +179,7 @@ export default function AdminScreen() {
   const { isArabic } = useApp();
   const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
 
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Contractors' | 'Workshops' | 'Designers' | 'Maintenance' | 'Listings' | 'Advertising' | 'Subscriptions' | 'Payments' | 'Homepage' | 'Settings'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Reviews' | 'Contractors' | 'Workshops' | 'Designers' | 'Maintenance' | 'Listings' | 'Advertising' | 'Subscriptions' | 'Payments' | 'Homepage' | 'Settings'>('Overview');
 
   if (!isLoaded) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator color={colors.primary} /></View>;
   if (!isSignedIn || !isAdmin) return (
@@ -203,15 +204,16 @@ export default function AdminScreen() {
         </View>
         <Text style={[styles.screenTitle, { color: colors.foreground }]}>{text(isArabic, 'Admin Console', 'لوحة الإدارة')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabScrollContent}>
-           {(['Overview', 'Contractors', 'Workshops', 'Designers', 'Maintenance', 'Listings', 'Advertising', 'Subscriptions', 'Payments', 'Homepage', 'Settings'] as const).map(tab => (
+           {(['Overview', 'Reviews', 'Contractors', 'Workshops', 'Designers', 'Maintenance', 'Listings', 'Advertising', 'Subscriptions', 'Payments', 'Homepage', 'Settings'] as const).map(tab => (
             <Pressable key={tab} testID={`tab-${tab}`} style={[styles.tab, activeTab === tab && [styles.activeTab, { backgroundColor: colors.foreground }]]} onPress={() => setActiveTab(tab)}>
-               <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Contractors: 'المقاولون', Workshops: 'الورش', Designers: 'المصممون', Maintenance: 'الصيانة', Listings: 'العقارات', Advertising: 'الإعلانات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Homepage: 'الصفحة الرئيسية', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
+               <Text style={[styles.tabText, activeTab === tab ? { color: colors.background } : { color: colors.mutedForeground }]}>{text(isArabic, tab, ({ Overview: 'نظرة عامة', Reviews: 'المراجعة', Contractors: 'المقاولون', Workshops: 'الورش', Designers: 'المصممون', Maintenance: 'الصيانة', Listings: 'العقارات', Advertising: 'الإعلانات', Subscriptions: 'الاشتراكات', Payments: 'المدفوعات', Homepage: 'الصفحة الرئيسية', Settings: 'الإعدادات' } as Record<string, string>)[tab])}</Text>
             </Pressable>
           ))}
         </ScrollView>
       </View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {activeTab === 'Overview' && <OverviewTab />}
+        {activeTab === 'Reviews' && <ReviewsTab />}
         {activeTab === 'Contractors' && <ContractorsTab />}
          {activeTab === 'Workshops' && <WorkshopsTab />}
           {activeTab === 'Designers' && <SpecialistsTab kind="designers" />}
@@ -223,6 +225,80 @@ export default function AdminScreen() {
         {activeTab === 'Homepage' && <HomepageSettingsTab />}
         {activeTab === 'Settings' && <SettingsTab />}
       </ScrollView>
+    </View>
+  );
+}
+
+type ReviewCategory = 'contractors' | 'consultants' | 'design' | 'building' | 'real-estate' | 'maintenance';
+const reviewCategoryLabels: Record<ReviewCategory, { en: string; ar: string }> = {
+  contractors: { en: 'Contractors', ar: 'المقاولون' },
+  consultants: { en: 'Consultants', ar: 'الاستشاريون' },
+  design: { en: 'Design', ar: 'التصميم' },
+  building: { en: 'Building workshops', ar: 'البناء والورش' },
+  'real-estate': { en: 'Real estate', ar: 'العقارات' },
+  maintenance: { en: 'Maintenance', ar: 'الصيانة' },
+};
+
+function ReviewsTab() {
+  const colors = useColors();
+  const { isArabic } = useApp();
+  const client = useQueryClient();
+  const [category, setCategory] = useState<ReviewCategory | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const reviews = useListAdminServiceReviews(category ? { category } : undefined);
+  const updateReview = useUpdateAdminServiceReview({ mutation: {
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: getListAdminServiceReviewsQueryKey() });
+      Alert.alert(text(isArabic, 'Review updated', 'تم تحديث المراجعة'));
+    },
+    onError: (error) => Alert.alert(text(isArabic, 'Review failed', 'تعذر تنفيذ المراجعة'), errorMessage(error)),
+  } });
+  const act = (item: AdminServiceReview, action: 'approve' | 'reject' | 'changes_requested') => {
+    const note = (notes[item.id] ?? '').trim();
+    if (action === 'changes_requested' && note.length < 4) {
+      Alert.alert(text(isArabic, 'Add a clear comment', 'أضف تعليقًا واضحًا'), text(isArabic, 'Explain exactly what the user must change before resubmitting.', 'وضح للمستخدم مكان التعديل المطلوب قبل إعادة الإرسال.'));
+      return;
+    }
+    const execute = () => updateReview.mutate({ kind: item.kind, id: item.id, data: { action, note: note || null } });
+    if (action === 'approve') {
+      confirmAction(text(isArabic, 'Approve', 'اعتماد'), text(isArabic, 'Publish this submission?', 'هل تريد اعتماد ونشر هذا الإعلان؟'), execute, text(isArabic, 'Cancel', 'رجوع'));
+    } else if (action === 'reject') {
+      confirmAction(text(isArabic, 'Cancel submission', 'إلغاء الإعلان'), text(isArabic, 'This submission will be cancelled and hidden.', 'سيتم إلغاء الإعلان وإخفاؤه.'), execute, text(isArabic, 'Back', 'رجوع'));
+    } else {
+      execute();
+    }
+  };
+  if (reviews.isLoading) return <ActivityIndicator color={colors.primary} style={styles.loader} />;
+  if (reviews.isError || !reviews.data) return <Text style={{ color: colors.destructive }}>{text(isArabic, 'Failed to load reviews.', 'تعذر تحميل المراجعات.')}</Text>;
+  return (
+    <View testID="admin-reviews" style={styles.reviewContainer}>
+      <View style={styles.tabHeader}><View><Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Submission review', 'مراجعة الإعلانات')}</Text><Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Choose a category to view its queue.', 'اختر فئة لعرض الإعلانات المنتظرة.')}</Text></View></View>
+      <View style={styles.reviewCategoryGrid}>
+        {reviews.data.categories.map((item) => {
+          const key = item.category as ReviewCategory;
+          const active = category === key;
+          return <Pressable key={key} testID={`review-category-${key}`} onPress={() => setCategory(key)} style={[styles.reviewCategoryCard, { backgroundColor: active ? colors.primarySoft : colors.card, borderColor: active ? colors.primary : colors.border }]}><Text style={[styles.reviewCategoryTitle, { color: colors.foreground }]}>{isArabic ? reviewCategoryLabels[key].ar : reviewCategoryLabels[key].en}</Text><View style={[styles.reviewCount, { backgroundColor: item.pendingCount ? colors.primary : colors.muted }]}><Text style={{ color: item.pendingCount ? colors.primaryForeground : colors.mutedForeground, fontWeight: '800' }}>{item.pendingCount}</Text></View><Text style={[styles.reviewCountLabel, { color: colors.mutedForeground }]}>{text(isArabic, 'waiting', 'بانتظار المراجعة')}</Text></Pressable>;
+        })}
+      </View>
+      {!category ? <View style={[styles.reviewEmpty, { borderColor: colors.border }]}><Feather name="layers" size={25} color={colors.primary} /><Text style={{ color: colors.mutedForeground }}>{text(isArabic, 'Select a category above.', 'اختر إحدى الفئات أعلاه.')}</Text></View> : null}
+      {category && reviews.data.items.length === 0 ? <View style={[styles.reviewEmpty, { borderColor: colors.border }]}><Feather name="check-circle" size={25} color={colors.primary} /><Text style={{ color: colors.mutedForeground }}>{text(isArabic, 'No submissions waiting in this category.', 'لا توجد إعلانات منتظرة في هذه الفئة.')}</Text></View> : null}
+      {category ? reviews.data.items.map((item) => (
+        <View key={`${item.kind}-${item.id}`} testID={`review-item-${item.id}`} style={[styles.reviewItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.cardHeader}><View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.title}</Text><Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{item.ownerName || item.ownerEmail || text(isArabic, 'Unknown user', 'مستخدم غير معروف')} · {item.city || '—'}</Text></View><View style={[styles.badge, { backgroundColor: item.status === 'pending_review' ? colors.primarySoft : colors.muted }]}><Text style={[styles.badgeText, { color: item.status === 'pending_review' ? colors.primary : colors.mutedForeground }]}>{item.status === 'pending_review' ? text(isArabic, 'Pending', 'منتظر') : text(isArabic, 'Changes requested', 'بانتظار تعديل المستخدم')}</Text></View></View>
+          {item.specialty ? <Text style={[styles.reviewSpecialty, { color: colors.primary }]}>{item.specialty}</Text> : null}
+          <Text style={[styles.reviewDescription, { color: colors.foreground }]}>{item.description}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reviewMedia}>
+            {item.mediaUrls.map((url, index) => /^data:video\//.test(url) ? <View key={index} style={[styles.reviewMediaItem, styles.reviewVideo, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}><Feather name="video" size={23} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: 10 }}>{text(isArabic, 'Video', 'فيديو')}</Text></View> : <Image key={index} source={{ uri: url }} style={[styles.reviewMediaItem, { borderColor: colors.border }]} />)}
+          </ScrollView>
+          {item.reviewNote ? <View style={[styles.existingNote, { backgroundColor: colors.primarySoft }]}><Feather name="message-square" size={15} color={colors.primary} /><Text style={{ color: colors.foreground, flex: 1 }}>{item.reviewNote}</Text></View> : null}
+          <TextInput testID={`review-note-${item.id}`} value={notes[item.id] ?? ''} onChangeText={(value) => setNotes((current) => ({ ...current, [item.id]: value }))} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={text(isArabic, 'Comment or required changes', 'اكتب تعليقك وحدد مكان التعديل المطلوب')} placeholderTextColor={colors.mutedForeground} style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          <View style={styles.reviewActions}>
+            <Pressable testID={`approve-review-${item.id}`} onPress={() => act(item, 'approve')} style={[styles.reviewAction, { backgroundColor: colors.primary }]}><Feather name="check" size={16} color={colors.primaryForeground} /><Text style={[styles.reviewActionText, { color: colors.primaryForeground }]}>{text(isArabic, 'Approve', 'اعتماد')}</Text></Pressable>
+            <Pressable testID={`changes-review-${item.id}`} onPress={() => act(item, 'changes_requested')} style={[styles.reviewAction, { backgroundColor: colors.primarySoft }]}><Feather name="edit-3" size={16} color={colors.primary} /><Text style={[styles.reviewActionText, { color: colors.primary }]}>{text(isArabic, 'Needs changes', 'يحتاج تعديل')}</Text></Pressable>
+            <Pressable testID={`reject-review-${item.id}`} onPress={() => act(item, 'reject')} style={[styles.reviewAction, { backgroundColor: colors.destructive }]}><Feather name="x" size={16} color="#FFFFFF" /><Text style={[styles.reviewActionText, { color: '#FFFFFF' }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text></Pressable>
+          </View>
+        </View>
+      )) : null}
     </View>
   );
 }
@@ -1794,4 +1870,21 @@ const styles = StyleSheet.create({
   inlineForm: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8 },
   statusPill: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },
   statusPillText: { fontSize: 12, fontWeight: '700' },
+  reviewContainer: { gap: 14 },
+  reviewCategoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  reviewCategoryCard: { width: '48%', borderWidth: 1, borderRadius: 14, padding: 13, minHeight: 105 },
+  reviewCategoryTitle: { fontSize: 13, fontWeight: '800', minHeight: 36 },
+  reviewCount: { width: 31, height: 31, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  reviewCountLabel: { fontSize: 10, marginTop: 5 },
+  reviewEmpty: { borderWidth: 1, borderStyle: 'dashed', borderRadius: 14, padding: 24, alignItems: 'center', gap: 9 },
+  reviewItem: { borderWidth: 1, borderRadius: 15, padding: 14, gap: 11 },
+  reviewSpecialty: { fontSize: 12, fontWeight: '800' },
+  reviewDescription: { fontSize: 13, lineHeight: 20 },
+  reviewMedia: { gap: 8 },
+  reviewMediaItem: { width: 110, height: 82, borderRadius: 10, borderWidth: 1 },
+  reviewVideo: { alignItems: 'center', justifyContent: 'center', gap: 4 },
+  existingNote: { borderRadius: 10, padding: 10, flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  reviewActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  reviewAction: { minHeight: 39, borderRadius: 9, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  reviewActionText: { fontSize: 11, fontWeight: '800' },
 });

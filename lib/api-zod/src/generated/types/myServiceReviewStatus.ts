@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ServiceRegistrationStatus = typeof ServiceRegistrationStatus[keyof typeof ServiceRegistrationStatus];
+export type MyServiceReviewStatus = typeof MyServiceReviewStatus[keyof typeof MyServiceReviewStatus];
 
 
-export const ServiceRegistrationStatus = {
+export const MyServiceReviewStatus = {
   pending_review: 'pending_review',
   approved: 'approved',
   changes_requested: 'changes_requested',

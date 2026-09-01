@@ -116,6 +116,7 @@ function RootLayoutNav() {
         <Stack.Screen name="contractor-profile" options={{ presentation: 'modal' }} />
         <Stack.Screen name="contractor-project" options={{ presentation: 'modal' }} />
         <Stack.Screen name="service-registration" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="my-submissions" options={{ presentation: 'modal' }} />
         <Stack.Screen name="service-request" options={{ presentation: 'modal' }} />
         <Stack.Screen name="add-service" options={{ presentation: 'modal' }} />
         <Stack.Screen name="requests" options={{ presentation: 'modal' }} />

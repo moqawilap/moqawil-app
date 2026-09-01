@@ -1071,6 +1071,7 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       city: input.city.trim(),
       imageUrls: mediaUrls,
       isPublished: false,
+      reviewStatus: "pending_review",
     }).returning();
     await logAudit(user.id, "contractor_project_submitted", "project", project.id, { mediaCount: mediaUrls.length });
     res.status(201).json({
@@ -1142,6 +1143,63 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       status: registration.status,
       createdAt: registration.createdAt.toISOString(),
     });
+  } catch (error) { next(error); }
+});
+
+router.get("/me/reviews", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const [registrations, contractorProjects] = await Promise.all([
+      db.select().from(serviceRegistrations).where(eq(serviceRegistrations.userId, user.id)).orderBy(desc(serviceRegistrations.createdAt)),
+      db.select({ project: projects }).from(projects)
+        .innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id))
+        .where(eq(contractorProfiles.userId, user.id))
+        .orderBy(desc(projects.createdAt)),
+    ]);
+    res.json([
+      ...contractorProjects.map(({ project }) => ({
+        id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
+        city: project.city, description: project.description ?? "", mediaUrls: project.imageUrls,
+        status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
+      })),
+      ...registrations.map((registration) => ({
+        id: registration.id, kind: "registration", category: registration.category, title: registration.title,
+        specialty: registration.specialty, city: registration.city, description: registration.description,
+        mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
+        createdAt: registration.createdAt.toISOString(),
+      })),
+    ]);
+  } catch (error) { next(error); }
+});
+
+router.patch("/me/reviews/:kind/:id", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const kind = String(req.params.kind);
+    const id = String(req.params.id);
+    const input = req.body ?? {};
+    const mediaUrls = Array.isArray(input.mediaUrls) ? input.mediaUrls : [];
+    const validMedia = mediaUrls.length >= 1 && mediaUrls.length <= 15
+      && mediaUrls.every((value: unknown) => typeof value === "string" && value.length <= 8_000_000 && (/^data:(image|video)\//.test(value) || /^https:\/\//.test(value)));
+    const totalMediaLength = mediaUrls.reduce((total: number, value: unknown) => total + (typeof value === "string" ? value.length : 0), 0);
+    if (!["project", "registration"].includes(kind) || typeof input.title !== "string" || input.title.trim().length < 2 || input.title.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || typeof input.description !== "string" || input.description.trim().length < 20 || input.description.length > 5000 || !validMedia || totalMediaLength > 32_000_000) {
+      res.status(400).json({ error: "Invalid resubmission fields" });
+      return;
+    }
+    if (kind === "registration") {
+      if (typeof input.specialty !== "string" || input.specialty.trim().length < 2 || input.specialty.length > 200) { res.status(400).json({ error: "Specialty is required" }); return; }
+      const existing = await db.query.serviceRegistrations.findFirst({ where: and(eq(serviceRegistrations.id, id), eq(serviceRegistrations.userId, user.id)) });
+      if (!existing) { res.status(404).json({ error: "Registration not found" }); return; }
+      const [updated] = await db.update(serviceRegistrations).set({ title: input.title.trim(), specialty: input.specialty.trim(), city: input.city.trim(), description: input.description.trim(), mediaUrls, status: "pending_review", reviewNote: null, updatedAt: new Date() }).where(eq(serviceRegistrations.id, id)).returning();
+      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+      return;
+    }
+    const [ownedProject] = await db.select({ project: projects }).from(projects)
+      .innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id))
+      .where(and(eq(projects.id, id), eq(contractorProfiles.userId, user.id))).limit(1);
+    if (!ownedProject) { res.status(404).json({ error: "Project not found" }); return; }
+    const [updated] = await db.update(projects).set({ title: input.title.trim(), city: input.city.trim(), description: input.description.trim(), imageUrls: mediaUrls, reviewStatus: "pending_review", reviewNote: null, isPublished: false, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 
@@ -1317,6 +1375,75 @@ router.get("/admin/overview", requireUser, requireAdmin, async (_req, res, next)
       db.select({ count: sql<number>`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "payment_due")), db.select({ count: sql<number>`count(*)` }).from(payments),
     ]);
     res.json({ contractors: Number(contractorCount[0]!.count), activeSubscriptions: Number(activeCount[0]!.count), paymentDueSubscriptions: Number(dueCount[0]!.count), paymentsRecorded: Number(paymentCount[0]!.count) });
+  } catch (error) { next(error); }
+});
+
+router.get("/admin/reviews", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const requestedCategory = typeof req.query.category === "string" ? req.query.category : null;
+    const categories = ["contractors", "consultants", "design", "building", "real-estate", "maintenance"];
+    if (requestedCategory && !categories.includes(requestedCategory)) { res.status(400).json({ error: "Invalid review category" }); return; }
+    const [registrationRows, projectRows] = await Promise.all([
+      db.select({ registration: serviceRegistrations, ownerName: users.displayName, ownerEmail: users.email })
+        .from(serviceRegistrations)
+        .innerJoin(users, eq(serviceRegistrations.userId, users.id))
+        .where(inArray(serviceRegistrations.status, ["pending_review", "changes_requested"]))
+        .orderBy(desc(serviceRegistrations.updatedAt)),
+      db.select({ project: projects, ownerName: contractorProfiles.businessName, ownerEmail: users.email })
+        .from(projects)
+        .innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id))
+        .innerJoin(users, eq(contractorProfiles.userId, users.id))
+        .where(inArray(projects.reviewStatus, ["pending_review", "changes_requested"]))
+        .orderBy(desc(projects.updatedAt)),
+    ]);
+    const allItems = [
+      ...projectRows.map(({ project, ownerName, ownerEmail }) => ({
+        id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
+        city: project.city, description: project.description ?? "", mediaUrls: project.imageUrls,
+        status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
+        ownerName, ownerEmail,
+      })),
+      ...registrationRows.map(({ registration, ownerName, ownerEmail }) => ({
+        id: registration.id, kind: "registration", category: registration.category, title: registration.title,
+        specialty: registration.specialty, city: registration.city, description: registration.description,
+        mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
+        createdAt: registration.createdAt.toISOString(), ownerName, ownerEmail,
+      })),
+    ];
+    res.json({
+      categories: categories.map((category) => ({ category, pendingCount: allItems.filter((item) => item.category === category && item.status === "pending_review").length })),
+      items: requestedCategory ? allItems.filter((item) => item.category === requestedCategory) : allItems,
+    });
+  } catch (error) { next(error); }
+});
+
+router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const admin = (req as AuthenticatedRequest).marketplaceUser;
+    const kind = String(req.params.kind);
+    const id = String(req.params.id);
+    const action = req.body?.action;
+    const note = typeof req.body?.note === "string" ? req.body.note.trim() : "";
+    if (!["project", "registration"].includes(kind) || !["approve", "reject", "changes_requested"].includes(action) || (action === "changes_requested" && note.length < 4) || note.length > 2000) {
+      res.status(400).json({ error: "Invalid review action" });
+      return;
+    }
+    const nextStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "changes_requested";
+    if (kind === "registration") {
+      const existing = await db.query.serviceRegistrations.findFirst({ where: eq(serviceRegistrations.id, id) });
+      if (!existing) { res.status(404).json({ error: "Registration not found" }); return; }
+      const [updated] = await db.update(serviceRegistrations).set({ status: nextStatus, reviewNote: note || null, updatedAt: new Date() }).where(eq(serviceRegistrations.id, id)).returning();
+      await createInAppNotification(existing.userId, action === "approve" ? "Service approved" : action === "reject" ? "Service registration cancelled" : "Service changes requested", note || (action === "approve" ? "Your service registration was approved." : "Your service registration was not approved."), { registrationId: id, reviewStatus: nextStatus });
+      await logAudit(admin.id, `service_review_${action}`, "service_registration", id, { note });
+      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+      return;
+    }
+    const [existing] = await db.select({ project: projects, ownerId: contractorProfiles.userId }).from(projects).innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id)).where(eq(projects.id, id)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Project not found" }); return; }
+    const [updated] = await db.update(projects).set({ reviewStatus: nextStatus, reviewNote: note || null, isPublished: action === "approve", updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+    await createInAppNotification(existing.ownerId, action === "approve" ? "Project approved" : action === "reject" ? "Project cancelled" : "Project changes requested", note || (action === "approve" ? "Your contractor project was approved." : "Your contractor project was not approved."), { projectId: id, reviewStatus: nextStatus });
+    await logAudit(admin.id, `project_review_${action}`, "project", id, { note });
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, next) => {

@@ -34,7 +34,7 @@ export const pushDeliveryStatusEnum = pgEnum("push_delivery_status", ["pending",
 export const serviceRequestStatusEnum = pgEnum("service_request_status", ["open", "quoted", "awarded", "closed", "cancelled"]);
 export const requestRecipientStatusEnum = pgEnum("request_recipient_status", ["invited", "viewed", "quoted", "declined"]);
 export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "accepted", "rejected", "withdrawn"]);
-export const serviceRegistrationStatusEnum = pgEnum("service_registration_status", ["pending_review", "approved", "rejected"]);
+export const serviceRegistrationStatusEnum = pgEnum("service_registration_status", ["pending_review", "approved", "changes_requested", "rejected"]);
 export const listingEngagementActionEnum = pgEnum("listing_engagement_action", ["view", "like", "save", "contact"]);
 export const marketplaceListingTypeEnum = pgEnum("marketplace_listing_type", ["sale", "rent"]);
 export const adCampaignStatusEnum = pgEnum("ad_campaign_status", ["draft", "active", "paused", "completed"]);
@@ -100,6 +100,8 @@ export const projects = pgTable("projects", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
   imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
   isPublished: boolean("is_published").notNull().default(true),
+  reviewStatus: serviceRegistrationStatusEnum("review_status").notNull().default("approved"),
+  reviewNote: text("review_note"),
   ...timestamps,
 }, (table) => [index("projects_contractor_idx").on(table.contractorId), index("projects_published_idx").on(table.isPublished, table.category)]);
 
@@ -113,6 +115,7 @@ export const serviceRegistrations = pgTable("service_registrations", {
   description: text("description").notNull(),
   mediaUrls: jsonb("media_urls").$type<string[]>().notNull().default([]),
   status: serviceRegistrationStatusEnum("status").notNull().default("pending_review"),
+  reviewNote: text("review_note"),
   ...timestamps,
 }, (table) => [
   index("service_registrations_user_idx").on(table.userId, table.createdAt),

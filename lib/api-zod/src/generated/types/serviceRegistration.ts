@@ -17,5 +17,7 @@ export interface ServiceRegistration {
   description: string;
   mediaUrls: string[];
   status: ServiceRegistrationStatus;
+  /** @nullable */
+  reviewNote?: string | null;
   createdAt: Date;
 }

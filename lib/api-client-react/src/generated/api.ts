@@ -35,6 +35,8 @@ import type {
   AdminListingUpdate,
   AdminOverview,
   AdminPaymentCreate,
+  AdminServiceReviewPage,
+  AdminServiceReviewUpdate,
   AdminSubscriptionUpdate,
   BadRequestResponse,
   ContactEventInput,
@@ -51,12 +53,14 @@ import type {
   GetListingsEngagementParams,
   HealthStatus,
   HomepageSettings,
+  ListAdminServiceReviewsParams,
   ListAdsParams,
   ListContractorsParams,
   ListingEngagement,
   ListingEngagementInput,
   MarketplaceListing,
   MarketplaceSettings,
+  MyServiceReview,
   NotFoundResponse,
   Notification,
   Payment,
@@ -71,6 +75,7 @@ import type {
   ServiceRegistrationCreate,
   ServiceRequest,
   ServiceRequestCreate,
+  ServiceReviewResubmit,
   Subscription,
   UserProfile,
   WorkshopRequest
@@ -2054,6 +2059,291 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateMyServiceRegistrationMutationOptions(options));
+    }
+
+export const getListMyServiceReviewsUrl = () => {
+
+
+
+
+  return `/api/me/reviews`
+}
+
+export const listMyServiceReviews = async ( options?: Parameters<typeof customFetch>[1]): Promise<MyServiceReview[]> => {
+
+  return customFetch<MyServiceReview[]>(getListMyServiceReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyServiceReviewsQueryKey = () => {
+    return [
+    `/api/me/reviews`
+    ] as const;
+    }
+
+
+export const getListMyServiceReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listMyServiceReviews>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyServiceReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyServiceReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyServiceReviews>>> = ({ signal }) => listMyServiceReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyServiceReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyServiceReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyServiceReviews>>>
+export type ListMyServiceReviewsQueryError = ErrorType<unknown>
+
+
+
+export function useListMyServiceReviews<TData = Awaited<ReturnType<typeof listMyServiceReviews>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyServiceReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyServiceReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getResubmitMyServiceReviewUrl = (kind: 'project' | 'registration',
+    id: string,) => {
+
+
+
+
+  return `/api/me/reviews/${kind}/${id}`
+}
+
+export const resubmitMyServiceReview = async (kind: 'project' | 'registration',
+    id: string,
+    serviceReviewResubmit: ServiceReviewResubmit, options?: Parameters<typeof customFetch>[1]): Promise<MyServiceReview> => {
+
+  return customFetch<MyServiceReview>(getResubmitMyServiceReviewUrl(kind,id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(serviceReviewResubmit)
+  }
+);}
+
+
+
+
+
+export const getResubmitMyServiceReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resubmitMyServiceReview>>, TError,{kind: 'project' | 'registration';id: string;data: BodyType<ServiceReviewResubmit>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resubmitMyServiceReview>>, TError,{kind: 'project' | 'registration';id: string;data: BodyType<ServiceReviewResubmit>}, TContext> => {
+
+const mutationKey = ['resubmitMyServiceReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resubmitMyServiceReview>>, {kind: 'project' | 'registration';id: string;data: BodyType<ServiceReviewResubmit>}> = (props) => {
+          const {kind,id,data} = props ?? {};
+
+          return  resubmitMyServiceReview(kind,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResubmitMyServiceReviewMutationResult = NonNullable<Awaited<ReturnType<typeof resubmitMyServiceReview>>>
+    export type ResubmitMyServiceReviewMutationBody = BodyType<ServiceReviewResubmit>
+    export type ResubmitMyServiceReviewMutationError = ErrorType<unknown>
+
+    export const useResubmitMyServiceReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resubmitMyServiceReview>>, TError,{kind: 'project' | 'registration';id: string;data: BodyType<ServiceReviewResubmit>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resubmitMyServiceReview>>,
+        TError,
+        {kind: 'project' | 'registration';id: string;data: BodyType<ServiceReviewResubmit>},
+        TContext
+      > => {
+      return useMutation(getResubmitMyServiceReviewMutationOptions(options));
+    }
+
+export const getListAdminServiceReviewsUrl = (params?: ListAdminServiceReviewsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/reviews?${stringifiedParams}` : `/api/admin/reviews`
+}
+
+export const listAdminServiceReviews = async (params?: ListAdminServiceReviewsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminServiceReviewPage> => {
+
+  return customFetch<AdminServiceReviewPage>(getListAdminServiceReviewsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminServiceReviewsQueryKey = (params?: ListAdminServiceReviewsParams,) => {
+    return [
+    `/api/admin/reviews`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminServiceReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminServiceReviews>>, TError = ErrorType<unknown>>(params?: ListAdminServiceReviewsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminServiceReviewsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminServiceReviews>>> = ({ signal }) => listAdminServiceReviews(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminServiceReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminServiceReviews>>>
+export type ListAdminServiceReviewsQueryError = ErrorType<unknown>
+
+
+
+export function useListAdminServiceReviews<TData = Awaited<ReturnType<typeof listAdminServiceReviews>>, TError = ErrorType<unknown>>(
+ params?: ListAdminServiceReviewsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminServiceReviewsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminServiceReviewUrl = (kind: 'project' | 'registration',
+    id: string,) => {
+
+
+
+
+  return `/api/admin/reviews/${kind}/${id}`
+}
+
+export const updateAdminServiceReview = async (kind: 'project' | 'registration',
+    id: string,
+    adminServiceReviewUpdate: AdminServiceReviewUpdate, options?: Parameters<typeof customFetch>[1]): Promise<MyServiceReview> => {
+
+  return customFetch<MyServiceReview>(getUpdateAdminServiceReviewUrl(kind,id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminServiceReviewUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminServiceReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminServiceReview>>, TError,{kind: 'project' | 'registration';id: string;data: BodyType<AdminServiceReviewUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminServiceReview>>, TError,{kind: 'project' | 'registration';id: string;data: BodyType<AdminServiceReviewUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminServiceReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminServiceReview>>, {kind: 'project' | 'registration';id: string;data: BodyType<AdminServiceReviewUpdate>}> = (props) => {
+          const {kind,id,data} = props ?? {};
+
+          return  updateAdminServiceReview(kind,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminServiceReviewMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminServiceReview>>>
+    export type UpdateAdminServiceReviewMutationBody = BodyType<AdminServiceReviewUpdate>
+    export type UpdateAdminServiceReviewMutationError = ErrorType<unknown>
+
+    export const useUpdateAdminServiceReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminServiceReview>>, TError,{kind: 'project' | 'registration';id: string;data: BodyType<AdminServiceReviewUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminServiceReview>>,
+        TError,
+        {kind: 'project' | 'registration';id: string;data: BodyType<AdminServiceReviewUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminServiceReviewMutationOptions(options));
     }
 
 export const getListMyNotificationsUrl = () => {

@@ -1058,7 +1058,126 @@ export const CreateMyServiceRegistrationResponse = zod.object({
   "city": zod.string(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
-  "status": zod.enum(['pending_review']),
+  "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
+  "reviewNote": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const ListMyServiceReviewsResponseItem = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['project', 'registration']),
+  "category": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "description": zod.string(),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
+  "reviewNote": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyServiceReviewsResponse = zod.array(ListMyServiceReviewsResponseItem)
+
+
+export const ResubmitMyServiceReviewParams = zod.object({
+  "kind": zod.enum(['project', 'registration']),
+  "id": zod.coerce.string()
+})
+
+export const resubmitMyServiceReviewBodyTitleMin = 2;
+export const resubmitMyServiceReviewBodyTitleMax = 200;
+
+export const resubmitMyServiceReviewBodySpecialtyMax = 200;
+
+export const resubmitMyServiceReviewBodyCityMin = 2;
+export const resubmitMyServiceReviewBodyCityMax = 100;
+
+export const resubmitMyServiceReviewBodyDescriptionMin = 20;
+export const resubmitMyServiceReviewBodyDescriptionMax = 5000;
+
+export const resubmitMyServiceReviewBodyMediaUrlsItemMax = 8000000;
+
+export const resubmitMyServiceReviewBodyMediaUrlsMax = 15;
+
+
+
+export const ResubmitMyServiceReviewBody = zod.object({
+  "title": zod.string().min(resubmitMyServiceReviewBodyTitleMin).max(resubmitMyServiceReviewBodyTitleMax),
+  "specialty": zod.string().max(resubmitMyServiceReviewBodySpecialtyMax).nullish(),
+  "city": zod.string().min(resubmitMyServiceReviewBodyCityMin).max(resubmitMyServiceReviewBodyCityMax),
+  "description": zod.string().min(resubmitMyServiceReviewBodyDescriptionMin).max(resubmitMyServiceReviewBodyDescriptionMax),
+  "mediaUrls": zod.array(zod.string().max(resubmitMyServiceReviewBodyMediaUrlsItemMax)).min(1).max(resubmitMyServiceReviewBodyMediaUrlsMax)
+})
+
+export const ResubmitMyServiceReviewResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['project', 'registration']),
+  "category": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "description": zod.string(),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
+  "reviewNote": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const ListAdminServiceReviewsQueryParams = zod.object({
+  "category": zod.enum(['contractors', 'consultants', 'design', 'building', 'real-estate', 'maintenance']).optional()
+})
+
+export const ListAdminServiceReviewsResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "category": zod.string(),
+  "pendingCount": zod.number()
+})),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['project', 'registration']),
+  "category": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "description": zod.string(),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
+  "reviewNote": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "ownerName": zod.string().nullable(),
+  "ownerEmail": zod.string().nullable()
+})))
+})
+
+
+export const UpdateAdminServiceReviewParams = zod.object({
+  "kind": zod.enum(['project', 'registration']),
+  "id": zod.coerce.string()
+})
+
+export const updateAdminServiceReviewBodyNoteMax = 2000;
+
+
+
+export const UpdateAdminServiceReviewBody = zod.object({
+  "action": zod.enum(['approve', 'reject', 'changes_requested']),
+  "note": zod.string().max(updateAdminServiceReviewBodyNoteMax).nullish()
+})
+
+export const UpdateAdminServiceReviewResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['project', 'registration']),
+  "category": zod.string(),
+  "title": zod.string(),
+  "specialty": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "description": zod.string(),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
+  "reviewNote": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
