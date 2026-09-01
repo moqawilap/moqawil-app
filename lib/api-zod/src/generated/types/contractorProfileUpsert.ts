@@ -42,4 +42,9 @@ export interface ContractorProfileUpsert {
      * @nullable
      */
   avatarUrl?: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 8000000
+     */
+  imageUrls?: string[];
 }

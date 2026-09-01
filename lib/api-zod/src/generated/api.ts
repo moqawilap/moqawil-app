@@ -892,6 +892,10 @@ export const getMyContractorProfileResponsePhoneMax = 32;
 
 export const getMyContractorProfileResponseAvatarUrlMax = 2048;
 
+export const getMyContractorProfileResponseImageUrlsItemMax = 8000000;
+
+export const getMyContractorProfileResponseImageUrlsMax = 15;
+
 
 
 export const GetMyContractorProfileResponse = zod.object({
@@ -901,7 +905,8 @@ export const GetMyContractorProfileResponse = zod.object({
   "bio": zod.string().max(getMyContractorProfileResponseBioMax).nullish(),
   "serviceArea": zod.string().max(getMyContractorProfileResponseServiceAreaMax).nullish(),
   "phone": zod.string().max(getMyContractorProfileResponsePhoneMax).nullish(),
-  "avatarUrl": zod.string().max(getMyContractorProfileResponseAvatarUrlMax).nullish()
+  "avatarUrl": zod.string().max(getMyContractorProfileResponseAvatarUrlMax).nullish(),
+  "imageUrls": zod.array(zod.string().max(getMyContractorProfileResponseImageUrlsItemMax)).max(getMyContractorProfileResponseImageUrlsMax).optional()
 })
 
 
@@ -922,6 +927,10 @@ export const upsertMyContractorProfileBodyPhoneMax = 32;
 
 export const upsertMyContractorProfileBodyAvatarUrlMax = 2048;
 
+export const upsertMyContractorProfileBodyImageUrlsItemMax = 8000000;
+
+export const upsertMyContractorProfileBodyImageUrlsMax = 15;
+
 
 
 export const UpsertMyContractorProfileBody = zod.object({
@@ -931,7 +940,8 @@ export const UpsertMyContractorProfileBody = zod.object({
   "bio": zod.string().max(upsertMyContractorProfileBodyBioMax).nullish(),
   "serviceArea": zod.string().max(upsertMyContractorProfileBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(upsertMyContractorProfileBodyPhoneMax).nullish(),
-  "avatarUrl": zod.string().max(upsertMyContractorProfileBodyAvatarUrlMax).nullish()
+  "avatarUrl": zod.string().max(upsertMyContractorProfileBodyAvatarUrlMax).nullish(),
+  "imageUrls": zod.array(zod.string().max(upsertMyContractorProfileBodyImageUrlsItemMax)).max(upsertMyContractorProfileBodyImageUrlsMax).optional()
 })
 
 export const upsertMyContractorProfileResponseContractorImageUrlsItemMax = 2000000;
@@ -974,6 +984,41 @@ export const UpsertMyContractorProfileResponse = zod.object({
   "cancelledAt": zod.coerce.date().nullish(),
   "priceOmaniRial": zod.number()
 })
+})
+
+
+export const createMyContractorProjectBodyTitleMin = 2;
+export const createMyContractorProjectBodyTitleMax = 200;
+
+export const createMyContractorProjectBodyDescriptionMin = 20;
+export const createMyContractorProjectBodyDescriptionMax = 5000;
+
+export const createMyContractorProjectBodyCityMin = 2;
+export const createMyContractorProjectBodyCityMax = 100;
+
+export const createMyContractorProjectBodyMediaUrlsItemMax = 8000000;
+
+export const createMyContractorProjectBodyMediaUrlsMax = 15;
+
+
+
+export const CreateMyContractorProjectBody = zod.object({
+  "title": zod.string().min(createMyContractorProjectBodyTitleMin).max(createMyContractorProjectBodyTitleMax),
+  "description": zod.string().min(createMyContractorProjectBodyDescriptionMin).max(createMyContractorProjectBodyDescriptionMax),
+  "city": zod.string().min(createMyContractorProjectBodyCityMin).max(createMyContractorProjectBodyCityMax),
+  "mediaUrls": zod.array(zod.string().max(createMyContractorProjectBodyMediaUrlsItemMax)).min(1).max(createMyContractorProjectBodyMediaUrlsMax),
+  "termsAccepted": zod.literal(true)
+})
+
+export const CreateMyContractorProjectResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.enum(['contractors']),
+  "city": zod.string(),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['pending_review']),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -2713,3 +2758,5 @@ export const GetAdminAdCampaignReportResponse = zod.object({
   "spentOmaniRial": zod.number()
 }))
 })
+
+

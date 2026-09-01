@@ -530,11 +530,66 @@ export interface ContractorProfileUpsert {
      * @nullable
      */
   avatarUrl?: string | null;
+  /**
+     * @maxItems 15
+     * @items.maxLength 8000000
+     */
+  imageUrls?: string[];
 }
 
 export interface ContractorProvisioning {
   contractor: Contractor;
   subscription: Subscription;
+}
+
+export interface ContractorProjectCreate {
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @minLength 20
+     * @maxLength 5000
+     */
+  description: string;
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  city: string;
+  /**
+     * @minItems 1
+     * @maxItems 15
+     * @items.maxLength 8000000
+     */
+  mediaUrls: string[];
+  termsAccepted: true;
+}
+
+export type ContractorProjectRegistrationCategory = typeof ContractorProjectRegistrationCategory[keyof typeof ContractorProjectRegistrationCategory];
+
+
+export const ContractorProjectRegistrationCategory = {
+  contractors: 'contractors',
+} as const;
+
+export type ContractorProjectRegistrationStatus = typeof ContractorProjectRegistrationStatus[keyof typeof ContractorProjectRegistrationStatus];
+
+
+export const ContractorProjectRegistrationStatus = {
+  pending_review: 'pending_review',
+} as const;
+
+export interface ContractorProjectRegistration {
+  id: string;
+  title: string;
+  description: string;
+  category: ContractorProjectRegistrationCategory;
+  city: string;
+  mediaUrls: string[];
+  status: ContractorProjectRegistrationStatus;
+  createdAt: string;
 }
 
 export interface RankingWeights {

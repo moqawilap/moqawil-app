@@ -41,6 +41,8 @@ import type {
   ContractorDetail,
   ContractorDirectoryPage,
   ContractorProfileUpsert,
+  ContractorProjectCreate,
+  ContractorProjectRegistration,
   ContractorProvisioning,
   DeleteAdminContractorParams,
   DevelopmentPaymentRequest,
@@ -1920,6 +1922,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpsertMyContractorProfileMutationOptions(options));
+    }
+
+export const getCreateMyContractorProjectUrl = () => {
+
+
+
+
+  return `/api/me/projects`
+}
+
+export const createMyContractorProject = async (contractorProjectCreate: ContractorProjectCreate, options?: Parameters<typeof customFetch>[1]): Promise<ContractorProjectRegistration> => {
+
+  return customFetch<ContractorProjectRegistration>(getCreateMyContractorProjectUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contractorProjectCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateMyContractorProjectMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyContractorProject>>, TError,{data: BodyType<ContractorProjectCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMyContractorProject>>, TError,{data: BodyType<ContractorProjectCreate>}, TContext> => {
+
+const mutationKey = ['createMyContractorProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMyContractorProject>>, {data: BodyType<ContractorProjectCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMyContractorProject(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMyContractorProjectMutationResult = NonNullable<Awaited<ReturnType<typeof createMyContractorProject>>>
+    export type CreateMyContractorProjectMutationBody = BodyType<ContractorProjectCreate>
+    export type CreateMyContractorProjectMutationError = ErrorType<void>
+
+    export const useCreateMyContractorProject = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyContractorProject>>, TError,{data: BodyType<ContractorProjectCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMyContractorProject>>,
+        TError,
+        {data: BodyType<ContractorProjectCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateMyContractorProjectMutationOptions(options));
     }
 
 export const getListMyNotificationsUrl = () => {

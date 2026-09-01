@@ -17,6 +17,9 @@ export default function AddServiceScreen() {
   const chooseService = (serviceId: ServiceId) => {
     setSelectedService(serviceId);
     setActiveService(serviceId);
+    if (serviceId === 'contractors') {
+      router.push('/contractor-project' as never);
+    }
   };
 
   return (

@@ -48,6 +48,8 @@ app.use([
   "/api/admin/contractors",
   "/api/admin/listings",
   "/api/requests",
+  "/api/me/projects",
+  "/api/me/contractor-profile",
 ], express.json({ limit: "40mb" }));
 app.use(express.json({ limit: "3mb" }));
 app.use(express.urlencoded({ extended: true }));

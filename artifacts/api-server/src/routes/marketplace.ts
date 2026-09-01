@@ -999,7 +999,7 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
       return;
     }
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || typeof input.wilayat !== "string" || input.wilayat.trim().length < 2 || input.wilayat.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048)) { res.status(400).json({ error: "Invalid contractor profile fields" }); return; }
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || typeof input.wilayat !== "string" || input.wilayat.trim().length < 2 || input.wilayat.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls))) { res.status(400).json({ error: "Invalid contractor profile fields" }); return; }
     if (user.role === "customer") {
       await promoteCustomerToContractor(user.clerkUserId);
     }
@@ -1008,12 +1008,12 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
       const [profile] = await tx.insert(contractorProfiles).values({
         userId: user.id, businessName: input.businessName.trim(), city: input.city.trim(), wilayat: typeof input.wilayat === "string" ? input.wilayat.trim() : null,
         bio: typeof input.bio === "string" ? input.bio : null, serviceArea: typeof input.serviceArea === "string" ? input.serviceArea : null,
-        phone: typeof input.phone === "string" ? input.phone : null, avatarUrl: typeof input.avatarUrl === "string" ? input.avatarUrl : null,
+        phone: typeof input.phone === "string" ? input.phone : null, avatarUrl: typeof input.avatarUrl === "string" ? input.avatarUrl : null, imageUrls: Array.isArray(input.imageUrls) ? input.imageUrls : [],
         lastActiveAt: new Date(),
       }).onConflictDoUpdate({ target: contractorProfiles.userId, set: {
         businessName: input.businessName.trim(), city: input.city.trim(), wilayat: typeof input.wilayat === "string" ? input.wilayat.trim() : null, bio: typeof input.bio === "string" ? input.bio : null,
         serviceArea: typeof input.serviceArea === "string" ? input.serviceArea : null, phone: typeof input.phone === "string" ? input.phone : null,
-        avatarUrl: typeof input.avatarUrl === "string" ? input.avatarUrl : null, lastActiveAt: new Date(), updatedAt: new Date(),
+        avatarUrl: typeof input.avatarUrl === "string" ? input.avatarUrl : null, ...(Array.isArray(input.imageUrls) ? { imageUrls: input.imageUrls } : {}), lastActiveAt: new Date(), updatedAt: new Date(),
       } }).returning();
       await tx.update(users).set({ role: "contractor", updatedAt: new Date() }).where(eq(users.id, user.id));
       let subscription = await tx.query.subscriptions.findFirst({ where: eq(subscriptions.contractorId, profile.id) });
@@ -1027,6 +1027,62 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
     });
     const persistedProfile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, result.profile.id) });
     res.json({ contractor: await contractorSummary(persistedProfile!), subscription: await subscriptionResponse(result.subscription) });
+  } catch (error) { next(error); }
+});
+
+router.post("/me/projects", requireUser, requireContractor, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
+    if (!profile) {
+      res.status(404).json({ error: "A contractor profile is required" });
+      return;
+    }
+    const input = req.body ?? {};
+    const mediaUrls = Array.isArray(input.mediaUrls) ? input.mediaUrls : [];
+    const validMedia = mediaUrls.length >= 1
+      && mediaUrls.length <= 15
+      && mediaUrls.every((value: unknown) => typeof value === "string"
+        && value.length <= 8_000_000
+        && (/^data:(image|video)\//.test(value) || /^https:\/\//.test(value)));
+    const totalMediaLength = mediaUrls.reduce((total: number, value: unknown) => total + (typeof value === "string" ? value.length : 0), 0);
+    if (
+      typeof input.title !== "string"
+      || input.title.trim().length < 2
+      || input.title.length > 200
+      || typeof input.description !== "string"
+      || input.description.trim().length < 20
+      || input.description.length > 5000
+      || typeof input.city !== "string"
+      || input.city.trim().length < 2
+      || input.city.length > 100
+      || input.termsAccepted !== true
+      || !validMedia
+      || totalMediaLength > 32_000_000
+    ) {
+      res.status(400).json({ error: "Invalid contractor project fields" });
+      return;
+    }
+    const [project] = await db.insert(projects).values({
+      contractorId: profile.id,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: "contractors",
+      city: input.city.trim(),
+      imageUrls: mediaUrls,
+      isPublished: false,
+    }).returning();
+    await logAudit(user.id, "contractor_project_submitted", "project", project.id, { mediaCount: mediaUrls.length });
+    res.status(201).json({
+      id: project.id,
+      title: project.title,
+      description: project.description!,
+      category: "contractors",
+      city: project.city!,
+      mediaUrls: project.imageUrls,
+      status: "pending_review",
+      createdAt: project.createdAt.toISOString(),
+    });
   } catch (error) { next(error); }
 });
 
