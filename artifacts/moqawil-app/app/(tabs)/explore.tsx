@@ -46,6 +46,7 @@ export default function ExploreScreen() {
   const [selectedGovernorate, setSelectedGovernorate] = useState('');
   const [selectedWilayat, setSelectedWilayat] = useState('');
   const [locationMenu, setLocationMenu] = useState<'governorate' | 'wilayat' | null>(null);
+  const [locationFilterTouched, setLocationFilterTouched] = useState(false);
   const [selectedBuildingService, setSelectedBuildingService] = useState('');
   const [selectedDesignService, setSelectedDesignService] = useState('');
   const [minimumRating, setMinimumRating] = useState(0);
@@ -58,7 +59,10 @@ export default function ExploreScreen() {
   const hasInvalidBudget = (!!minimumBudget.trim() && minimumBudgetValue === undefined) || (!!maximumBudget.trim() && maximumBudgetValue === undefined);
   const budgetRangeValid = !hasInvalidBudget && (minimumBudgetValue === undefined || maximumBudgetValue === undefined || minimumBudgetValue <= maximumBudgetValue);
   const selectedService = activeService ?? 'contractors';
-  const ads = useListAds({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }, { query: { queryKey: getListAdsQueryKey({ city: location.city, wilayat: selectedWilayat || undefined, service: selectedService, limit: 1 }) } });
+  const effectiveGovernorate = locationFilterTouched ? selectedGovernorate || undefined : location.city;
+  const effectiveWilayat = locationFilterTouched ? selectedWilayat || undefined : location.source === 'manual' ? location.area : undefined;
+  const adQuery = { city: effectiveGovernorate, wilayat: effectiveWilayat, service: selectedService, limit: 1 };
+  const ads = useListAds(adQuery, { query: { queryKey: getListAdsQueryKey(adQuery) } });
   const selectedServiceInfo = serviceItems.find((service) => service.id === selectedService) ?? serviceItems[0];
   const visibleMode = selectedService === 'real-estate' ? 'Properties' : mode;
   const directoryCategory = selectedService === 'design' ? 'consultants' : selectedService;
@@ -66,8 +70,8 @@ export default function ExploreScreen() {
     search: query.trim() || undefined,
     category: directoryCategory === 'contractors' ? undefined : directoryCategory,
     service: selectedService === 'building' ? selectedBuildingService || undefined : selectedService === 'design' ? selectedDesignService || undefined : undefined,
-    city: selectedGovernorate || undefined,
-    wilayat: selectedWilayat || undefined,
+    city: effectiveGovernorate,
+    wilayat: effectiveWilayat,
     verified: verifiedOnly || undefined,
     sort: sort === 'price_asc' || sort === 'price_desc' ? 'relevance' : sort,
     limit: 50,
@@ -98,8 +102,8 @@ export default function ExploreScreen() {
       selectedService === 'design' ? provider.role === 'consultant' :
       selectedService === 'building' ? provider.role === 'contractor' :
       selectedService === 'maintenance' ? provider.role === 'maintenance' : true,
-    ).filter((provider) => !selectedGovernorate || provider.city === selectedGovernorate)
-      .filter((provider) => !selectedWilayat || provider.wilayat === selectedWilayat)
+    ).filter((provider) => !effectiveGovernorate || provider.city === effectiveGovernorate)
+      .filter((provider) => !effectiveWilayat || provider.wilayat === effectiveWilayat)
       .filter((provider) => selectedService !== 'building' || !selectedBuildingService || provider.buildingServices?.includes(selectedBuildingService));
     const source = apiProviders?.length ? apiProviders : fallbackProviders;
     return source
@@ -112,15 +116,15 @@ export default function ExploreScreen() {
         if (sort === 'newest') return dateFromText(b.createdAt) - dateFromText(a.createdAt);
         return ('rankingScore' in b ? Number(b.rankingScore ?? 0) : 0) - ('rankingScore' in a ? Number(a.rankingScore ?? 0) : 0);
       });
-  }, [query, managedProviders, directory.data, minimumRating, selectedService, selectedGovernorate, selectedWilayat, selectedBuildingService, selectedDesignService, sort]);
+  }, [query, managedProviders, directory.data, minimumRating, selectedService, effectiveGovernorate, effectiveWilayat, selectedBuildingService, selectedDesignService, sort]);
 
   const filteredListings = useMemo(() => availableListings
     .filter((listing) => {
       const price = amountFromText(listing.price);
       const haystack = `${listing.title} ${listing.titleAr} ${listing.location} ${listing.locationAr}`.toLowerCase();
       return (!query.trim() || haystack.includes(query.trim().toLowerCase()))
-        && (!selectedGovernorate || haystack.includes(selectedGovernorate.toLowerCase()))
-        && (!selectedWilayat || haystack.includes(selectedWilayat.toLowerCase()))
+        && (!effectiveGovernorate || haystack.includes(effectiveGovernorate.toLowerCase()))
+        && (!effectiveWilayat || haystack.includes(effectiveWilayat.toLowerCase()))
         && (listing.rating ?? 0) >= minimumRating
         && (minimumBudgetValue === undefined || (price !== null && price >= minimumBudgetValue))
         && (maximumBudgetValue === undefined || (price !== null && price <= maximumBudgetValue));
@@ -133,7 +137,7 @@ export default function ExploreScreen() {
       if (sort === 'rating_desc') return (b.rating ?? 0) - (a.rating ?? 0);
       if (sort === 'oldest') return dateFromText(a.createdAt) - dateFromText(b.createdAt);
       return dateFromText(b.createdAt) - dateFromText(a.createdAt);
-    }), [availableListings, maximumBudgetValue, minimumBudgetValue, minimumRating, query, selectedGovernorate, selectedWilayat, sort]);
+    }), [availableListings, effectiveGovernorate, effectiveWilayat, maximumBudgetValue, minimumBudgetValue, minimumRating, query, sort]);
 
   const sortOptions: Array<{ value: SortOption; label: string; labelAr: string }> = [
     { value: 'relevance', label: 'Best match', labelAr: 'الأفضل تطابقًا' },
@@ -206,7 +210,7 @@ export default function ExploreScreen() {
           </View> : null}
            {locationMenu ? <View style={[styles.locationMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
              <ScrollView nestedScrollEnabled style={styles.locationMenuScroll}>
-               <Pressable testID="location-all" onPress={() => { setSelectedGovernorate(''); setSelectedWilayat(''); setLocationMenu(null); }} style={styles.locationOption}><Text style={{ color: colors.foreground }}>{isArabic ? 'كل عُمان' : 'All Oman'}</Text></Pressable>
+                <Pressable testID="location-all" onPress={() => { setSelectedGovernorate(''); setSelectedWilayat(''); setLocationFilterTouched(true); setLocationMenu(null); }} style={styles.locationOption}><Text style={{ color: colors.foreground }}>{isArabic ? 'كل عُمان' : 'All Oman'}</Text></Pressable>
                {locationOptions.map((item) => {
                  const value = 'wilayats' in item ? item.name : item.name;
                  const label = isArabic ? ('wilayats' in item ? item.nameAr : item.nameAr) : value;
@@ -214,9 +218,11 @@ export default function ExploreScreen() {
                    if ('wilayats' in item) {
                      setSelectedGovernorate(item.name);
                      setSelectedWilayat('');
+                      setLocationFilterTouched(true);
                      setLocationMenu('wilayat');
                    } else {
                      setSelectedWilayat(item.name);
+                      setLocationFilterTouched(true);
                      setLocationMenu(null);
                    }
                  }} style={styles.locationOption}><Text style={{ color: colors.foreground }}>{label}</Text></Pressable>;

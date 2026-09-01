@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { recordListingEngagement } from '@workspace/api-client-react';
 import { images, listings, providers as seedProviders, type Provider } from '@/data/mockData';
@@ -10,7 +10,7 @@ type Locale = 'en' | 'ar';
 type LocationState = {
   city: string;
   area: string;
-  source: 'default' | 'device';
+  source: 'default' | 'device' | 'manual';
 };
 
 type AppContextValue = {
@@ -21,6 +21,7 @@ type AppContextValue = {
   location: LocationState;
   locationLoading: boolean;
   refreshLocation: (options?: { silent?: boolean }) => Promise<void>;
+  selectLocation: (location: { city: string; area: string }) => void;
   savedIds: string[];
   toggleSaved: (id: string, options?: { listing?: boolean }) => void;
   isSaved: (id: string) => boolean;
@@ -56,6 +57,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [engagementClientId, setEngagementClientId] = useState<string | null>(null);
   const [activeService, setActiveService] = useState<string | null>(null);
   const [managedProviders, setManagedProviders] = useState<Provider[]>(seedProviders);
+  const locationRequestId = useRef(0);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -96,6 +98,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshLocation = async ({ silent = false }: { silent?: boolean } = {}) => {
+    const requestId = ++locationRequestId.current;
     setLocationLoading(true);
     try {
       if (Platform.OS === 'web') {
@@ -112,13 +115,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (!response.ok) throw new Error('Reverse geocoding failed');
           const result = await response.json() as { address?: Record<string, string> };
           const address = result.address ?? {};
-          setLocation({
-            city: address.city || address.town || address.municipality || address.state || 'Oman',
-            area: address.suburb || address.neighbourhood || address.village || address.city || 'Near you',
-            source: 'device',
-          });
+          if (requestId === locationRequestId.current) {
+            setLocation({
+              city: address.city || address.town || address.municipality || address.state || 'Oman',
+              area: address.suburb || address.neighbourhood || address.village || address.city || 'Near you',
+              source: 'device',
+            });
+          }
         } catch {
-          setLocation({ city: 'Oman', area: 'Near your location', source: 'device' });
+          if (requestId === locationRequestId.current) {
+            setLocation({ city: 'Oman', area: 'Near your location', source: 'device' });
+          }
         }
         return;
       }
@@ -134,16 +141,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         longitude: current.coords.longitude,
       });
       const place = places[0];
-      setLocation({
-        city: place?.city || place?.district || 'Muscat',
-        area: place?.district || place?.subregion || 'Near you',
-        source: 'device',
-      });
+      if (requestId === locationRequestId.current) {
+        setLocation({
+          city: place?.city || place?.district || 'Muscat',
+          area: place?.district || place?.subregion || 'Near you',
+          source: 'device',
+        });
+      }
     } catch {
       if (!silent) Alert.alert(locale === 'ar' ? 'تعذر تحديد الموقع' : 'Could not update location', locale === 'ar' ? 'اسمح للمتصفح بالوصول إلى موقعك ثم اضغط مرة أخرى.' : 'Allow location access in your browser, then try again.');
     } finally {
-      setLocationLoading(false);
+      if (requestId === locationRequestId.current) {
+        setLocationLoading(false);
+      }
     }
+  };
+
+  const selectLocation = ({ city, area }: { city: string; area: string }) => {
+    locationRequestId.current += 1;
+    setLocationLoading(false);
+    setLocation({ city, area, source: 'manual' });
+    Haptics.selectionAsync().catch(() => undefined);
   };
 
   useEffect(() => {
@@ -195,8 +213,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isArabic: locale === 'ar',
       preferencesLoaded,
       location,
-       locationLoading,
+      locationLoading,
       refreshLocation,
+      selectLocation,
       savedIds,
       toggleSaved,
       isSaved: (id: string) => savedIds.includes(id),
