@@ -67,6 +67,8 @@ import type {
   QuoteCreate,
   RatingInput,
   RatingSummary,
+  ServiceRegistration,
+  ServiceRegistrationCreate,
   ServiceRequest,
   ServiceRequestCreate,
   Subscription,
@@ -1987,6 +1989,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateMyContractorProjectMutationOptions(options));
+    }
+
+export const getCreateMyServiceRegistrationUrl = () => {
+
+
+
+
+  return `/api/me/service-registrations`
+}
+
+export const createMyServiceRegistration = async (serviceRegistrationCreate: ServiceRegistrationCreate, options?: Parameters<typeof customFetch>[1]): Promise<ServiceRegistration> => {
+
+  return customFetch<ServiceRegistration>(getCreateMyServiceRegistrationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(serviceRegistrationCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateMyServiceRegistrationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyServiceRegistration>>, TError,{data: BodyType<ServiceRegistrationCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMyServiceRegistration>>, TError,{data: BodyType<ServiceRegistrationCreate>}, TContext> => {
+
+const mutationKey = ['createMyServiceRegistration'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMyServiceRegistration>>, {data: BodyType<ServiceRegistrationCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMyServiceRegistration(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMyServiceRegistrationMutationResult = NonNullable<Awaited<ReturnType<typeof createMyServiceRegistration>>>
+    export type CreateMyServiceRegistrationMutationBody = BodyType<ServiceRegistrationCreate>
+    export type CreateMyServiceRegistrationMutationError = ErrorType<unknown>
+
+    export const useCreateMyServiceRegistration = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyServiceRegistration>>, TError,{data: BodyType<ServiceRegistrationCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMyServiceRegistration>>,
+        TError,
+        {data: BodyType<ServiceRegistrationCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateMyServiceRegistrationMutationOptions(options));
     }
 
 export const getListMyNotificationsUrl = () => {

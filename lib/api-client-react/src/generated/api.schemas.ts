@@ -592,6 +592,78 @@ export interface ContractorProjectRegistration {
   createdAt: string;
 }
 
+export type ServiceRegistrationCreateCategory = typeof ServiceRegistrationCreateCategory[keyof typeof ServiceRegistrationCreateCategory];
+
+
+export const ServiceRegistrationCreateCategory = {
+  consultants: 'consultants',
+  design: 'design',
+  building: 'building',
+  'real-estate': 'real-estate',
+  maintenance: 'maintenance',
+} as const;
+
+export interface ServiceRegistrationCreate {
+  category: ServiceRegistrationCreateCategory;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  specialty: string;
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  city: string;
+  /**
+     * @minLength 20
+     * @maxLength 5000
+     */
+  description: string;
+  /**
+     * @minItems 1
+     * @maxItems 15
+     * @items.maxLength 8000000
+     */
+  mediaUrls: string[];
+  termsAccepted: true;
+}
+
+export type ServiceRegistrationCategory = typeof ServiceRegistrationCategory[keyof typeof ServiceRegistrationCategory];
+
+
+export const ServiceRegistrationCategory = {
+  consultants: 'consultants',
+  design: 'design',
+  building: 'building',
+  'real-estate': 'real-estate',
+  maintenance: 'maintenance',
+} as const;
+
+export type ServiceRegistrationStatus = typeof ServiceRegistrationStatus[keyof typeof ServiceRegistrationStatus];
+
+
+export const ServiceRegistrationStatus = {
+  pending_review: 'pending_review',
+} as const;
+
+export interface ServiceRegistration {
+  id: string;
+  category: ServiceRegistrationCategory;
+  title: string;
+  specialty: string;
+  city: string;
+  description: string;
+  mediaUrls: string[];
+  status: ServiceRegistrationStatus;
+  createdAt: string;
+}
+
 export interface RankingWeights {
   rating: number;
   reviews: number;

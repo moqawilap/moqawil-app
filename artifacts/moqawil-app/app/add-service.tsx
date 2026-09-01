@@ -19,6 +19,8 @@ export default function AddServiceScreen() {
     setActiveService(serviceId);
     if (serviceId === 'contractors') {
       router.push('/contractor-project' as never);
+    } else {
+      router.push({ pathname: '/service-registration', params: { category: serviceId } } as never);
     }
   };
 

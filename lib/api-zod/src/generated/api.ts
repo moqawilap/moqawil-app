@@ -1022,6 +1022,47 @@ export const CreateMyContractorProjectResponse = zod.object({
 })
 
 
+export const createMyServiceRegistrationBodyTitleMin = 2;
+export const createMyServiceRegistrationBodyTitleMax = 200;
+
+export const createMyServiceRegistrationBodySpecialtyMin = 2;
+export const createMyServiceRegistrationBodySpecialtyMax = 200;
+
+export const createMyServiceRegistrationBodyCityMin = 2;
+export const createMyServiceRegistrationBodyCityMax = 100;
+
+export const createMyServiceRegistrationBodyDescriptionMin = 20;
+export const createMyServiceRegistrationBodyDescriptionMax = 5000;
+
+export const createMyServiceRegistrationBodyMediaUrlsItemMax = 8000000;
+
+export const createMyServiceRegistrationBodyMediaUrlsMax = 15;
+
+
+
+export const CreateMyServiceRegistrationBody = zod.object({
+  "category": zod.enum(['consultants', 'design', 'building', 'real-estate', 'maintenance']),
+  "title": zod.string().min(createMyServiceRegistrationBodyTitleMin).max(createMyServiceRegistrationBodyTitleMax),
+  "specialty": zod.string().min(createMyServiceRegistrationBodySpecialtyMin).max(createMyServiceRegistrationBodySpecialtyMax),
+  "city": zod.string().min(createMyServiceRegistrationBodyCityMin).max(createMyServiceRegistrationBodyCityMax),
+  "description": zod.string().min(createMyServiceRegistrationBodyDescriptionMin).max(createMyServiceRegistrationBodyDescriptionMax),
+  "mediaUrls": zod.array(zod.string().max(createMyServiceRegistrationBodyMediaUrlsItemMax)).min(1).max(createMyServiceRegistrationBodyMediaUrlsMax),
+  "termsAccepted": zod.literal(true)
+})
+
+export const CreateMyServiceRegistrationResponse = zod.object({
+  "id": zod.string(),
+  "category": zod.enum(['consultants', 'design', 'building', 'real-estate', 'maintenance']),
+  "title": zod.string(),
+  "specialty": zod.string(),
+  "city": zod.string(),
+  "description": zod.string(),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['pending_review']),
+  "createdAt": zod.coerce.date()
+})
+
+
 export const ListMyNotificationsResponseItem = zod.object({
   "id": zod.string(),
   "type": zod.string(),

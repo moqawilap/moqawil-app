@@ -49,6 +49,7 @@ app.use([
   "/api/admin/listings",
   "/api/requests",
   "/api/me/projects",
+  "/api/me/service-registrations",
   "/api/me/contractor-profile",
 ], express.json({ limit: "40mb" }));
 app.use(express.json({ limit: "3mb" }));

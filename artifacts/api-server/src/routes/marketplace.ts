@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
-  adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, pushBroadcastDeliveries, pushBroadcasts, pushDevices, quotes, rankingWeightsSchema, requestRecipients, reviews,
+  adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, pushBroadcastDeliveries, pushBroadcasts, pushDevices, quotes, rankingWeightsSchema, requestRecipients, reviews, serviceRegistrations,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
   type AdAudience, type AdMediaItem,
 } from "@workspace/db";
@@ -1082,6 +1082,65 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       mediaUrls: project.imageUrls,
       status: "pending_review",
       createdAt: project.createdAt.toISOString(),
+    });
+  } catch (error) { next(error); }
+});
+
+router.post("/me/service-registrations", requireUser, async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const input = req.body ?? {};
+    const allowedCategories = ["consultants", "design", "building", "real-estate", "maintenance"];
+    const mediaUrls = Array.isArray(input.mediaUrls) ? input.mediaUrls : [];
+    const validMedia = mediaUrls.length >= 1
+      && mediaUrls.length <= 15
+      && mediaUrls.every((value: unknown) => typeof value === "string"
+        && value.length <= 8_000_000
+        && (/^data:(image|video)\//.test(value) || /^https:\/\//.test(value)));
+    const totalMediaLength = mediaUrls.reduce((total: number, value: unknown) => total + (typeof value === "string" ? value.length : 0), 0);
+    if (
+      typeof input.category !== "string"
+      || !allowedCategories.includes(input.category)
+      || typeof input.title !== "string"
+      || input.title.trim().length < 2
+      || input.title.length > 200
+      || typeof input.specialty !== "string"
+      || input.specialty.trim().length < 2
+      || input.specialty.length > 200
+      || typeof input.city !== "string"
+      || input.city.trim().length < 2
+      || input.city.length > 100
+      || typeof input.description !== "string"
+      || input.description.trim().length < 20
+      || input.description.length > 5000
+      || input.termsAccepted !== true
+      || !validMedia
+      || totalMediaLength > 32_000_000
+    ) {
+      res.status(400).json({ error: "Invalid service registration fields" });
+      return;
+    }
+    const [registration] = await db.insert(serviceRegistrations).values({
+      userId: user.id,
+      category: input.category,
+      title: input.title.trim(),
+      specialty: input.specialty.trim(),
+      city: input.city.trim(),
+      description: input.description.trim(),
+      mediaUrls,
+      status: "pending_review",
+    }).returning();
+    await logAudit(user.id, "service_registration_submitted", "service_registration", registration.id, { category: input.category, mediaCount: mediaUrls.length });
+    res.status(201).json({
+      id: registration.id,
+      category: registration.category,
+      title: registration.title,
+      specialty: registration.specialty,
+      city: registration.city,
+      description: registration.description,
+      mediaUrls: registration.mediaUrls,
+      status: registration.status,
+      createdAt: registration.createdAt.toISOString(),
     });
   } catch (error) { next(error); }
 });
