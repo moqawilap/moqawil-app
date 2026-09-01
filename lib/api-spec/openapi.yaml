@@ -485,9 +485,11 @@ components:
       properties:
         id: { type: string }
         businessName: { type: string }
+        businessNameArabic: { type: [string, "null"] }
         city: { type: string }
         wilayat: { type: [string, "null"] }
         bio: { type: [string, "null"] }
+        bioArabic: { type: [string, "null"] }
         avatarUrl: { type: [string, "null"] }
         imageUrls: { type: array, maxItems: 15, items: { type: string, maxLength: 2000000 } }
         isVerified: { type: boolean }

@@ -86,8 +86,8 @@ export default function ExploreScreen() {
   const filteredProviders = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const apiProviders = directory.data?.items.map((contractor) => ({
-      id: contractor.id, name: contractor.businessName, nameAr: contractor.businessName, specialty: contractor.bio || 'Contractor',
-      specialtyAr: contractor.bio || 'مقاول', rating: contractor.rating, reviews: contractor.reviewCount, distance: contractor.city,
+      id: contractor.id, name: contractor.businessName, nameAr: contractor.businessNameArabic || contractor.businessName, specialty: contractor.bio || 'Contractor',
+      specialtyAr: contractor.bioArabic || contractor.bio || 'مقاول', rating: contractor.rating, reviews: contractor.reviewCount, distance: contractor.city,
       city: contractor.city, wilayat: contractor.wilayat ?? undefined, verified: contractor.isVerified,
       image: contractor.avatarUrl ? { uri: contractor.avatarUrl } : selectedService === 'consultants' || selectedService === 'design' ? images.interior : selectedService === 'maintenance' ? images.villa : images.contractor,
       rankingScore: contractor.rankingScore, priceOmaniRial: contractor.priceOmaniRial, createdAt: contractor.createdAt,

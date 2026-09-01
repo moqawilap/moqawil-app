@@ -9,11 +9,15 @@
 export interface Contractor {
   id: string;
   businessName: string;
+  /** @nullable */
+  businessNameArabic?: string | null;
   city: string;
   /** @nullable */
   wilayat?: string | null;
   /** @nullable */
   bio?: string | null;
+  /** @nullable */
+  bioArabic?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
   /**

@@ -11,6 +11,39 @@ import { useColors } from '@/hooks/useColors';
 import { getContactMessage, getWhatsAppUrl, type ContactCategory } from '@/constants/contactMessages';
 import { getGetContractorQueryKey, getGetContractorRatingQueryKey, getListContractorsQueryKey, useGetContractor, useGetContractorRating, useRateContractor, useRecordContactEvent } from '@workspace/api-client-react';
 
+const serviceTranslations: Record<string, string> = {
+  'general contracting': 'المقاولات العامة',
+  'home and villa construction': 'بناء المنازل والفلل',
+  'residential construction': 'البناء السكني',
+  'commercial construction': 'البناء التجاري',
+  'renovation': 'التجديد والترميم',
+  'finishing work': 'أعمال التشطيب',
+  'structural & design': 'التصميم والإنشاءات',
+  'structural design': 'التصميم الإنشائي',
+  'interior design': 'التصميم الداخلي',
+  'architecture': 'الهندسة المعمارية',
+  'engineering consultancy': 'الاستشارات الهندسية',
+  'electrical': 'الأعمال الكهربائية',
+  'plumbing': 'أعمال السباكة',
+  'air conditioning': 'التكييف',
+  'painting': 'الدهانات',
+  'carpentry': 'النجارة',
+  'aluminium': 'الألمنيوم',
+  'kitchen design': 'تصميم المطابخ',
+  'facade design': 'تصميم الواجهات',
+};
+const categoryTranslations: Record<string, string> = {
+  contractors: 'المقاولات',
+  consultants: 'الاستشارات الهندسية',
+  design: 'التصميم',
+  building: 'البناء والورش',
+  maintenance: 'الصيانة',
+};
+function localizedServiceName(name: string, category: string, isArabic: boolean) {
+  if (!isArabic) return name;
+  return serviceTranslations[name.trim().toLowerCase()] ?? categoryTranslations[category.trim().toLowerCase()] ?? name;
+}
+
 export default function ProviderDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -29,16 +62,16 @@ export default function ProviderDetail() {
   } } });
   const fallback = managedProviders.find((item) => item.id === id);
   const provider = contractor.data ? {
-    id: contractor.data.id, name: contractor.data.businessName, nameAr: contractor.data.businessName,
+    id: contractor.data.id, name: contractor.data.businessName, nameAr: contractor.data.businessNameArabic || contractor.data.businessName,
     specialty: contractor.data.services.map((service) => service.name).join(' · ') || 'Contractor',
     specialtyAr: contractor.data.services.map((service) => service.name).join(' · ') || 'مقاول',
     city: contractor.data.city, rating: contractor.data.rating, reviews: contractor.data.reviewCount,
     verified: contractor.data.isVerified, projects: contractor.data.projects.length,
     image: contractor.data.avatarUrl ? { uri: contractor.data.avatarUrl } : require('@/assets/images/contractor-project.jpg'),
-    description: contractor.data.bio || '', descriptionAr: contractor.data.bio || '', distance: contractor.data.city,
+    description: contractor.data.bio || '', descriptionAr: contractor.data.bioArabic || contractor.data.bio || '', distance: contractor.data.city,
     phone: contractor.data.phone ?? '', contractAmount: '', startingPrice: '', role: 'contractor' as const, accent: '',
   } : fallback;
-  if (!provider) return <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }]}><Text style={{ color: colors.foreground }}>Provider unavailable.</Text><ActionButton label="Go back" secondary onPress={() => router.back()} /></View>;
+  if (!provider) return <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }]}><Text style={{ color: colors.foreground }}>{isArabic ? 'مقدم الخدمة غير متوفر.' : 'Provider unavailable.'}</Text><ActionButton label={isArabic ? 'رجوع' : 'Go back'} secondary onPress={() => router.back()} /></View>;
   const contactCategory: ContactCategory =
     activeService === 'design' || provider.role === 'consultant' ? 'design'
       : activeService === 'maintenance' || provider.role === 'maintenance' ? 'maintenance'
@@ -80,28 +113,28 @@ export default function ProviderDetail() {
             <View style={styles.titleBlock}>
               <View style={styles.verifiedRow}>
                 <Text style={[styles.providerTitle, { color: colors.foreground }]}>{isArabic ? provider.nameAr : provider.name}</Text>
-                {provider.verified ? <View style={[styles.verifiedPill, { backgroundColor: colors.primarySoft }]}><Feather name="check" size={12} color={colors.primary} /><Text style={[styles.verifiedText, { color: colors.primary }]}>Verified</Text></View> : null}
+                {provider.verified ? <View style={[styles.verifiedPill, { backgroundColor: colors.primarySoft }]}><Feather name="check" size={12} color={colors.primary} /><Text style={[styles.verifiedText, { color: colors.primary }]}>{isArabic ? 'موثّق' : 'Verified'}</Text></View> : null}
               </View>
               <Text style={[styles.specialty, { color: colors.mutedForeground }]}>{isArabic ? provider.specialtyAr : provider.specialty} · {provider.city}</Text>
             </View>
           </View>
           <View style={[styles.statsRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <View><Rating value={rate.data?.rating ?? (persistedRating.data?.rating ? persistedRating.data.rating : provider.rating)} reviews={provider.reviews} /><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Customer rating</Text></View>
+            <View><Rating value={rate.data?.rating ?? (persistedRating.data?.rating ? persistedRating.data.rating : provider.rating)} reviews={provider.reviews} /><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{isArabic ? 'تقييم العملاء' : 'Customer rating'}</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View><Text style={[styles.statValue, { color: colors.foreground }]}>{provider.projects}</Text><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Projects</Text></View>
+            <View><Text style={[styles.statValue, { color: colors.foreground }]}>{provider.projects}</Text><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{isArabic ? 'المشاريع' : 'Projects'}</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View><Text style={[styles.statValue, { color: colors.foreground }]}>{provider.distance}</Text><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Away</Text></View>
+            <View><Text style={[styles.statValue, { color: colors.foreground }]}>{provider.distance}</Text><Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{isArabic ? 'المسافة' : 'Away'}</Text></View>
           </View>
           <StarRatingInput value={selectedRating} onChange={(value) => { setSelectedRating(value); rate.mutate({ id, data: { rating: value } }); }} disabled={rate.isPending} label={isArabic ? 'قيّم مقدم الخدمة من نجمة إلى خمس' : 'Rate this provider from one to five stars'} />
           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>{isArabic ? 'عن مقدم الخدمة' : 'About this provider'}</Text>
           <Text style={[styles.description, { color: colors.mutedForeground }]}>{isArabic ? provider.descriptionAr : provider.description}</Text>
            {contractor.isLoading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 14 }} /> : null}
-           {contractor.data?.services.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'الخدمات' : 'Services'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.services.map((service) => service.name).join(' • ')}</Text></> : null}
-           {contractor.data?.projects.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المشاريع' : 'Projects'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.projects.map((project) => project.title).join(' • ')}</Text></> : null}
-           {contractor.data?.reviews.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المراجعات' : 'Reviews'}</Text>{contractor.data.reviews.slice(0, 3).map((review) => <Text key={review.id} style={[styles.description, { color: colors.mutedForeground }]}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)} {review.comment ?? ''}</Text>)}</> : null}
+            {contractor.data?.services.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'الخدمات' : 'Services'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.services.map((service) => localizedServiceName(service.name, service.category, isArabic)).join(' • ')}</Text></> : null}
+            {contractor.data?.projects.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المشاريع' : 'Projects'}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>{contractor.data.projects.map((project) => isArabic ? (project.description || project.title) : project.title).join(' • ')}</Text></> : null}
+            {contractor.data?.reviews.length ? <><Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'المراجعات' : 'Reviews'}</Text>{contractor.data.reviews.slice(0, 3).map((review) => <Text key={review.id} style={[styles.description, { color: colors.mutedForeground }]}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)} {review.comment ?? ''}</Text>)}</> : null}
           <Text style={[styles.sectionLabel, { color: colors.foreground, marginTop: 28 }]}>{isArabic ? 'لماذا تختاره' : 'Why customers choose them'}</Text>
           <View style={styles.benefitList}>
-            {['Verified business profile', 'Clear project communication', 'Reviews from local customers'].map((item) => (
+            {(isArabic ? ['ملف تجاري موثّق', 'تواصل واضح حول المشروع', 'تقييمات من عملاء محليين'] : ['Verified business profile', 'Clear project communication', 'Reviews from local customers']).map((item) => (
               <View key={item} style={styles.benefitRow}><View style={[styles.checkCircle, { backgroundColor: colors.primarySoft }]}><Feather name="check" size={13} color={colors.primary} /></View><Text style={[styles.benefitText, { color: colors.foreground }]}>{item}</Text></View>
             ))}
           </View>

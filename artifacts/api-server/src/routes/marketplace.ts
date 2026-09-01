@@ -801,7 +801,7 @@ router.get("/contractors", async (req, res, next) => {
       db.select({ count: sql<number>`count(distinct ${contractorProfiles.id})` }).from(contractorProfiles)
         .innerJoin(subscriptions, eq(subscriptions.contractorId, contractorProfiles.id)).where(and(...filters)),
     ]);
-    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, avatarUrl: row.profile.avatarUrl, imageUrls: row.profile.imageUrls.length ? row.profile.imageUrls : row.profile.avatarUrl ? [row.profile.avatarUrl] : [], isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore), priceOmaniRial: decimal(row.profile.agreedContractAmountOmaniRial), createdAt: row.profile.createdAt.toISOString() })), page, total: Number(totalRows[0]!.count) });
+    res.json({ items: rows.map((row) => ({ id: row.profile.id, businessName: row.profile.businessName, businessNameArabic: row.profile.businessNameArabic, city: row.profile.city, wilayat: row.profile.wilayat, bio: row.profile.bio, bioArabic: row.profile.bioArabic, avatarUrl: row.profile.avatarUrl, imageUrls: row.profile.imageUrls.length ? row.profile.imageUrls : row.profile.avatarUrl ? [row.profile.avatarUrl] : [], isVerified: row.profile.isVerified, isPublished: row.profile.isPublished, rating: Number(row.rating), reviewCount: Number(row.reviewCount), rankingScore: Number(row.rankingScore), priceOmaniRial: decimal(row.profile.agreedContractAmountOmaniRial), createdAt: row.profile.createdAt.toISOString() })), page, total: Number(totalRows[0]!.count) });
   } catch (error) { next(error); }
 });
 
@@ -827,6 +827,8 @@ router.get("/contractors/:id", async (req, res, next) => {
     ]);
     res.json({
       ...summary,
+      businessNameArabic: profile.businessNameArabic,
+      bioArabic: profile.bioArabic,
       phone: profile.phone,
       services: profileServices.map((item) => ({
         id: item.id,
