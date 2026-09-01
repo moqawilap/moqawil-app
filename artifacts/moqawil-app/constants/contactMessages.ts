@@ -1,19 +1,19 @@
 export type ContactCategory = 'property' | 'workshop' | 'design' | 'maintenance' | 'contractor';
 
-const arabicSubjectLine: Record<ContactCategory, (name: string) => string> = {
-  property: (name) => `العقار المعروض «${name}»`,
-  workshop: (name) => `خدمات الورشة «${name}»`,
-  design: (name) => `خدمات التصميم لدى «${name}»`,
-  maintenance: (name) => `خدمة الصيانة المقدمة من «${name}»`,
-  contractor: (name) => `خدمات المقاولات المقدمة من «${name}»`,
+const arabicMessageLine: Record<ContactCategory, (name: string) => string> = {
+  property: (name) => `أتواصل معكم عبر تطبيق «مقاول» بخصوص العقار المعروض «${name}»، وأرغب في معرفة السعر والتفاصيل وترتيب موعد للمعاينة.`,
+  workshop: (name) => `أتواصل معكم عبر تطبيق «مقاول» بخصوص خدمات الورشة «${name}»، وأرغب في معرفة الخدمات المتاحة والتكلفة والمدة المتوقعة.`,
+  design: (name) => `أتواصل معكم عبر تطبيق «مقاول» بخصوص خدمات التصميم لدى «${name}»، وأرغب في معرفة الخدمات المتاحة والتكلفة ومدة تنفيذ المشروع.`,
+  maintenance: (name) => `أتواصل معكم عبر تطبيق «مقاول» بخصوص خدمة الصيانة المقدمة من «${name}»، وأرغب في معرفة إمكانية الخدمة والتكلفة وأقرب موعد متاح.`,
+  contractor: (name) => `أتواصل معكم عبر تطبيق «مقاول» بخصوص خدمات المقاولات المقدمة من «${name}»، وأرغب في معرفة نطاق الخدمات والتكلفة ومدة تنفيذ المشروع.`,
 };
 
-const englishSubjectLine: Record<ContactCategory, (name: string) => string> = {
-  property: (name) => `the listed property “${name}”`,
-  workshop: (name) => `the workshop services offered by “${name}”`,
-  design: (name) => `the design services offered by “${name}”`,
-  maintenance: (name) => `the maintenance service offered by “${name}”`,
-  contractor: (name) => `the contracting services offered by “${name}”`,
+const englishMessageLine: Record<ContactCategory, (name: string) => string> = {
+  property: (name) => `I found you through the Moqawil app regarding the listed property “${name}”. I would like to know the price and details and arrange a viewing.`,
+  workshop: (name) => `I found you through the Moqawil app regarding the services at “${name}”. I would like to know the available services, cost, and expected timeframe.`,
+  design: (name) => `I found you through the Moqawil app regarding the design services at “${name}”. I would like to know the available services, cost, and project timeframe.`,
+  maintenance: (name) => `I found you through the Moqawil app regarding the maintenance service offered by “${name}”. I would like to know the availability, cost, and earliest appointment.`,
+  contractor: (name) => `I found you through the Moqawil app regarding the contracting services offered by “${name}”. I would like to know the scope, cost, and project timeframe.`,
 };
 
 export function getContactMessage(category: ContactCategory, subjectName: string, isArabic: boolean) {
@@ -23,7 +23,7 @@ export function getContactMessage(category: ContactCategory, subjectName: string
       'السلام عليكم ورحمة الله وبركاته،',
       'حياكم الله،',
       '',
-      `تواصلت معكم عبر تطبيق «مقاول» بخصوص ${arabicSubjectLine[category](name)}، وأرغب في معرفة المزيد من المعلومات والتفاصيل.`,
+      arabicMessageLine[category](name),
       '',
       'أتمنى تزويدي بالتفاصيل المتاحة، وشكرًا لكم.',
     ].join('\n');
@@ -31,7 +31,7 @@ export function getContactMessage(category: ContactCategory, subjectName: string
   return [
     'Hello,',
     '',
-    `I found you through the Moqawil app and would like to learn more about ${englishSubjectLine[category](name)}.`,
+    englishMessageLine[category](name),
     '',
     'Please share the available information and details. Thank you.',
   ].join('\n');
