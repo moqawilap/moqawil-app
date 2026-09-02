@@ -13,6 +13,7 @@ import {
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
+import { emailAdminContact, emailAdminServiceRequest } from "../lib/email";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getHomepageSettings, getSettings, isDirectoryEligible, isHomepageSettings, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
 
 type MarketplaceAuthHandlers = {
@@ -595,6 +596,16 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
         deliveredAt: new Date(),
       })));
     }
+    await emailAdminContact({
+      customerName: user.displayName ?? "",
+      customerEmail: user.email,
+      channel: input.channel,
+      category: input.category,
+      subjectName: input.subjectName.trim(),
+      occurredAt: new Date(),
+    }).catch((error) => {
+      console.error("Unable to send contact email", error);
+    });
     await logAudit(user.id, "contact_attempt", input.category, input.subjectId, {
       channel: input.channel,
       subjectName: input.subjectName.trim(),
@@ -1237,6 +1248,18 @@ router.post("/service-requests", requireUser, async (req, res, next) => {
       return { created, recipientCount: candidates.length };
     });
     await createInAppNotification(user.id, "Request sent", request.recipientCount ? `Your request was sent to ${request.recipientCount} matching workshop${request.recipientCount === 1 ? "" : "s"}.` : "Your request is saved. Matching workshops will appear when available.", { requestId: request.created.id });
+    await emailAdminServiceRequest({
+      customerName: user.displayName ?? "",
+      customerEmail: user.email,
+      serviceName: request.created.serviceName,
+      serviceCategory: request.created.serviceCategory,
+      governorate: request.created.governorate,
+      wilayat: request.created.wilayat,
+      requirements: request.created.requirements,
+      occurredAt: request.created.createdAt,
+    }).catch((error) => {
+      console.error("Unable to send service request email", error);
+    });
     res.status(201).json({ ...request.created, budgetOmaniRial: decimal(request.created.budgetOmaniRial), recipientCount: request.recipientCount, quoteCount: 0 });
   } catch (error) { next(error); }
 });
