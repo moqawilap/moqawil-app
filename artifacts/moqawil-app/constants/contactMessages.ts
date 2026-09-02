@@ -23,9 +23,16 @@ export function getListingUrl(listingId: string) {
     : `moqawil-app://listing/${encodeURIComponent(listingId)}`;
 }
 
+export function getProviderUrl(providerId: string) {
+  const domain = process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return domain
+    ? `https://${domain}/provider/${encodeURIComponent(providerId)}`
+    : `moqawil-app://provider/${encodeURIComponent(providerId)}`;
+}
+
 export function getContactMessage(category: ContactCategory, subjectName: string, isArabic: boolean, subjectUrl?: string) {
   const name = subjectName.trim();
-  const linkLine = subjectUrl ? (isArabic ? `رابط الإعلان: ${subjectUrl}` : `Listing link: ${subjectUrl}`) : null;
+  const linkLine = subjectUrl ? (isArabic ? `رابط الإعلان أو الخدمة: ${subjectUrl}` : `Listing or service link: ${subjectUrl}`) : null;
   if (isArabic) {
     return [
       'السلام عليكم ورحمة الله وبركاته،',
