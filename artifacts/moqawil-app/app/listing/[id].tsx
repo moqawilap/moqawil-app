@@ -8,7 +8,7 @@ import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagement
 import { listings, marketplaceListingToLocal } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getContactMessage, getWhatsAppUrl } from '@/constants/contactMessages';
+import { getContactMessage, getListingUrl, getWhatsAppUrl } from '@/constants/contactMessages';
 import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useRateListing, useRecordContactEvent, useRecordListingEngagement } from '@workspace/api-client-react';
 
 export default function ListingDetail() {
@@ -52,7 +52,7 @@ export default function ListingDetail() {
   };
   const openWhatsApp = () => {
     const phone = listing.phone ?? '+96877224535';
-    const message = getContactMessage('property', isArabic ? listing.titleAr : listing.title, isArabic);
+    const message = getContactMessage('property', isArabic ? listing.titleAr : listing.title, isArabic, getListingUrl(listing.id));
     const url = getWhatsAppUrl(phone, message);
     if (!url) return;
     recordContact('whatsapp');

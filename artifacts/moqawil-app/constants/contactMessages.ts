@@ -16,8 +16,16 @@ const englishMessageLine: Record<ContactCategory, (name: string) => string> = {
   contractor: (name) => `I found you through the Moqawil app regarding the contracting services offered by “${name}”. I would like to know the scope, cost, and project timeframe.`,
 };
 
-export function getContactMessage(category: ContactCategory, subjectName: string, isArabic: boolean) {
+export function getListingUrl(listingId: string) {
+  const domain = process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return domain
+    ? `https://${domain}/listing/${encodeURIComponent(listingId)}`
+    : `moqawil-app://listing/${encodeURIComponent(listingId)}`;
+}
+
+export function getContactMessage(category: ContactCategory, subjectName: string, isArabic: boolean, subjectUrl?: string) {
   const name = subjectName.trim();
+  const linkLine = subjectUrl ? (isArabic ? `رابط الإعلان: ${subjectUrl}` : `Listing link: ${subjectUrl}`) : null;
   if (isArabic) {
     return [
       'السلام عليكم ورحمة الله وبركاته،',
@@ -26,6 +34,7 @@ export function getContactMessage(category: ContactCategory, subjectName: string
       arabicMessageLine[category](name),
       '',
       'أتمنى تزويدي بالتفاصيل المتاحة، وشكرًا لكم.',
+      ...(linkLine ? ['', linkLine] : []),
     ].join('\n');
   }
   return [
@@ -34,6 +43,7 @@ export function getContactMessage(category: ContactCategory, subjectName: string
     englishMessageLine[category](name),
     '',
     'Please share the available information and details. Thank you.',
+    ...(linkLine ? ['', linkLine] : []),
   ].join('\n');
 }
 
