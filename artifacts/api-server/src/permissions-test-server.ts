@@ -69,6 +69,12 @@ const [assignedRequest, unassignedRequest, concurrentRequest, cancellableRequest
   },
 ]).returning();
 if (!plan) throw new Error("Permission test requires an active subscription plan");
+await db.insert(requestRecipients).values([
+  { requestId: assignedRequest.id, contractorId: profile.id },
+  { requestId: concurrentRequest.id, contractorId: profile.id },
+  { requestId: concurrentRequest.id, contractorId: secondProfile.id },
+  { requestId: cancellableRequest.id, contractorId: profile.id },
+]);
 await db.insert(subscriptions).values({
   contractorId: profile.id,
   planId: plan.id,

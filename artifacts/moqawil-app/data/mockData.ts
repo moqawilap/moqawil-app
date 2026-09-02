@@ -247,6 +247,8 @@ export const listings: Listing[] = [
     baths: 6,
     area: '420 m²',
     image: images.villa,
+    createdAt: '2026-08-18T08:00:00.000Z',
+    updatedAt: '2026-08-18T08:00:00.000Z',
   },
   {
     id: 'qurum-apartment',
@@ -261,6 +263,8 @@ export const listings: Listing[] = [
     baths: 3,
     area: '126 m²',
     image: images.interior,
+    createdAt: '2026-08-20T08:00:00.000Z',
+    updatedAt: '2026-08-20T08:00:00.000Z',
   },
 ];
 
