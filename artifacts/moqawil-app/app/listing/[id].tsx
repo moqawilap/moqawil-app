@@ -11,6 +11,13 @@ import { useColors } from '@/hooks/useColors';
 import { getContactMessage, getListingUrl, getWhatsAppUrl } from '@/constants/contactMessages';
 import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useRateListing, useRecordContactEvent, useRecordListingEngagement } from '@workspace/api-client-react';
 
+function formatListingDate(value: string | undefined, isArabic: boolean) {
+  if (!value) return isArabic ? 'غير متوفر' : 'Unavailable';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return isArabic ? 'غير متوفر' : 'Unavailable';
+  return new Intl.DateTimeFormat(isArabic ? 'ar-OM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+}
+
 export default function ListingDetail() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -22,9 +29,11 @@ export default function ListingDetail() {
   const liveListing = useGetListing(id ?? '', { query: { queryKey: getGetListingQueryKey(id ?? ''), enabled: Boolean(id && !localListing) } });
   const persistedRating = useGetListingRating(id ?? '', { query: { queryKey: getGetListingRatingQueryKey(id ?? ''), enabled: Boolean(id) } });
   const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : (localListing ?? listings[0]);
+  const gallery = listing.imageUrls?.length ? listing.imageUrls : [listing.image];
   const contact = useRecordListingEngagement();
   const contactEvent = useRecordContactEvent();
   const [selectedRating, setSelectedRating] = React.useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
   const rate = useRateListing({ mutation: { onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: getGetListingQueryKey(listing.id) });
     queryClient.invalidateQueries({ queryKey: getGetListingRatingQueryKey(listing.id) });
@@ -69,26 +78,47 @@ export default function ListingDetail() {
           <IconButton icon="bookmark" active={isSaved(listing.id)} onPress={() => toggleSaved(listing.id, { listing: true })} accessibilityLabel={isArabic ? 'حفظ الإعلان' : 'Save property'} />
         </View>
         <View style={styles.heroWrap}>
-          <Image source={listing.image} style={styles.heroImage} />
+           <Image source={gallery[selectedImageIndex] ?? gallery[0]} style={styles.heroImage} />
           <View style={styles.heroTag}><Text style={styles.heroTagText}>{isArabic ? listing.typeAr : listing.type}</Text></View>
         </View>
+         {gallery.length > 1 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryStrip}>
+           {gallery.map((image, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={isArabic ? `الصورة ${index + 1}` : `Photo ${index + 1}`} onPress={() => setSelectedImageIndex(index)} style={[styles.thumbnail, index === selectedImageIndex && { borderColor: colors.primary }]}>
+             <Image source={image} style={styles.thumbnailImage} />
+           </Pressable>)}
+         </ScrollView> : null}
         <View style={styles.content}>
           <Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? listing.titleAr : listing.title}</Text>
           <Text style={[styles.price, { color: colors.primary }]}>{listing.price}</Text>
           <Rating value={rate.data?.rating ?? (persistedRating.data?.rating ? persistedRating.data.rating : listing.rating ?? 0)} />
           <StarRatingInput value={selectedRating} onChange={submitRating} disabled={rate.isPending} label={isArabic ? 'قيّم هذا العقار من نجمة إلى خمس' : 'Rate this property from one to five stars'} />
           <View style={styles.locationRow}><Feather name="map-pin" size={15} color={colors.mutedForeground} /><Text style={[styles.location, { color: colors.mutedForeground }]}>{isArabic ? listing.locationAr : listing.location}</Text></View>
+           <View style={[styles.metaCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+             <View style={styles.metaRow}>
+               <Feather name="calendar" size={16} color={colors.primary} />
+               <View style={styles.metaCopy}><Text style={[styles.metaLabel, { color: colors.mutedForeground }]}>{isArabic ? 'تاريخ الإعلان' : 'Listed on'}</Text><Text style={[styles.metaValue, { color: colors.foreground }]}>{formatListingDate(listing.createdAt, isArabic)}</Text></View>
+             </View>
+             <View style={[styles.metaDivider, { backgroundColor: colors.border }]} />
+             <View style={styles.metaRow}>
+               <Feather name="refresh-cw" size={16} color={colors.primary} />
+               <View style={styles.metaCopy}><Text style={[styles.metaLabel, { color: colors.mutedForeground }]}>{isArabic ? 'آخر تحديث' : 'Last updated'}</Text><Text style={[styles.metaValue, { color: colors.foreground }]}>{formatListingDate(listing.updatedAt, isArabic)}</Text></View>
+             </View>
+             <View style={[styles.metaDivider, { backgroundColor: colors.border }]} />
+             <View style={styles.metaRow}>
+               <Feather name="hash" size={16} color={colors.primary} />
+               <View style={styles.metaCopy}><Text style={[styles.metaLabel, { color: colors.mutedForeground }]}>{isArabic ? 'رقم الإعلان' : 'Listing ID'}</Text><Text selectable style={[styles.metaValue, { color: colors.foreground }]}>{listing.id}</Text></View>
+             </View>
+           </View>
           <View style={[styles.specs, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             {[[String(listing.beds), 'Bedrooms'], [String(listing.baths), 'Bathrooms'], [listing.area, 'Total area']].map(([value, label]) => (
               <View key={label} style={styles.spec}><Text style={[styles.specValue, { color: colors.foreground }]}>{value}</Text><Text style={[styles.specLabel, { color: colors.mutedForeground }]}>{label}</Text></View>
             ))}
           </View>
           <ListingEngagementMetrics listingId={listing.id} saved={isSaved(listing.id)} onSave={() => toggleSaved(listing.id, { listing: true })} trackView />
-          <Text style={[styles.sectionLabel, { color: colors.foreground }]}>A home with room to grow</Text>
-          <Text style={[styles.description, { color: colors.mutedForeground }]}>Explore the full property details, ask questions directly, and arrange a visit with the listing contact.</Text>
+           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>{isArabic ? 'تفاصيل الإعلان' : 'Listing details'}</Text>
+           <Text style={[styles.description, { color: colors.mutedForeground }]}>{isArabic ? 'اطّلع على تفاصيل العقار، وتواصل مع المعلن مباشرة لترتيب موعد للمعاينة.' : 'Review the property details and contact the advertiser directly to arrange a viewing.'}</Text>
           <View style={[styles.tip, { backgroundColor: colors.primarySoft }]}>
             <Feather name="shield" size={18} color={colors.primary} />
-            <Text style={[styles.tipText, { color: colors.foreground }]}>Keep your first meeting in a public place and verify property documents before paying.</Text>
+             <Text style={[styles.tipText, { color: colors.foreground }]}>{isArabic ? 'احرص على أن يكون اللقاء الأول في مكان عام، وتحقق من مستندات العقار قبل الدفع.' : 'Meet in a public place first and verify the property documents before making a payment.'}</Text>
           </View>
         </View>
       </ScrollView>
@@ -107,11 +137,20 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: '100%' },
   heroTag: { position: 'absolute', top: 18, left: 18, backgroundColor: 'rgba(255,255,255,0.94)', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 9 },
   heroTagText: { color: '#153457', fontWeight: '800', fontSize: 11 },
+  galleryStrip: { paddingHorizontal: 18, paddingTop: 10, gap: 8 },
+  thumbnail: { width: 64, height: 54, borderWidth: 2, borderColor: 'transparent', borderRadius: 10, overflow: 'hidden' },
+  thumbnailImage: { width: '100%', height: '100%' },
   content: { padding: 20 },
   title: { fontSize: 27, fontWeight: '800', letterSpacing: -0.7 },
   price: { fontSize: 20, fontWeight: '800', marginTop: 8 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 9 },
   location: { fontSize: 13 },
+  metaCard: { borderWidth: 1, borderRadius: 18, padding: 14, marginTop: 18, gap: 12 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  metaCopy: { flex: 1, gap: 2 },
+  metaLabel: { fontSize: 11 },
+  metaValue: { fontSize: 13, fontWeight: '800' },
+  metaDivider: { height: 1, marginLeft: 26 },
   specs: { borderWidth: 1, borderRadius: 18, padding: 17, marginTop: 22, flexDirection: 'row', justifyContent: 'space-between' },
   spec: { flex: 1, alignItems: 'center', gap: 4 },
   specValue: { fontSize: 16, fontWeight: '800' },

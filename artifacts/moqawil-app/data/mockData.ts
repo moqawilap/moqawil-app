@@ -18,6 +18,7 @@ export type Provider = {
   buildingServices?: string[];
   verified: boolean;
   image: ImageSourcePropType;
+  imageUrls?: ImageSourcePropType[];
   accent: string;
   description: string;
   descriptionAr: string;
@@ -42,10 +43,12 @@ export type Listing = {
   baths: number;
   area: string;
   image: ImageSourcePropType;
+  imageUrls?: ImageSourcePropType[];
   phone?: string;
   featured?: boolean;
   rating?: number;
   createdAt?: string;
+  updatedAt?: string;
 };
 
 export function marketplaceListingToLocal(listing: MarketplaceListing): Listing {
@@ -62,9 +65,11 @@ export function marketplaceListingToLocal(listing: MarketplaceListing): Listing 
     baths: listing.bathrooms,
     area: listing.area,
     image: listing.imageUrl ? { uri: listing.imageUrl } : images.interior,
+    imageUrls: listing.imageUrls.map((uri) => ({ uri })),
     phone: listing.contactPhone ?? undefined,
     rating: listing.rating,
     createdAt: listing.createdAt,
+    updatedAt: listing.updatedAt,
   };
 }
 
@@ -177,6 +182,7 @@ export const providers: Provider[] = [
     wilayat: 'Muscat',
     verified: true,
     image: images.interior,
+    createdAt: '2026-08-20T08:00:00.000Z',
     accent: '#0B9B8C',
     description: 'Certified engineers helping you turn a property idea into a buildable plan.',
     descriptionAr: 'مهندسون معتمدون يساعدونك على تحويل فكرة العقار إلى مخطط قابل للتنفيذ.',
@@ -199,6 +205,7 @@ export const providers: Provider[] = [
     wilayat: 'Al Seeb',
     verified: true,
     image: images.villa,
+    createdAt: '2026-08-18T08:00:00.000Z',
     accent: '#7D62BE',
     description: 'Fast, dependable help for electrical, plumbing, AC, and home care needs.',
     descriptionAr: 'خدمة سريعة وموثوقة للكهرباء والسباكة والتكييف والعناية بالمنزل.',
@@ -223,6 +230,8 @@ export const listings: Listing[] = [
     baths: 4,
     area: '248 m²',
     image: images.interior,
+    createdAt: '2026-08-15T08:00:00.000Z',
+    updatedAt: '2026-08-15T08:00:00.000Z',
     featured: true,
   },
   {
