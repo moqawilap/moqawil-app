@@ -22,6 +22,8 @@ export interface ServiceReviewResubmit {
      * @maxLength 100
      */
   city: string;
+  servesAllGovernorates?: boolean;
+  deliveryAvailable?: boolean;
   /**
      * @minLength 20
      * @maxLength 5000

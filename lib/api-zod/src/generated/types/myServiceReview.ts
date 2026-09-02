@@ -17,6 +17,8 @@ export interface MyServiceReview {
   specialty?: string | null;
   /** @nullable */
   city?: string | null;
+  servesAllGovernorates: boolean;
+  deliveryAvailable: boolean;
   description: string;
   mediaUrls: string[];
   status: MyServiceReviewStatus;

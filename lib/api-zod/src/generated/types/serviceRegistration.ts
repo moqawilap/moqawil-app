@@ -14,6 +14,8 @@ export interface ServiceRegistration {
   title: string;
   specialty: string;
   city: string;
+  servesAllGovernorates: boolean;
+  deliveryAvailable: boolean;
   description: string;
   mediaUrls: string[];
   status: ServiceRegistrationStatus;

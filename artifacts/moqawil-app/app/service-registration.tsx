@@ -108,6 +108,8 @@ export default function ServiceRegistrationScreen() {
   const categoryCopy = copy[category];
   const service = serviceItems.find((item) => item.id === category)!;
   const [form, setForm] = useState({ title: '', specialty: '', city: '', description: '' });
+  const [servesAllGovernorates, setServesAllGovernorates] = useState(false);
+  const [deliveryAvailable, setDeliveryAvailable] = useState(false);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -196,6 +198,21 @@ export default function ServiceRegistrationScreen() {
           <Field label={isArabic ? categoryCopy.nameAr : categoryCopy.nameEn} testID="registration-title" value={form.title} onChangeText={(value) => update('title', value)} placeholder={isArabic ? categoryCopy.namePlaceholderAr : categoryCopy.namePlaceholderEn} isArabic={isArabic} colors={colors} />
           <Field label={isArabic ? categoryCopy.specialtyAr : categoryCopy.specialtyEn} testID="registration-specialty" value={form.specialty} onChangeText={(value) => update('specialty', value)} placeholder={isArabic ? categoryCopy.specialtyPlaceholderAr : categoryCopy.specialtyPlaceholderEn} isArabic={isArabic} colors={colors} />
           <Field label={isArabic ? categoryCopy.locationAr : categoryCopy.locationEn} testID="registration-city" value={form.city} onChangeText={(value) => update('city', value)} placeholder={isArabic ? 'المحافظة أو الولاية' : 'Governorate or wilayat'} isArabic={isArabic} colors={colors} />
+           {category !== 'real-estate' ? <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+             <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نطاق تقديم الخدمة' : 'Service coverage'}</Text>
+             <Pressable testID="coverage-local" onPress={() => setServesAllGovernorates(false)} style={[styles.choiceRow, { borderColor: !servesAllGovernorates ? colors.primary : colors.border, backgroundColor: !servesAllGovernorates ? colors.primarySoft : colors.background }]}>
+               <Feather name={!servesAllGovernorates ? 'check-circle' : 'circle'} size={19} color={colors.primary} />
+               <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? `داخل ${form.city.trim() || 'الموقع المحدد'} فقط` : `Only in ${form.city.trim() || 'the selected location'}`}</Text></View>
+             </Pressable>
+             <Pressable testID="coverage-all-oman" onPress={() => setServesAllGovernorates(true)} style={[styles.choiceRow, { borderColor: servesAllGovernorates ? colors.primary : colors.border, backgroundColor: servesAllGovernorates ? colors.primarySoft : colors.background }]}>
+               <Feather name={servesAllGovernorates ? 'check-circle' : 'circle'} size={19} color={colors.primary} />
+               <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'جميع محافظات سلطنة عُمان' : 'All governorates of Oman'}</Text></View>
+             </Pressable>
+             <Pressable testID="delivery-available" accessibilityRole="checkbox" accessibilityState={{ checked: deliveryAvailable }} onPress={() => setDeliveryAvailable((current) => !current)} style={[styles.deliveryRow, { borderTopColor: colors.border }]}>
+               <Feather name={deliveryAvailable ? 'check-square' : 'square'} size={20} color={colors.primary} />
+               <Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'يوفر التوصيل أو الوصول إلى موقع العميل' : 'Delivery or travel to the customer is available'}</Text>
+             </Pressable>
+           </View> : null}
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نبذة عن الأعمال والخدمات' : 'About the work and services'}</Text><TextInput testID="registration-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? categoryCopy.descriptionPlaceholderAr : categoryCopy.descriptionPlaceholderEn} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات الأعمال' : 'Work photos and videos'}</Text><Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? `${media.length}/15 · الحد الإجمالي 24 م.ب` : `${media.length}/15 · 24 MB total limit`}</Text></View>
           <View style={styles.mediaGrid}>
@@ -207,7 +224,7 @@ export default function ServiceRegistrationScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-          <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: form.specialty.trim(), city: form.city.trim(), description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
+          <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: form.specialty.trim(), city: form.city.trim(), servesAllGovernorates: category === 'real-estate' ? false : servesAllGovernorates, deliveryAvailable: category === 'real-estate' ? false : deliveryAvailable, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
         </View>
       </ScrollView>
     </View>
@@ -231,6 +248,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '800', marginBottom: 6 },
   hint: { fontSize: 10, marginTop: -3 },
   input: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, fontSize: 14 },
+  coverageCard: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 9 },
+  choiceRow: { minHeight: 50, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  choiceTitle: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: '700' },
+  deliveryRow: { borderTopWidth: 1, paddingTop: 12, marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 9 },
   description: { minHeight: 122, paddingTop: 12, textAlignVertical: 'top' },
   mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   mediaCard: { width: 92, height: 92, borderRadius: 14, borderWidth: 1 },

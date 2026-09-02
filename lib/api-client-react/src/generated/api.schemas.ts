@@ -620,6 +620,8 @@ export interface ServiceRegistrationCreate {
      * @maxLength 100
      */
   city: string;
+  servesAllGovernorates: boolean;
+  deliveryAvailable: boolean;
   /**
      * @minLength 20
      * @maxLength 5000
@@ -661,6 +663,8 @@ export interface ServiceRegistration {
   title: string;
   specialty: string;
   city: string;
+  servesAllGovernorates: boolean;
+  deliveryAvailable: boolean;
   description: string;
   mediaUrls: string[];
   status: ServiceRegistrationStatus;
@@ -696,6 +700,8 @@ export interface MyServiceReview {
   specialty?: string | null;
   /** @nullable */
   city?: string | null;
+  servesAllGovernorates: boolean;
+  deliveryAvailable: boolean;
   description: string;
   mediaUrls: string[];
   status: MyServiceReviewStatus;
@@ -720,6 +726,8 @@ export interface ServiceReviewResubmit {
      * @maxLength 100
      */
   city: string;
+  servesAllGovernorates?: boolean;
+  deliveryAvailable?: boolean;
   /**
      * @minLength 20
      * @maxLength 5000

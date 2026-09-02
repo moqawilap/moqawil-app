@@ -112,6 +112,8 @@ export const serviceRegistrations = pgTable("service_registrations", {
   title: varchar("title", { length: 200 }).notNull(),
   specialty: varchar("specialty", { length: 200 }).notNull(),
   city: varchar("city", { length: 100 }).notNull(),
+  servesAllGovernorates: boolean("serves_all_governorates").notNull().default(false),
+  deliveryAvailable: boolean("delivery_available").notNull().default(false),
   description: text("description").notNull(),
   mediaUrls: jsonb("media_urls").$type<string[]>().notNull().default([]),
   status: serviceRegistrationStatusEnum("status").notNull().default("pending_review"),

@@ -1125,6 +1125,8 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       || typeof input.city !== "string"
       || input.city.trim().length < 2
       || input.city.length > 100
+      || typeof input.servesAllGovernorates !== "boolean"
+      || typeof input.deliveryAvailable !== "boolean"
       || typeof input.description !== "string"
       || input.description.trim().length < 20
       || input.description.length > 5000
@@ -1141,6 +1143,8 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       title: input.title.trim(),
       specialty: input.specialty.trim(),
       city: input.city.trim(),
+      servesAllGovernorates: input.servesAllGovernorates,
+      deliveryAvailable: input.deliveryAvailable,
       description: input.description.trim(),
       mediaUrls,
       status: "pending_review",
@@ -1152,6 +1156,8 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       title: registration.title,
       specialty: registration.specialty,
       city: registration.city,
+      servesAllGovernorates: registration.servesAllGovernorates,
+      deliveryAvailable: registration.deliveryAvailable,
       description: registration.description,
       mediaUrls: registration.mediaUrls,
       status: registration.status,
@@ -1173,12 +1179,13 @@ router.get("/me/reviews", requireUser, async (req, res, next) => {
     res.json([
       ...contractorProjects.map(({ project }) => ({
         id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
-        city: project.city, description: project.description ?? "", mediaUrls: project.imageUrls,
+        city: project.city, servesAllGovernorates: false, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
         status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
       })),
       ...registrations.map((registration) => ({
         id: registration.id, kind: "registration", category: registration.category, title: registration.title,
-        specialty: registration.specialty, city: registration.city, description: registration.description,
+        specialty: registration.specialty, city: registration.city, servesAllGovernorates: registration.servesAllGovernorates,
+        deliveryAvailable: registration.deliveryAvailable, description: registration.description,
         mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
         createdAt: registration.createdAt.toISOString(),
       })),
@@ -1204,8 +1211,19 @@ router.patch("/me/reviews/:kind/:id", requireUser, async (req, res, next) => {
       if (typeof input.specialty !== "string" || input.specialty.trim().length < 2 || input.specialty.length > 200) { res.status(400).json({ error: "Specialty is required" }); return; }
       const existing = await db.query.serviceRegistrations.findFirst({ where: and(eq(serviceRegistrations.id, id), eq(serviceRegistrations.userId, user.id)) });
       if (!existing) { res.status(404).json({ error: "Registration not found" }); return; }
-      const [updated] = await db.update(serviceRegistrations).set({ title: input.title.trim(), specialty: input.specialty.trim(), city: input.city.trim(), description: input.description.trim(), mediaUrls, status: "pending_review", reviewNote: null, updatedAt: new Date() }).where(eq(serviceRegistrations.id, id)).returning();
-      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+      const [updated] = await db.update(serviceRegistrations).set({
+        title: input.title.trim(),
+        specialty: input.specialty.trim(),
+        city: input.city.trim(),
+        servesAllGovernorates: typeof input.servesAllGovernorates === "boolean" ? input.servesAllGovernorates : existing.servesAllGovernorates,
+        deliveryAvailable: typeof input.deliveryAvailable === "boolean" ? input.deliveryAvailable : existing.deliveryAvailable,
+        description: input.description.trim(),
+        mediaUrls,
+        status: "pending_review",
+        reviewNote: null,
+        updatedAt: new Date(),
+      }).where(eq(serviceRegistrations.id, id)).returning();
+      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
       return;
     }
     const [ownedProject] = await db.select({ project: projects }).from(projects)
@@ -1213,7 +1231,7 @@ router.patch("/me/reviews/:kind/:id", requireUser, async (req, res, next) => {
       .where(and(eq(projects.id, id), eq(contractorProfiles.userId, user.id))).limit(1);
     if (!ownedProject) { res.status(404).json({ error: "Project not found" }); return; }
     const [updated] = await db.update(projects).set({ title: input.title.trim(), city: input.city.trim(), description: input.description.trim(), imageUrls: mediaUrls, reviewStatus: "pending_review", reviewNote: null, isPublished: false, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
-    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 
@@ -1425,13 +1443,14 @@ router.get("/admin/reviews", requireUser, requireAdmin, async (req, res, next) =
     const allItems = [
       ...projectRows.map(({ project, ownerName, ownerEmail }) => ({
         id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
-        city: project.city, description: project.description ?? "", mediaUrls: project.imageUrls,
+        city: project.city, servesAllGovernorates: false, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
         status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
         ownerName, ownerEmail,
       })),
       ...registrationRows.map(({ registration, ownerName, ownerEmail }) => ({
         id: registration.id, kind: "registration", category: registration.category, title: registration.title,
-        specialty: registration.specialty, city: registration.city, description: registration.description,
+        specialty: registration.specialty, city: registration.city, servesAllGovernorates: registration.servesAllGovernorates,
+        deliveryAvailable: registration.deliveryAvailable, description: registration.description,
         mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
         createdAt: registration.createdAt.toISOString(), ownerName, ownerEmail,
       })),
@@ -1461,7 +1480,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
       const [updated] = await db.update(serviceRegistrations).set({ status: nextStatus, reviewNote: note || null, updatedAt: new Date() }).where(eq(serviceRegistrations.id, id)).returning();
       await createInAppNotification(existing.userId, action === "approve" ? "Service approved" : action === "reject" ? "Service registration cancelled" : "Service changes requested", note || (action === "approve" ? "Your service registration was approved." : "Your service registration was not approved."), { registrationId: id, reviewStatus: nextStatus });
       await logAudit(admin.id, `service_review_${action}`, "service_registration", id, { note });
-      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+       res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
       return;
     }
     const [existing] = await db.select({ project: projects, ownerId: contractorProfiles.userId }).from(projects).innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id)).where(eq(projects.id, id)).limit(1);
@@ -1469,7 +1488,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
     const [updated] = await db.update(projects).set({ reviewStatus: nextStatus, reviewNote: note || null, isPublished: action === "approve", updatedAt: new Date() }).where(eq(projects.id, id)).returning();
     await createInAppNotification(existing.ownerId, action === "approve" ? "Project approved" : action === "reject" ? "Project cancelled" : "Project changes requested", note || (action === "approve" ? "Your contractor project was approved." : "Your contractor project was not approved."), { projectId: id, reviewStatus: nextStatus });
     await logAudit(admin.id, `project_review_${action}`, "project", id, { note });
-    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, next) => {

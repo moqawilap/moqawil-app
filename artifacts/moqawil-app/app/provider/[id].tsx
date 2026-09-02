@@ -8,7 +8,7 @@ import { ActionButton, BrandMark, FixedBackButton, IconButton, Rating, StarRatin
 import { providers } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getContactMessage, getProviderUrl, getWhatsAppUrl, type ContactCategory } from '@/constants/contactMessages';
+import { getContactMessage, getWhatsAppUrl, type ContactCategory } from '@/constants/contactMessages';
 import { getGetContractorQueryKey, getGetContractorRatingQueryKey, getListContractorsQueryKey, useGetContractor, useGetContractorRating, useRateContractor, useRecordContactEvent } from '@workspace/api-client-react';
 
 const serviceTranslations: Record<string, string> = {
@@ -92,7 +92,7 @@ export default function ProviderDetail() {
     void Linking.openURL(`tel:${provider.phone.replace(/\s/g, '')}`);
   };
   const openWhatsApp = () => {
-    const url = getWhatsAppUrl(provider.phone, getContactMessage(contactCategory, subjectName, isArabic, getProviderUrl(provider.id)));
+    const url = getWhatsAppUrl(provider.phone, getContactMessage(contactCategory, subjectName, isArabic));
     if (!url) return;
     recordContact('whatsapp');
     void Linking.openURL(url);
