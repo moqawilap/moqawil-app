@@ -4,12 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagementMetrics, Rating, StarRatingInput } from '@/components/MoqawilUI';
-import { listings, marketplaceListingToLocal } from '@/data/mockData';
+import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagementMetrics, PropertyCard, Rating, StarRatingInput } from '@/components/MoqawilUI';
+import { listings, marketplaceListingToLocal, mergeMarketplaceListings } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { getContactMessage, getListingUrl, getWhatsAppUrl } from '@/constants/contactMessages';
-import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useRateListing, useRecordContactEvent, useRecordListingEngagement } from '@workspace/api-client-react';
+import { getGetListingQueryKey, getGetListingRatingQueryKey, getListListingsQueryKey, useGetListing, useGetListingRating, useListListings, useRateListing, useRecordContactEvent, useRecordListingEngagement } from '@workspace/api-client-react';
 
 function formatListingDate(value: string | undefined, isArabic: boolean) {
   if (!value) return isArabic ? 'غير متوفر' : 'Unavailable';
@@ -27,9 +27,23 @@ export default function ListingDetail() {
   const { isArabic, isSaved, toggleSaved, engagementClientId } = useApp();
   const localListing = listings.find((item) => item.id === id);
   const liveListing = useGetListing(id ?? '', { query: { queryKey: getGetListingQueryKey(id ?? ''), enabled: Boolean(id && !localListing) } });
+  const allListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
   const persistedRating = useGetListingRating(id ?? '', { query: { queryKey: getGetListingRatingQueryKey(id ?? ''), enabled: Boolean(id) } });
   const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : (localListing ?? listings[0]);
   const gallery = listing.imageUrls?.length ? listing.imageUrls : [listing.image];
+  const relatedListings = React.useMemo(() => {
+    const currentLocation = listing.location.toLowerCase();
+    return mergeMarketplaceListings(allListings.data)
+      .filter((item) => item.id !== listing.id)
+      .map((item) => {
+        const sameType = item.type === listing.type;
+        const sameLocation = item.location.toLowerCase() === currentLocation;
+        return { item, score: (sameType ? 4 : 0) + (sameLocation ? 3 : 0) + (Date.parse(item.createdAt ?? '') || 0) / 1_000_000_000_000 };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map(({ item }) => item);
+  }, [allListings.data, listing.id, listing.location, listing.type]);
   const contact = useRecordListingEngagement();
   const contactEvent = useRecordContactEvent();
   const [selectedRating, setSelectedRating] = React.useState(0);
@@ -120,6 +134,22 @@ export default function ListingDetail() {
             <Feather name="shield" size={18} color={colors.primary} />
              <Text style={[styles.tipText, { color: colors.foreground }]}>{isArabic ? 'احرص على أن يكون اللقاء الأول في مكان عام، وتحقق من مستندات العقار قبل الدفع.' : 'Meet in a public place first and verify the property documents before making a payment.'}</Text>
           </View>
+           {relatedListings.length ? <View style={styles.relatedSection}>
+             <View style={styles.relatedHeader}>
+               <Text style={[styles.sectionLabel, styles.relatedTitle, { color: colors.foreground }]}>{isArabic ? 'إعلانات ذات صلة' : 'Related listings'}</Text>
+               <Feather name="chevron-right" size={18} color={colors.primary} />
+             </View>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.relatedList}>
+               {relatedListings.map((related) => <View key={related.id} style={styles.relatedCard}>
+                 <PropertyCard
+                   listing={{ ...related, title: isArabic ? related.titleAr : related.title, location: isArabic ? related.locationAr : related.location, type: isArabic ? related.typeAr : related.type }}
+                   saved={isSaved(related.id)}
+                   onPress={() => router.push({ pathname: '/listing/[id]', params: { id: related.id } })}
+                   onSave={() => toggleSaved(related.id, { listing: true })}
+                 />
+               </View>)}
+             </ScrollView>
+           </View> : null}
         </View>
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
@@ -159,5 +189,10 @@ const styles = StyleSheet.create({
   description: { fontSize: 14, lineHeight: 22, marginTop: 8 },
   tip: { marginTop: 24, padding: 14, borderRadius: 15, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   tipText: { flex: 1, fontSize: 12, lineHeight: 18 },
+  relatedSection: { marginTop: 4 },
+  relatedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  relatedTitle: { marginTop: 28 },
+  relatedList: { gap: 12, paddingTop: 12, paddingBottom: 4 },
+  relatedCard: { width: 286 },
   bottomActions: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 13, borderTopWidth: 1, flexDirection: 'row', gap: 10 },
 });
