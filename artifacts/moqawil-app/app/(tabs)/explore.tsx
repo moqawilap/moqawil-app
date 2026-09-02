@@ -53,7 +53,7 @@ export default function ExploreScreen() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [minimumBudget, setMinimumBudget] = useState('');
   const [maximumBudget, setMaximumBudget] = useState('');
-  const [sort, setSort] = useState<SortOption>('relevance');
+  const [sort, setSort] = useState<SortOption>('newest');
   const minimumBudgetValue = budgetFromInput(minimumBudget);
   const maximumBudgetValue = budgetFromInput(maximumBudget);
   const hasInvalidBudget = (!!minimumBudget.trim() && minimumBudgetValue === undefined) || (!!maximumBudget.trim() && maximumBudgetValue === undefined);
@@ -140,14 +140,14 @@ export default function ExploreScreen() {
     }), [availableListings, effectiveGovernorate, effectiveWilayat, maximumBudgetValue, minimumBudgetValue, minimumRating, query, sort]);
 
   const sortOptions: Array<{ value: SortOption; label: string; labelAr: string }> = [
+    { value: 'newest', label: 'Newest first', labelAr: 'الأحدث أولًا' },
+    { value: 'oldest', label: 'Oldest first', labelAr: 'الأقدم أولًا' },
     { value: 'relevance', label: 'Best match', labelAr: 'الأفضل تطابقًا' },
     { value: 'rating_desc', label: 'Highest rated', labelAr: 'الأعلى تقييمًا' },
     ...(visibleMode === 'Properties' ? [
       { value: 'price_asc' as const, label: 'Lowest price', labelAr: 'السعر الأقل' },
       { value: 'price_desc' as const, label: 'Highest price', labelAr: 'السعر الأعلى' },
     ] : []),
-    { value: 'newest', label: 'Newest', labelAr: 'الأحدث' },
-    { value: 'oldest', label: 'Oldest', labelAr: 'الأقدم' },
   ];
   const selectedSortLabel = sortOptions.find((option) => option.value === sort);
 
@@ -200,7 +200,7 @@ export default function ExploreScreen() {
             </ScrollView>
           </View> : null}
           {visibleMode !== 'Properties' ? <View style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.budgetTitle, { color: colors.foreground }]}>{isArabic ? 'الترتيب' : 'Sort results'}</Text>
+             <Text style={[styles.budgetTitle, { color: colors.foreground }]}>{isArabic ? 'ترتيب الإعلانات والنتائج' : 'Sort listings and results'}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortOptions}>
               {sortOptions.map((option) => {
                 const selected = sort === option.value;
