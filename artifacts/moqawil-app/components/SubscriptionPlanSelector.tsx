@@ -53,6 +53,27 @@ export function SubscriptionPlanSelector({ category, value, onChange }: {
           );
         })}
       </View>
+      <View testID="payment-methods" style={[styles.paymentCard, { borderTopColor: colors.border }]}>
+        <View style={styles.paymentHeading}>
+          <Feather name="lock" size={15} color={colors.primary} />
+          <Text style={[styles.paymentTitle, { color: colors.foreground }]}>{isArabic ? 'طرق الدفع' : 'Payment methods'}</Text>
+        </View>
+        <Text style={[styles.paymentHint, { color: colors.mutedForeground }]}>{isArabic ? 'تُستخدم بعد اعتماد الطلب وانتهاء الشهر المجاني.' : 'Used after approval and the free first month.'}</Text>
+        <View style={styles.paymentGrid}>
+          <View style={[styles.paymentMethod, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.visa, { color: colors.primary }]}>VISA</Text>
+            <Text style={[styles.paymentLabel, { color: colors.foreground }]}>{isArabic ? 'بطاقة بنكية' : 'Bank card'}</Text>
+          </View>
+          <View style={[styles.paymentMethod, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.mastercard, { color: colors.foreground }]}>●●</Text>
+            <Text style={[styles.paymentLabel, { color: colors.foreground }]}>Mastercard</Text>
+          </View>
+          <View style={[styles.paymentMethod, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Feather name="smartphone" size={17} color={colors.foreground} />
+            <Text style={[styles.paymentLabel, { color: colors.foreground }]}>Apple Pay</Text>
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -72,4 +93,13 @@ const styles = StyleSheet.create({
   omr: { fontSize: 12, fontWeight: '800' },
   free: { fontSize: 10, marginTop: 2 },
   error: { fontSize: 11, fontWeight: '700' },
+  paymentCard: { borderTopWidth: 1, paddingTop: 12, gap: 5 },
+  paymentHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  paymentTitle: { fontSize: 12, fontWeight: '900' },
+  paymentHint: { fontSize: 10, lineHeight: 15 },
+  paymentGrid: { flexDirection: 'row', gap: 7, marginTop: 3 },
+  paymentMethod: { flex: 1, minHeight: 57, borderWidth: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 4 },
+  visa: { fontSize: 14, fontWeight: '900', fontStyle: 'italic' },
+  mastercard: { fontSize: 13, fontWeight: '900', letterSpacing: -2 },
+  paymentLabel: { fontSize: 9, fontWeight: '700', textAlign: 'center' },
 });
