@@ -132,7 +132,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== Location.PermissionStatus.GRANTED) {
-        Alert.alert('Location access needed', 'You can continue with Muscat, or allow location to see nearby providers.');
+        Alert.alert(
+          locale === 'ar' ? 'السماح بالوصول إلى الموقع' : 'Location access needed',
+          locale === 'ar' ? 'اسمح للتطبيق بالوصول إلى موقعك الحالي من نافذة الهاتف، أو يمكنك المتابعة باستخدام مسقط.' : 'Allow the app to access your current location from the phone prompt, or continue using Muscat.',
+        );
         return;
       }
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -163,11 +166,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLocation({ city, area, source: 'manual' });
     Haptics.selectionAsync().catch(() => undefined);
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => { refreshLocation({ silent: true }).catch(() => undefined); }, 450);
-    return () => clearTimeout(timer);
-  }, []);
 
   const addContractor = (input: { name: string; specialty: string; city: string; contractAmount: string; phone: string }) => {
     const id = `${input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;

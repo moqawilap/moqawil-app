@@ -28,6 +28,12 @@
         }
       ],
       "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "السماح لتطبيق مقاول باستخدام موقعك الحالي لعرض الخدمات القريبة منك."
+        }
+      ],
       "expo-notifications",
       "expo-web-browser"
     ],

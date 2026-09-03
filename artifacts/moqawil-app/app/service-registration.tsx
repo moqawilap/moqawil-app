@@ -128,6 +128,8 @@ export default function ServiceRegistrationScreen() {
   const service = serviceItems.find((item) => item.id === category)!;
   const [form, setForm] = useState({ title: '', specialty: '', description: '' });
   const [serviceWilayats, setServiceWilayats] = useState<string[]>([]);
+  const [serviceGovernorates, setServiceGovernorates] = useState<string[]>([]);
+  const [serviceLocationLevel, setServiceLocationLevel] = useState<'governorates' | 'wilayats'>('governorates');
   const [deliveryAvailable, setDeliveryAvailable] = useState(false);
   const [propertyGovernorate, setPropertyGovernorate] = useState('');
   const [propertyWilayat, setPropertyWilayat] = useState('');
@@ -144,6 +146,19 @@ export default function ServiceRegistrationScreen() {
   const totalBytes = useMemo(() => media.reduce((sum, item) => sum + item.size, 0), [media]);
   const servesAllGovernorates = serviceWilayats.length === allWilayats.length;
   const isProperty = category === 'real-estate';
+  const selectedServiceGovernorates = omanGovernorates.filter((item) => serviceGovernorates.includes(item.name));
+  const serviceWilayatOptions = selectedServiceGovernorates.flatMap((item) => item.wilayats.map((wilayat) => ({ ...wilayat, governorate: item.name, governorateAr: item.nameAr })));
+  const toggleServiceGovernorate = (name: string) => {
+    const governorate = omanGovernorates.find((item) => item.name === name);
+    if (!governorate) return;
+    const selected = serviceGovernorates.includes(name);
+    setServiceGovernorates((current) => selected ? current.filter((item) => item !== name) : [...current, name]);
+    setServiceWilayats((current) => selected
+      ? current.filter((item) => !governorate.wilayats.some((wilayat) => wilayat.name === item))
+      : [...new Set([...current, ...governorate.wilayats.map((wilayat) => wilayat.name)])]);
+  };
+  const toggleServiceWilayat = (name: string) => setServiceWilayats((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
+  const goBackServiceLocation = () => setServiceLocationLevel('governorates');
   const selectedGovernorate = omanGovernorates.find((item) => item.name === propertyGovernorate);
   const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === propertyWilayat);
   const knownAreas = propertyWilayat ? omanWilayatAreas[propertyWilayat] ?? [] : [];
@@ -288,28 +303,23 @@ export default function ServiceRegistrationScreen() {
              </View>
            </> : <>
            <Field label={isArabic ? categoryCopy.specialtyAr : categoryCopy.specialtyEn} testID="registration-specialty" value={form.specialty} onChangeText={(value) => update('specialty', value)} placeholder={isArabic ? categoryCopy.specialtyPlaceholderAr : categoryCopy.specialtyPlaceholderEn} isArabic={isArabic} colors={colors} />
-             <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'الولايات التي تقدم فيها الخدمة' : 'Wilayats you serve'}</Text>
-              <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'يمكنك اختيار أكثر من ولاية.' : 'You can select more than one wilayat.'}</Text>
-              <Pressable testID="coverage-all-oman" accessibilityRole="checkbox" accessibilityState={{ checked: servesAllGovernorates }} onPress={() => setServiceWilayats(servesAllGovernorates ? [] : allWilayats.map((item) => item.name))} style={[styles.choiceRow, { borderColor: servesAllGovernorates ? colors.primary : colors.border, backgroundColor: servesAllGovernorates ? colors.primarySoft : colors.background }]}>
+              {servesAllGovernorates ? null : <View testID="service-location-picker" style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+               <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'الولايات التي تقدم فيها الخدمة' : 'Wilayats you serve'}</Text>
+               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر المحافظات والولايات داخل نفس القائمة.' : 'Choose governorates and wilayats in the same list.'}</Text>
+               {serviceLocationLevel === 'wilayats' ? <Pressable testID="service-location-back" accessibilityLabel={isArabic ? 'العودة للمحافظات' : 'Back to governorates'} onPress={goBackServiceLocation} style={[styles.locationPath, { borderColor: colors.border, backgroundColor: colors.background }]}><Feather name={isArabic ? 'chevron-right' : 'chevron-left'} size={20} color={colors.primary} /><View style={{ flex: 1 }}><Text style={[styles.locationLevel, { color: colors.primary }]}>{isArabic ? 'الولايات' : 'Wilayats'}</Text><Text style={[styles.locationSelection, { color: colors.foreground }]}>{isArabic ? `${serviceGovernorates.length} محافظة مختارة` : `${serviceGovernorates.length} governorates selected`}</Text></View></Pressable> : null}
+               {serviceLocationLevel === 'governorates'
+                 ? <MultiChoiceGrid options={omanGovernorates.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))} values={serviceGovernorates} onToggle={toggleServiceGovernorate} colors={colors} prefix="coverage-governorate" />
+                 : <MultiChoiceGrid options={serviceWilayatOptions.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))} values={serviceWilayats} onToggle={toggleServiceWilayat} colors={colors} prefix="coverage-wilayat" />}
+               {serviceLocationLevel === 'governorates' && serviceGovernorates.length > 0 ? <ActionButton label={isArabic ? 'اختيار الولايات' : 'Choose wilayats'} onPress={() => setServiceLocationLevel('wilayats')} /> : null}
+              </View>}
+              <Pressable testID="coverage-all-oman" accessibilityRole="checkbox" accessibilityState={{ checked: servesAllGovernorates }} onPress={() => { const next = !servesAllGovernorates; setServiceWilayats(next ? allWilayats.map((item) => item.name) : []); setServiceGovernorates(next ? omanGovernorates.map((item) => item.name) : []); setServiceLocationLevel('governorates'); }} style={[styles.choiceRow, { borderColor: servesAllGovernorates ? colors.primary : colors.border, backgroundColor: servesAllGovernorates ? colors.primarySoft : colors.surface }]}>
                 <Feather name={servesAllGovernorates ? 'check-square' : 'square'} size={19} color={colors.primary} />
-                <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'كل السلطنة' : 'All Oman'}</Text></View>
+                <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'كل السلطنة' : 'All Oman'}</Text><Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'تفعيل هذا الخيار يلغي اختيار المحافظات والولايات.' : 'Enabling this hides the governorate and wilayat picker.'}</Text></View>
               </Pressable>
-              {omanGovernorates.map((governorate) => <View key={governorate.name} style={styles.governorateGroup}>
-                <Text style={[styles.governorateTitle, { color: colors.foreground }]}>{isArabic ? governorate.nameAr : governorate.name}</Text>
-                <View style={styles.wilayatGrid}>{governorate.wilayats.map((wilayat) => {
-                  const selected = serviceWilayats.includes(wilayat.name);
-                  return <Pressable key={wilayat.name} testID={`coverage-wilayat-${wilayat.name}`} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => toggleWilayat(wilayat.name)} style={[styles.wilayatChoice, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.background }]}>
-                    <Feather name={selected ? 'check-square' : 'square'} size={16} color={selected ? colors.primary : colors.mutedForeground} />
-                    <Text style={[styles.wilayatChoiceText, { color: colors.foreground }]}>{isArabic ? wilayat.nameAr : wilayat.name}</Text>
-                  </Pressable>;
-                })}</View>
-              </View>)}
              <Pressable testID="delivery-available" accessibilityRole="checkbox" accessibilityState={{ checked: deliveryAvailable }} onPress={() => setDeliveryAvailable((current) => !current)} style={[styles.deliveryRow, { borderTopColor: colors.border }]}>
                <Feather name={deliveryAvailable ? 'check-square' : 'square'} size={20} color={colors.primary} />
                <Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'يوفر التوصيل أو الوصول إلى موقع العميل' : 'Delivery or travel to the customer is available'}</Text>
              </Pressable>
-            </View>
            </>}
            <View><Text style={[styles.label, { color: colors.foreground }]}>{isProperty ? (isArabic ? 'وصف العقار' : 'Property description') : (isArabic ? 'نبذة عن الأعمال والخدمات' : 'About the work and services')}</Text><TextInput testID="registration-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? categoryCopy.descriptionPlaceholderAr : categoryCopy.descriptionPlaceholderEn} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات الأعمال' : 'Work photos and videos'}</Text><Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? `${media.length}/15 · الحد الإجمالي 24 م.ب` : `${media.length}/15 · 24 MB total limit`}</Text></View>
@@ -345,6 +355,10 @@ function Field({ label, testID, value, onChangeText, placeholder, isArabic, colo
 
 function ChoiceGrid({ options, value, onChange, colors }: { options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; colors: ReturnType<typeof useColors> }) {
   return <View style={styles.wilayatGrid}>{options.map((option) => { const selected = option.value === value; return <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => onChange(option.value)} style={[styles.wilayatChoice, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.background }]}><Feather name={selected ? 'check-circle' : 'circle'} size={16} color={selected ? colors.primary : colors.mutedForeground} /><Text style={[styles.wilayatChoiceText, { color: colors.foreground }]}>{option.label}</Text></Pressable>; })}</View>;
+}
+
+function MultiChoiceGrid({ options, values, onToggle, colors, prefix }: { options: { value: string; label: string }[]; values: string[]; onToggle: (value: string) => void; colors: ReturnType<typeof useColors>; prefix: string }) {
+  return <View style={styles.wilayatGrid}>{options.map((option) => { const selected = values.includes(option.value); return <Pressable key={option.value} testID={`${prefix}-${option.value}`} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => onToggle(option.value)} style={[styles.wilayatChoice, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.background }]}><Feather name={selected ? 'check-square' : 'square'} size={16} color={selected ? colors.primary : colors.mutedForeground} /><Text style={[styles.wilayatChoiceText, { color: colors.foreground }]}>{option.label}</Text></Pressable>; })}</View>;
 }
 
 function ChoiceSection({ title, options, value, onChange, colors }: { title: string; options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; colors: ReturnType<typeof useColors> }) {

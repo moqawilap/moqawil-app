@@ -76,6 +76,10 @@ export default function HomeScreen() {
     selectLocation({ city, area });
     setLocationPickerVisible(false);
   };
+  const useCurrentLocation = async () => {
+    setLocationPickerVisible(false);
+    await refreshLocation();
+  };
   const renderSection = (id: HomepageSectionId) => {
     const section = homepage.sections[id];
     if (!section?.visible) return null;
@@ -165,7 +169,7 @@ export default function HomeScreen() {
                   </View>
                   <Pressable testID="close-location-picker" accessibilityRole="button" accessibilityLabel={isArabic ? 'إغلاق' : 'Close'} onPress={() => setLocationPickerVisible(false)} style={[styles.locationClose, { backgroundColor: colors.surface, borderColor: colors.border }]}><Feather name="x" size={18} color={colors.foreground} /></Pressable>
                 </View>
-                <Pressable testID="detect-current-location" accessibilityRole="button" onPress={() => { setLocationPickerVisible(false); refreshLocation().catch(() => undefined); }} style={[styles.detectLocationButton, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
+                <Pressable testID="detect-current-location" accessibilityRole="button" accessibilityLabel={isArabic ? 'السماح للتطبيق بالوصول إلى موقعك الحالي' : 'Allow the app to access your current location'} onPress={() => { useCurrentLocation().catch(() => undefined); }} style={[styles.detectLocationButton, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
                   <View style={[styles.detectLocationIcon, { backgroundColor: colors.primary }]}><Feather name="navigation" size={15} color={colors.primaryForeground} /></View>
                   <View style={styles.detectLocationCopy}><Text style={[styles.detectLocationTitle, { color: colors.foreground }]}>{isArabic ? 'استخدم موقعي الحالي' : 'Use my current location'}</Text><Text style={[styles.detectLocationSubtitle, { color: colors.mutedForeground }]}>{isArabic ? 'تحديد الموقع تلقائيًا عبر GPS' : 'Detect automatically with GPS'}</Text></View>
                   <Feather name="chevron-right" size={17} color={colors.primary} />
