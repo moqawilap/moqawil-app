@@ -22,6 +22,8 @@ export interface MyServiceReview {
   deliveryAvailable: boolean;
   description: string;
   mediaUrls: string[];
+  /** @nullable */
+  subscriptionPlanCode: string | null;
   status: MyServiceReviewStatus;
   /** @nullable */
   reviewNote?: string | null;

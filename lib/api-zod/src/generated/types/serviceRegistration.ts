@@ -21,6 +21,8 @@ export interface ServiceRegistration {
   propertyDetails?: PropertyRegistrationDetails | null;
   description: string;
   mediaUrls: string[];
+  /** @nullable */
+  subscriptionPlanCode: string | null;
   status: ServiceRegistrationStatus;
   /** @nullable */
   reviewNote?: string | null;

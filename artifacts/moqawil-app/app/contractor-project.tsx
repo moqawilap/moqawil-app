@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
+import { SubscriptionPlanSelector, type ServiceSubscriptionPlanCode } from '@/components/SubscriptionPlanSelector';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import {
@@ -48,6 +49,7 @@ export default function ContractorProjectScreen() {
   const [form, setForm] = useState({ title: '', city: '', description: '' });
   const [media, setMedia] = useState<ProjectMedia[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [subscriptionPlanCode, setSubscriptionPlanCode] = useState<ServiceSubscriptionPlanCode | ''>('');
   const [mediaLoading, setMediaLoading] = useState(false);
 
   const createProject = useCreateMyContractorProject({ mutation: {
@@ -130,7 +132,7 @@ export default function ContractorProjectScreen() {
   }
 
   const totalBytes = media.reduce((total, item) => total + item.size, 0);
-  const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && form.description.trim().length >= 20 && media.length >= 1 && termsAccepted;
+  const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && form.description.trim().length >= 20 && media.length >= 1 && subscriptionPlanCode.length > 0 && termsAccepted;
   const terms = isArabic ? [
     'يجب أن يكون مقدم الإعلان مقاولًا وأن تكون بيانات المنشأة صحيحة.',
     'يجب أن يكون المشروع من تنفيذ المقاول، مع امتلاك حق نشر الصور والفيديوهات وموافقة صاحب المشروع عند الحاجة.',
@@ -163,12 +165,13 @@ export default function ContractorProjectScreen() {
             {media.map((item) => <View key={item.id} style={[styles.mediaCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>{item.type === 'image' ? <Image source={{ uri: item.dataUrl }} style={styles.preview} /> : <View style={[styles.videoPreview, { backgroundColor: colors.primarySoft }]}><Feather name="video" size={24} color={colors.primary} /><Text numberOfLines={1} style={[styles.videoName, { color: colors.foreground }]}>{item.name}</Text></View>}<Pressable accessibilityLabel={isArabic ? 'حذف الملف' : 'Remove file'} onPress={() => setMedia((current) => current.filter((mediaItem) => mediaItem.id !== item.id))} style={[styles.removeMedia, { backgroundColor: colors.navy }]}><Feather name="x" size={13} color="#FFFFFF" /></Pressable></View>)}
             {media.length < MAX_MEDIA ? <Pressable testID="add-project-media" onPress={pickMedia} disabled={mediaLoading} style={[styles.addMedia, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>{mediaLoading ? <ActivityIndicator color={colors.primary} /> : <><Feather name="plus" size={23} color={colors.primary} /><Text style={[styles.addMediaText, { color: colors.primary }]}>{isArabic ? 'إضافة وسائط' : 'Add media'}</Text></>}</Pressable> : null}
           </View>
+           <SubscriptionPlanSelector category="service" value={subscriptionPlanCode} onChange={(code) => setSubscriptionPlanCode(code as ServiceSubscriptionPlanCode)} />
           <View style={[styles.termsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.termsTitle, { color: colors.foreground }]}>{isArabic ? 'شروط تسجيل الإعلان' : 'Advertisement terms'}</Text>
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="project-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط تسجيل ونشر الإعلان' : 'I agree to the advertisement registration and publishing terms'}</Text></Pressable>
           </View>
-          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أدخل الاسم والموقع ووصفًا من 20 حرفًا على الأقل، وأضف ملفًا واحدًا، ثم وافق على الشروط.' : 'Enter a name, location, a description of at least 20 characters, add one file, and accept the terms.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} /></View>
+          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أدخل الاسم والموقع ووصفًا من 20 حرفًا على الأقل، واختر الباقة، وأضف ملفًا واحدًا، ثم وافق على الشروط.' : 'Enter a name, location, a description of at least 20 characters, choose a plan, add one file, and accept the terms.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, termsAccepted: true } }); }} /></View>
         </View>
       </ScrollView>
     </View>

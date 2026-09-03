@@ -6,6 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader, ServiceIcon } from '@/components/MoqawilUI';
+import { SubscriptionPlanSelector, type SubscriptionPlanCode } from '@/components/SubscriptionPlanSelector';
 import { serviceItems, type ServiceId } from '@/data/mockData';
 import { omanGovernorates, omanWilayatAreas } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
@@ -142,6 +143,7 @@ export default function ServiceRegistrationScreen() {
   const [activeCount, setActiveCount] = useState<keyof typeof propertyCounts | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [subscriptionPlanCode, setSubscriptionPlanCode] = useState<SubscriptionPlanCode | ''>('');
   const [mediaLoading, setMediaLoading] = useState(false);
   const totalBytes = useMemo(() => media.reduce((sum, item) => sum + item.size, 0), [media]);
   const servesAllGovernorates = serviceWilayats.length === allWilayats.length;
@@ -266,7 +268,7 @@ export default function ServiceRegistrationScreen() {
     'The administrator reviews the registration before it appears and may request changes, reject it, or remove it.',
   ];
   const validProperty = !isProperty || (propertyGovernorate && propertyWilayat && finalPropertyArea.length >= 2 && propertyType && Number(propertySize) > 0);
-  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && termsAccepted;
+  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && subscriptionPlanCode.length > 0 && termsAccepted;
   const primaryLocation = allWilayats.find((item) => item.name === serviceWilayats[0]);
 
   return (
@@ -327,12 +329,13 @@ export default function ServiceRegistrationScreen() {
             {media.map((item) => <View key={item.id} style={[styles.mediaCard, { borderColor: colors.border }]}>{item.type === 'image' ? <Image source={{ uri: item.dataUrl }} style={styles.preview} /> : <View style={[styles.video, { backgroundColor: colors.primarySoft }]}><Feather name="video" size={23} color={colors.primary} /><Text numberOfLines={1} style={[styles.videoName, { color: colors.foreground }]}>{item.name}</Text></View>}<Pressable onPress={() => setMedia((current) => current.filter((mediaItem) => mediaItem.id !== item.id))} style={[styles.remove, { backgroundColor: colors.navy }]}><Feather name="x" size={13} color="#FFFFFF" /></Pressable></View>)}
             {media.length < MAX_MEDIA ? <Pressable testID="add-registration-media" onPress={pickMedia} disabled={mediaLoading} style={[styles.addMedia, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>{mediaLoading ? <ActivityIndicator color={colors.primary} /> : <><Feather name="plus" size={23} color={colors.primary} /><Text style={[styles.addMediaText, { color: colors.primary }]}>{isArabic ? 'إضافة وسائط' : 'Add media'}</Text></>}</Pressable> : null}
           </View>
+           <SubscriptionPlanSelector category={isProperty ? 'real-estate' : 'service'} value={subscriptionPlanCode} onChange={setSubscriptionPlanCode} />
           <View style={[styles.termsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.termsTitle, { color: colors.foreground }]}>{isArabic ? 'شروط التسجيل والإعلان' : 'Registration and advertising terms'}</Text>
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-            <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all choices and fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
+            <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، واختر الباقة، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all choices and fields, choose a plan, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, termsAccepted: true } }); }} />
         </View>
       </ScrollView>
       <Modal visible={activeCount !== null} transparent animationType="fade" onRequestClose={() => setActiveCount(null)}>

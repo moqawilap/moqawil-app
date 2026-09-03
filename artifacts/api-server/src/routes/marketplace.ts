@@ -34,6 +34,21 @@ const promoteCustomerToContractor = auth.promoteCustomerToContractor ?? (async (
 });
 const router: IRouter = Router();
 const decimal = (value: string | null) => value === null ? null : Number(value);
+router.get("/subscription-plans", async (_req, res, next) => {
+  try {
+    const settings = await getSettings();
+    const plans = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true)).orderBy(asc(subscriptionPlans.category), asc(subscriptionPlans.billingMonths));
+    res.json(plans.map((plan) => ({
+      code: plan.code,
+      name: plan.name,
+      category: plan.category,
+      billingMonths: plan.billingMonths,
+      trialMonths: settings.trialMonths,
+      priceUsd: Number(plan.priceUsd),
+      priceOmaniRial: Number(plan.priceOmaniRial),
+    })));
+  } catch (error) { next(error); }
+});
 async function logAudit(actorUserId: string, action: string, entityType: string, entityId: string, metadata: Record<string, unknown> = {}) {
   await db.insert(auditEvents).values({ actorUserId, action, entityType, entityId, metadata });
 }
@@ -97,7 +112,7 @@ async function subscriptionResponse(item: typeof subscriptions.$inferSelect) {
     db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, item.contractorId) }),
     getSettings(),
   ]);
-  return { ...(await refreshSubscriptionStatus(item.id))!, contractorId: item.contractorId, contractorName: profile?.businessName ?? null, planName: plan?.name ?? "Unavailable plan", billingMonths: plan?.billingMonths ?? 0, trialMonths: settings.trialMonths, priceOmaniRial: Number(plan?.priceOmaniRial ?? settings.defaultPriceOmaniRial) };
+  return { ...(await refreshSubscriptionStatus(item.id))!, contractorId: item.contractorId, contractorName: profile?.businessName ?? null, planName: plan?.name ?? "Unavailable plan", billingMonths: plan?.billingMonths ?? 0, trialMonths: settings.trialMonths, priceUsd: Number(plan?.priceUsd ?? 0), priceOmaniRial: Number(plan?.priceOmaniRial ?? settings.defaultPriceOmaniRial) };
 }
 async function paymentResponse(item: typeof payments.$inferSelect) {
   const subscription = await db.query.subscriptions.findFirst({ where: eq(subscriptions.id, item.subscriptionId) });
@@ -1080,6 +1095,9 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       return;
     }
     const input = req.body ?? {};
+    const selectedPlan = typeof input.subscriptionPlanCode === "string"
+      ? await db.query.subscriptionPlans.findFirst({ where: and(eq(subscriptionPlans.code, input.subscriptionPlanCode), eq(subscriptionPlans.category, "service"), eq(subscriptionPlans.isActive, true)) })
+      : null;
     const mediaUrls = Array.isArray(input.mediaUrls) ? input.mediaUrls : [];
     const validMedia = mediaUrls.length >= 1
       && mediaUrls.length <= 15
@@ -1097,6 +1115,7 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       || typeof input.city !== "string"
       || input.city.trim().length < 2
       || input.city.length > 100
+      || !selectedPlan
       || input.termsAccepted !== true
       || !validMedia
       || totalMediaLength > 32_000_000
@@ -1111,6 +1130,7 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       category: "contractors",
       city: input.city.trim(),
       imageUrls: mediaUrls,
+      subscriptionPlanCode: selectedPlan.code,
       isPublished: false,
       reviewStatus: "pending_review",
     }).returning();
@@ -1122,6 +1142,7 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       category: "contractors",
       city: project.city!,
       mediaUrls: project.imageUrls,
+      subscriptionPlanCode: project.subscriptionPlanCode,
       status: "pending_review",
       createdAt: project.createdAt.toISOString(),
     });
@@ -1141,6 +1162,10 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
         && (/^data:(image|video)\//.test(value) || /^https:\/\//.test(value)));
     const totalMediaLength = mediaUrls.reduce((total: number, value: unknown) => total + (typeof value === "string" ? value.length : 0), 0);
     const isProperty = input.category === "real-estate";
+    const expectedPlanCategory = isProperty ? "real-estate" : "service";
+    const selectedPlan = typeof input.subscriptionPlanCode === "string"
+      ? await db.query.subscriptionPlans.findFirst({ where: and(eq(subscriptionPlans.code, input.subscriptionPlanCode), eq(subscriptionPlans.category, expectedPlanCategory), eq(subscriptionPlans.isActive, true)) })
+      : null;
     if (
       typeof input.category !== "string"
       || !allowedCategories.includes(input.category)
@@ -1160,6 +1185,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       || typeof input.description !== "string"
       || input.description.trim().length < 20
       || input.description.length > 5000
+      || !selectedPlan
       || input.termsAccepted !== true
       || !validMedia
       || totalMediaLength > 32_000_000
@@ -1179,6 +1205,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       propertyDetails: isProperty ? input.propertyDetails : null,
       description: input.description.trim(),
       mediaUrls,
+      subscriptionPlanCode: selectedPlan.code,
       status: "pending_review",
     }).returning();
     await logAudit(user.id, "service_registration_submitted", "service_registration", registration.id, { category: input.category, mediaCount: mediaUrls.length });
@@ -1194,6 +1221,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       propertyDetails: registration.propertyDetails,
       description: registration.description,
       mediaUrls: registration.mediaUrls,
+      subscriptionPlanCode: registration.subscriptionPlanCode,
       status: registration.status,
       createdAt: registration.createdAt.toISOString(),
     });
@@ -1214,13 +1242,13 @@ router.get("/me/reviews", requireUser, async (req, res, next) => {
       ...contractorProjects.map(({ project }) => ({
         id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
         city: project.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
-        status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
+        subscriptionPlanCode: project.subscriptionPlanCode, status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
       })),
       ...registrations.map((registration) => ({
         id: registration.id, kind: "registration", category: registration.category, title: registration.title,
         specialty: registration.specialty, city: registration.city, serviceWilayats: registration.serviceWilayats, servesAllGovernorates: registration.servesAllGovernorates,
         deliveryAvailable: registration.deliveryAvailable, propertyDetails: registration.propertyDetails, description: registration.description,
-        mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
+        mediaUrls: registration.mediaUrls, subscriptionPlanCode: registration.subscriptionPlanCode, status: registration.status, reviewNote: registration.reviewNote,
         createdAt: registration.createdAt.toISOString(),
       })),
     ]);
@@ -1258,7 +1286,7 @@ router.patch("/me/reviews/:kind/:id", requireUser, async (req, res, next) => {
         reviewNote: null,
         updatedAt: new Date(),
       }).where(eq(serviceRegistrations.id, id)).returning();
-      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+      res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, description: updated.description, mediaUrls: updated.mediaUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
       return;
     }
     const [ownedProject] = await db.select({ project: projects }).from(projects)
@@ -1266,7 +1294,7 @@ router.patch("/me/reviews/:kind/:id", requireUser, async (req, res, next) => {
       .where(and(eq(projects.id, id), eq(contractorProfiles.userId, user.id))).limit(1);
     if (!ownedProject) { res.status(404).json({ error: "Project not found" }); return; }
     const [updated] = await db.update(projects).set({ title: input.title.trim(), city: input.city.trim(), description: input.description.trim(), imageUrls: mediaUrls, reviewStatus: "pending_review", reviewNote: null, isPublished: false, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
-    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 
@@ -1481,14 +1509,14 @@ router.get("/admin/reviews", requireUser, requireAdmin, async (req, res, next) =
       ...projectRows.map(({ project, ownerName, ownerEmail }) => ({
         id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
         city: project.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
-        status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
+        subscriptionPlanCode: project.subscriptionPlanCode, status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
         ownerName, ownerEmail,
       })),
       ...registrationRows.map(({ registration, ownerName, ownerEmail }) => ({
         id: registration.id, kind: "registration", category: registration.category, title: registration.title,
         specialty: registration.specialty, city: registration.city, serviceWilayats: registration.serviceWilayats, servesAllGovernorates: registration.servesAllGovernorates,
         deliveryAvailable: registration.deliveryAvailable, propertyDetails: registration.propertyDetails, description: registration.description,
-        mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
+        mediaUrls: registration.mediaUrls, subscriptionPlanCode: registration.subscriptionPlanCode, status: registration.status, reviewNote: registration.reviewNote,
         createdAt: registration.createdAt.toISOString(), ownerName, ownerEmail,
       })),
     ];
@@ -1581,12 +1609,20 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
           });
         }
         const subscription = await tx.query.subscriptions.findFirst({ where: eq(subscriptions.contractorId, profile.id) });
+        const selectedPlan = await tx.query.subscriptionPlans.findFirst({
+          where: and(
+            eq(subscriptionPlans.code, existing.subscriptionPlanCode ?? "service-annual"),
+            eq(subscriptionPlans.category, "service"),
+            eq(subscriptionPlans.isActive, true),
+          ),
+        });
+        if (!selectedPlan) throw new Error("Selected subscription plan is unavailable");
         if (!subscription) {
-          const plan = await tx.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.isActive, true) });
-          if (!plan) throw new Error("No active subscription plan is configured");
           const settings = await getSettings();
           const now = new Date();
-          await tx.insert(subscriptions).values({ contractorId: profile.id, planId: plan.id, status: "free_trial", trialStartedAt: now, trialEndsAt: addMonths(now, settings.trialMonths) });
+          await tx.insert(subscriptions).values({ contractorId: profile.id, planId: selectedPlan.id, status: "free_trial", trialStartedAt: now, trialEndsAt: addMonths(now, settings.trialMonths) });
+        } else if (subscription.planId !== selectedPlan.id) {
+          await tx.update(subscriptions).set({ planId: selectedPlan.id, updatedAt: new Date() }).where(eq(subscriptions.id, subscription.id));
         }
         return registration;
       });
@@ -1596,15 +1632,26 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
       }
       await createInAppNotification(existing.userId, action === "approve" ? "Service approved" : action === "reject" ? "Service registration cancelled" : "Service changes requested", note || (action === "approve" ? "Your service registration was approved." : "Your service registration was not approved."), { registrationId: id, reviewStatus: nextStatus });
       await logAudit(admin.id, `service_review_${action}`, "service_registration", id, { note });
-       res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, propertyDetails: updated.propertyDetails, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+       res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, propertyDetails: updated.propertyDetails, description: updated.description, mediaUrls: updated.mediaUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
       return;
     }
     const [existing] = await db.select({ project: projects, ownerId: contractorProfiles.userId }).from(projects).innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id)).where(eq(projects.id, id)).limit(1);
     if (!existing) { res.status(404).json({ error: "Project not found" }); return; }
     const [updated] = await db.update(projects).set({ reviewStatus: nextStatus, reviewNote: note || null, isPublished: action === "approve", updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+    if (action === "approve") {
+      const selectedPlan = await db.query.subscriptionPlans.findFirst({
+        where: and(
+          eq(subscriptionPlans.code, existing.project.subscriptionPlanCode ?? "service-annual"),
+          eq(subscriptionPlans.category, "service"),
+          eq(subscriptionPlans.isActive, true),
+        ),
+      });
+      if (!selectedPlan) throw new Error("Selected subscription plan is unavailable");
+      await db.update(subscriptions).set({ planId: selectedPlan.id, updatedAt: new Date() }).where(eq(subscriptions.contractorId, existing.project.contractorId));
+    }
     await createInAppNotification(existing.ownerId, action === "approve" ? "Project approved" : action === "reject" ? "Project cancelled" : "Project changes requested", note || (action === "approve" ? "Your contractor project was approved." : "Your contractor project was not approved."), { projectId: id, reviewStatus: nextStatus });
     await logAudit(admin.id, `project_review_${action}`, "project", id, { note });
-    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, next) => {

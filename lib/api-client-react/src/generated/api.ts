@@ -77,6 +77,7 @@ import type {
   ServiceRequestCreate,
   ServiceReviewResubmit,
   Subscription,
+  SubscriptionPlan,
   UserProfile,
   WorkshopRequest
 } from './api.schemas';
@@ -167,6 +168,77 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListSubscriptionPlansUrl = () => {
+
+
+
+
+  return `/api/subscription-plans`
+}
+
+export const listSubscriptionPlans = async ( options?: Parameters<typeof customFetch>[1]): Promise<SubscriptionPlan[]> => {
+
+  return customFetch<SubscriptionPlan[]>(getListSubscriptionPlansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSubscriptionPlansQueryKey = () => {
+    return [
+    `/api/subscription-plans`
+    ] as const;
+    }
+
+
+export const getListSubscriptionPlansQueryOptions = <TData = Awaited<ReturnType<typeof listSubscriptionPlans>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSubscriptionPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSubscriptionPlansQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSubscriptionPlans>>> = ({ signal }) => listSubscriptionPlans({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSubscriptionPlans>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSubscriptionPlansQueryResult = NonNullable<Awaited<ReturnType<typeof listSubscriptionPlans>>>
+export type ListSubscriptionPlansQueryError = ErrorType<unknown>
+
+
+
+export function useListSubscriptionPlans<TData = Awaited<ReturnType<typeof listSubscriptionPlans>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSubscriptionPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSubscriptionPlansQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

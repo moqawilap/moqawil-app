@@ -15,6 +15,8 @@ export interface ContractorProjectRegistration {
   category: ContractorProjectRegistrationCategory;
   city: string;
   mediaUrls: string[];
+  /** @nullable */
+  subscriptionPlanCode: string | null;
   status: ContractorProjectRegistrationStatus;
   createdAt: Date;
 }

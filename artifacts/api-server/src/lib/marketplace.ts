@@ -4,10 +4,17 @@ import { DEFAULT_HOMEPAGE_SETTINGS, normalizeHomepageSettings } from "./homepage
 export { DEFAULT_HOMEPAGE_SETTINGS, HOMEPAGE_SECTION_IDS, isHomepageSettings, normalizeHomepageSettings } from "./homepageSettings";
 
 export const DEFAULT_SETTINGS = {
-  trialMonths: 4,
-  defaultPriceOmaniRial: 100,
+  trialMonths: 1,
+  defaultPriceOmaniRial: 30.8,
   rankingWeights: { rating: 35, reviews: 15, projects: 15, profile: 10, verification: 10, activity: 10, engagement: 5 } satisfies RankingWeights,
 };
+
+export const SUBSCRIPTION_PLAN_DEFINITIONS = [
+  { code: "service-monthly", name: "Service Monthly", category: "service", priceUsd: "10.00", priceOmaniRial: "3.850", billingMonths: 1 },
+  { code: "service-annual", name: "Service Annual", category: "service", priceUsd: "80.00", priceOmaniRial: "30.800", billingMonths: 12 },
+  { code: "real-estate-monthly", name: "Real Estate Monthly", category: "real-estate", priceUsd: "15.00", priceOmaniRial: "5.775", billingMonths: 1 },
+  { code: "real-estate-annual", name: "Real Estate Annual", category: "real-estate", priceUsd: "120.00", priceOmaniRial: "46.200", billingMonths: 12 },
+] as const;
 
 /**
  * Provision only the operational records required for marketplace onboarding.
@@ -16,23 +23,35 @@ export const DEFAULT_SETTINGS = {
  */
 export async function ensureMarketplaceDefaults() {
   await db.transaction(async (tx) => {
-    await tx.insert(subscriptionPlans).values({
-      code: "annual-standard",
-      name: "Standard Annual",
-      priceOmaniRial: DEFAULT_SETTINGS.defaultPriceOmaniRial.toFixed(3),
-      billingMonths: 12,
-      isActive: true,
-    }).onConflictDoNothing({ target: subscriptionPlans.code });
+    await tx.update(subscriptionPlans).set({ isActive: false, updatedAt: new Date() }).where(eq(subscriptionPlans.code, "annual-standard"));
+    for (const plan of SUBSCRIPTION_PLAN_DEFINITIONS) {
+      await tx.insert(subscriptionPlans).values({
+        ...plan,
+        isActive: true,
+      }).onConflictDoUpdate({
+        target: subscriptionPlans.code,
+        set: { ...plan, isActive: true, updatedAt: new Date() },
+      });
+    }
 
-    await tx.insert(marketplaceSettings).values([
-      {
-        key: "subscription",
+    await tx.insert(marketplaceSettings).values({
+      key: "subscription",
+      value: {
+        trialMonths: DEFAULT_SETTINGS.trialMonths,
+        defaultPriceOmaniRial: DEFAULT_SETTINGS.defaultPriceOmaniRial,
+      },
+      description: "Subscription lifecycle configuration",
+    }).onConflictDoUpdate({
+      target: marketplaceSettings.key,
+      set: {
         value: {
           trialMonths: DEFAULT_SETTINGS.trialMonths,
           defaultPriceOmaniRial: DEFAULT_SETTINGS.defaultPriceOmaniRial,
         },
-        description: "Subscription lifecycle configuration",
+        updatedAt: new Date(),
       },
+    });
+    await tx.insert(marketplaceSettings).values([
       {
         key: "ranking",
         value: DEFAULT_SETTINGS.rankingWeights,

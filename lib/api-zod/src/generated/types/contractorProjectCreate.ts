@@ -5,6 +5,7 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
+import type { ContractorProjectCreateSubscriptionPlanCode } from './contractorProjectCreateSubscriptionPlanCode';
 
 export interface ContractorProjectCreate {
   /**
@@ -28,5 +29,6 @@ export interface ContractorProjectCreate {
      * @items.maxLength 8000000
      */
   mediaUrls: string[];
+  subscriptionPlanCode: ContractorProjectCreateSubscriptionPlanCode;
   termsAccepted: true;
 }

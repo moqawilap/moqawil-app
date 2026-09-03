@@ -7,6 +7,7 @@
  */
 import type { PropertyRegistrationDetails } from './propertyRegistrationDetails';
 import type { ServiceRegistrationCreateCategory } from './serviceRegistrationCreateCategory';
+import type { ServiceRegistrationCreateSubscriptionPlanCode } from './serviceRegistrationCreateSubscriptionPlanCode';
 
 export interface ServiceRegistrationCreate {
   category: ServiceRegistrationCreateCategory;
@@ -46,5 +47,6 @@ export interface ServiceRegistrationCreate {
      * @items.maxLength 8000000
      */
   mediaUrls: string[];
+  subscriptionPlanCode: ServiceRegistrationCreateSubscriptionPlanCode;
   termsAccepted: true;
 }

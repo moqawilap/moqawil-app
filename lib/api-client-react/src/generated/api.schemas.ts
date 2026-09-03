@@ -130,6 +130,49 @@ export type ContractorDetail = Contractor & ({
   reviews: Review[];
 });
 
+export type SubscriptionPlanCode = typeof SubscriptionPlanCode[keyof typeof SubscriptionPlanCode];
+
+
+export const SubscriptionPlanCode = {
+  'service-monthly': 'service-monthly',
+  'service-annual': 'service-annual',
+  'real-estate-monthly': 'real-estate-monthly',
+  'real-estate-annual': 'real-estate-annual',
+} as const;
+
+export type SubscriptionPlanCategory = typeof SubscriptionPlanCategory[keyof typeof SubscriptionPlanCategory];
+
+
+export const SubscriptionPlanCategory = {
+  service: 'service',
+  'real-estate': 'real-estate',
+} as const;
+
+export type SubscriptionPlanBillingMonths = typeof SubscriptionPlanBillingMonths[keyof typeof SubscriptionPlanBillingMonths];
+
+
+export const SubscriptionPlanBillingMonths = {
+  NUMBER_1: 1,
+  NUMBER_12: 12,
+} as const;
+
+export type SubscriptionPlanTrialMonths = typeof SubscriptionPlanTrialMonths[keyof typeof SubscriptionPlanTrialMonths];
+
+
+export const SubscriptionPlanTrialMonths = {
+  NUMBER_1: 1,
+} as const;
+
+export interface SubscriptionPlan {
+  code: SubscriptionPlanCode;
+  name: string;
+  category: SubscriptionPlanCategory;
+  billingMonths: SubscriptionPlanBillingMonths;
+  trialMonths: SubscriptionPlanTrialMonths;
+  priceUsd: number;
+  priceOmaniRial: number;
+}
+
 export type SubscriptionStatus = typeof SubscriptionStatus[keyof typeof SubscriptionStatus];
 
 
@@ -159,6 +202,7 @@ export interface Subscription {
   currentPeriodEndsAt?: string | null;
   /** @nullable */
   cancelledAt?: string | null;
+  priceUsd: number;
   priceOmaniRial: number;
 }
 
@@ -542,6 +586,14 @@ export interface ContractorProvisioning {
   subscription: Subscription;
 }
 
+export type ContractorProjectCreateSubscriptionPlanCode = typeof ContractorProjectCreateSubscriptionPlanCode[keyof typeof ContractorProjectCreateSubscriptionPlanCode];
+
+
+export const ContractorProjectCreateSubscriptionPlanCode = {
+  'service-monthly': 'service-monthly',
+  'service-annual': 'service-annual',
+} as const;
+
 export interface ContractorProjectCreate {
   /**
      * @minLength 2
@@ -564,6 +616,7 @@ export interface ContractorProjectCreate {
      * @items.maxLength 8000000
      */
   mediaUrls: string[];
+  subscriptionPlanCode: ContractorProjectCreateSubscriptionPlanCode;
   termsAccepted: true;
 }
 
@@ -588,6 +641,8 @@ export interface ContractorProjectRegistration {
   category: ContractorProjectRegistrationCategory;
   city: string;
   mediaUrls: string[];
+  /** @nullable */
+  subscriptionPlanCode: string | null;
   status: ContractorProjectRegistrationStatus;
   createdAt: string;
 }
@@ -649,6 +704,16 @@ export const ServiceRegistrationCreateCategory = {
   maintenance: 'maintenance',
 } as const;
 
+export type ServiceRegistrationCreateSubscriptionPlanCode = typeof ServiceRegistrationCreateSubscriptionPlanCode[keyof typeof ServiceRegistrationCreateSubscriptionPlanCode];
+
+
+export const ServiceRegistrationCreateSubscriptionPlanCode = {
+  'service-monthly': 'service-monthly',
+  'service-annual': 'service-annual',
+  'real-estate-monthly': 'real-estate-monthly',
+  'real-estate-annual': 'real-estate-annual',
+} as const;
+
 export interface ServiceRegistrationCreate {
   category: ServiceRegistrationCreateCategory;
   /**
@@ -687,6 +752,7 @@ export interface ServiceRegistrationCreate {
      * @items.maxLength 8000000
      */
   mediaUrls: string[];
+  subscriptionPlanCode: ServiceRegistrationCreateSubscriptionPlanCode;
   termsAccepted: true;
 }
 
@@ -723,6 +789,8 @@ export interface ServiceRegistration {
   propertyDetails?: PropertyRegistrationDetails | null;
   description: string;
   mediaUrls: string[];
+  /** @nullable */
+  subscriptionPlanCode: string | null;
   status: ServiceRegistrationStatus;
   /** @nullable */
   reviewNote?: string | null;
@@ -761,6 +829,8 @@ export interface MyServiceReview {
   deliveryAvailable: boolean;
   description: string;
   mediaUrls: string[];
+  /** @nullable */
+  subscriptionPlanCode: string | null;
   status: MyServiceReviewStatus;
   /** @nullable */
   reviewNote?: string | null;

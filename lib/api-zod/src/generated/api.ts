@@ -13,6 +13,18 @@ export const HealthCheckResponse = zod.object({
 })
 
 
+export const ListSubscriptionPlansResponseItem = zod.object({
+  "code": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
+  "name": zod.string(),
+  "category": zod.enum(['service', 'real-estate']),
+  "billingMonths": zod.union([zod.literal(1),zod.literal(12)]),
+  "trialMonths": zod.literal(1),
+  "priceUsd": zod.number(),
+  "priceOmaniRial": zod.number()
+})
+export const ListSubscriptionPlansResponse = zod.array(ListSubscriptionPlansResponseItem)
+
+
 export const listContractorsQueryMinBudgetMin = 0;
 
 export const listContractorsQueryMaxBudgetMin = 0;
@@ -819,6 +831,7 @@ export const GetMySubscriptionResponse = zod.object({
   "currentPeriodStartsAt": zod.coerce.date().nullish(),
   "currentPeriodEndsAt": zod.coerce.date().nullish(),
   "cancelledAt": zod.coerce.date().nullish(),
+  "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
 })
 
@@ -840,6 +853,7 @@ export const StartDevelopmentPaymentResponse = zod.object({
   "currentPeriodStartsAt": zod.coerce.date().nullish(),
   "currentPeriodEndsAt": zod.coerce.date().nullish(),
   "cancelledAt": zod.coerce.date().nullish(),
+  "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
 })
 
@@ -857,6 +871,7 @@ export const CancelMySubscriptionResponse = zod.object({
   "currentPeriodStartsAt": zod.coerce.date().nullish(),
   "currentPeriodEndsAt": zod.coerce.date().nullish(),
   "cancelledAt": zod.coerce.date().nullish(),
+  "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
 })
 
@@ -982,6 +997,7 @@ export const UpsertMyContractorProfileResponse = zod.object({
   "currentPeriodStartsAt": zod.coerce.date().nullish(),
   "currentPeriodEndsAt": zod.coerce.date().nullish(),
   "cancelledAt": zod.coerce.date().nullish(),
+  "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
 })
 })
@@ -1007,6 +1023,7 @@ export const CreateMyContractorProjectBody = zod.object({
   "description": zod.string().min(createMyContractorProjectBodyDescriptionMin).max(createMyContractorProjectBodyDescriptionMax),
   "city": zod.string().min(createMyContractorProjectBodyCityMin).max(createMyContractorProjectBodyCityMax),
   "mediaUrls": zod.array(zod.string().max(createMyContractorProjectBodyMediaUrlsItemMax)).min(1).max(createMyContractorProjectBodyMediaUrlsMax),
+  "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual']),
   "termsAccepted": zod.literal(true)
 })
 
@@ -1017,6 +1034,7 @@ export const CreateMyContractorProjectResponse = zod.object({
   "category": zod.enum(['contractors']),
   "city": zod.string(),
   "mediaUrls": zod.array(zod.string()),
+  "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review']),
   "createdAt": zod.coerce.date()
 })
@@ -1085,6 +1103,7 @@ export const CreateMyServiceRegistrationBody = zod.object({
 }),zod.null()]).optional(),
   "description": zod.string().min(createMyServiceRegistrationBodyDescriptionMin).max(createMyServiceRegistrationBodyDescriptionMax),
   "mediaUrls": zod.array(zod.string().max(createMyServiceRegistrationBodyMediaUrlsItemMax)).min(1).max(createMyServiceRegistrationBodyMediaUrlsMax),
+  "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
   "termsAccepted": zod.literal(true)
 })
 
@@ -1131,6 +1150,7 @@ export const CreateMyServiceRegistrationResponse = zod.object({
 }),zod.null()]).optional(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
+  "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
   "reviewNote": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1149,6 +1169,7 @@ export const ListMyServiceReviewsResponseItem = zod.object({
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
+  "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
   "reviewNote": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1206,6 +1227,7 @@ export const ResubmitMyServiceReviewResponse = zod.object({
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
+  "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
   "reviewNote": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1233,6 +1255,7 @@ export const ListAdminServiceReviewsResponse = zod.object({
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
+  "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
   "reviewNote": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1269,6 +1292,7 @@ export const UpdateAdminServiceReviewResponse = zod.object({
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
+  "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
   "reviewNote": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1863,6 +1887,7 @@ export const ListAdminSubscriptionsResponseItem = zod.object({
   "currentPeriodStartsAt": zod.coerce.date().nullish(),
   "currentPeriodEndsAt": zod.coerce.date().nullish(),
   "cancelledAt": zod.coerce.date().nullish(),
+  "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
 })
 export const ListAdminSubscriptionsResponse = zod.array(ListAdminSubscriptionsResponseItem)
@@ -2006,6 +2031,7 @@ export const UpdateAdminSubscriptionResponse = zod.object({
   "currentPeriodStartsAt": zod.coerce.date().nullish(),
   "currentPeriodEndsAt": zod.coerce.date().nullish(),
   "cancelledAt": zod.coerce.date().nullish(),
+  "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
 })
 

@@ -24,5 +24,6 @@ export interface Subscription {
   currentPeriodEndsAt?: Date | null;
   /** @nullable */
   cancelledAt?: Date | null;
+  priceUsd: number;
   priceOmaniRial: number;
 }
