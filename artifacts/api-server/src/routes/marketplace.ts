@@ -591,7 +591,7 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
       whatsapp: "واتساب",
       email: "بريد إلكتروني",
     } as const;
-    const admins = await db.select({ id: users.id }).from(users).where(and(eq(users.role, "admin"), eq(users.isActive, true)));
+    const admins = await db.select({ id: users.id, email: users.email }).from(users).where(and(eq(users.role, "admin"), eq(users.isActive, true)));
     if (admins.length) {
       await db.insert(notifications).values(admins.map((admin) => ({
         userId: admin.id,
@@ -613,6 +613,7 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
     await emailAdminContact({
       customerName: user.displayName ?? "",
       customerEmail: user.email,
+      adminEmails: admins.map((admin) => admin.email),
       channel: input.channel,
       category: input.category,
       subjectName: input.subjectName.trim(),
@@ -1300,9 +1301,11 @@ router.post("/service-requests", requireUser, async (req, res, next) => {
       return { created, recipientCount: candidates.length };
     });
     await createInAppNotification(user.id, "Request sent", request.recipientCount ? `Your request was sent to ${request.recipientCount} matching workshop${request.recipientCount === 1 ? "" : "s"}.` : "Your request is saved. Matching workshops will appear when available.", { requestId: request.created.id });
+    const adminEmails = await db.select({ email: users.email }).from(users).where(and(eq(users.role, "admin"), eq(users.isActive, true)));
     await emailAdminServiceRequest({
       customerName: user.displayName ?? "",
       customerEmail: user.email,
+      adminEmails: adminEmails.map((admin) => admin.email),
       serviceName: request.created.serviceName,
       serviceCategory: request.created.serviceCategory,
       governorate: request.created.governorate,

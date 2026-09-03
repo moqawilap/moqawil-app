@@ -2,6 +2,7 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || "moqawil.om@gmail.com";
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL?.trim() || "Moqawil <onboarding@resend.dev>";
+const USES_RESEND_TEST_SENDER = FROM_EMAIL.toLowerCase().includes("onboarding@resend.dev");
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({
@@ -11,6 +12,16 @@ function escapeHtml(value: string) {
     '"': "&quot;",
     "'": "&#39;",
   })[character] ?? character);
+}
+
+function isDeliverableEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  const domain = normalized.split("@")[1] ?? "";
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)
+    && domain !== "example.com"
+    && domain !== "example.net"
+    && domain !== "example.org"
+    && !domain.endsWith(".invalid");
 }
 
 function emailLayout(title: string, intro: string, rows: Array<[string, string]>) {
@@ -34,14 +45,17 @@ function emailLayout(title: string, intro: string, rows: Array<[string, string]>
   </body></html>`;
 }
 
-async function sendAdminEmail(subject: string, html: string) {
+async function sendAdminEmail(subject: string, html: string, adminEmails: string[] = []) {
+  const requestedRecipients = USES_RESEND_TEST_SENDER ? [ADMIN_EMAIL] : [...adminEmails, ADMIN_EMAIL];
+  const recipients = [...new Set(requestedRecipients.map((email) => email.trim().toLowerCase()).filter(isDeliverableEmail))];
+  if (!recipients.length) throw new Error("No deliverable admin email address is configured");
   const connectors = new ReplitConnectors();
   const response = await connectors.proxy("resend", "/emails", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       from: FROM_EMAIL,
-      to: [ADMIN_EMAIL],
+      to: recipients,
       subject,
       html,
     }),
@@ -55,6 +69,7 @@ async function sendAdminEmail(subject: string, html: string) {
 export async function emailAdminContact(input: {
   customerName: string;
   customerEmail: string;
+  adminEmails?: string[];
   channel: "call" | "whatsapp";
   category: string;
   subjectName: string;
@@ -78,12 +93,14 @@ export async function emailAdminContact(input: {
       ["الإعلان أو الخدمة", input.subjectName],
       ["وقت التواصل", input.occurredAt.toLocaleString("ar-OM", { timeZone: "Asia/Muscat" })],
     ]),
+    input.adminEmails,
   );
 }
 
 export async function emailAdminServiceRequest(input: {
   customerName: string;
   customerEmail: string;
+  adminEmails?: string[];
   serviceName: string;
   serviceCategory: string;
   governorate: string;
@@ -103,5 +120,6 @@ export async function emailAdminServiceRequest(input: {
       ["المتطلبات", input.requirements],
       ["وقت الطلب", input.occurredAt.toLocaleString("ar-OM", { timeZone: "Asia/Muscat" })],
     ]),
+    input.adminEmails,
   );
 }

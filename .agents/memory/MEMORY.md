@@ -8,3 +8,4 @@
 - [Expo package targeting](expo-package-targeting.md) — native Expo dependencies must be added to the mobile artifact, not the pnpm workspace root.
 - [Service-specific location coverage](service-specific-location-coverage.md) — multi-wilayat coverage belongs to each approved service so one provider can use different areas per specialty.
 - [Property location hierarchy](property-location-hierarchy.md) — property ads use one exact governorate–wilayat–area path, never the multi-wilayat service coverage selector.
+- [Resend test sender restrictions](resend-test-sender-restrictions.md) — onboarding sender can deliver only to the connected Resend account owner until an official domain is verified.

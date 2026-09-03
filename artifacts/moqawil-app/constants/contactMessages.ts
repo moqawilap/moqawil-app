@@ -16,16 +16,24 @@ const englishMessageLine: Record<ContactCategory, (name: string) => string> = {
   contractor: (name) => `I found you through the Moqawil app regarding the contracting services offered by “${name}”. I would like to know the scope, cost, and project timeframe.`,
 };
 
-export function getListingUrl(listingId: string) {
+function getPageUrl(path: string) {
   const domain = process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/+$/, '');
   return domain
-    ? `https://${domain}/listing/${encodeURIComponent(listingId)}`
-    : `moqawil-app://listing/${encodeURIComponent(listingId)}`;
+    ? `https://${domain}${path}`
+    : `moqawil-app://${path.replace(/^\/+/, '')}`;
+}
+
+export function getListingUrl(listingId: string) {
+  return getPageUrl(`/listing/${encodeURIComponent(listingId)}`);
+}
+
+export function getProviderUrl(providerId: string) {
+  return getPageUrl(`/provider/${encodeURIComponent(providerId)}`);
 }
 
 export function getContactMessage(category: ContactCategory, subjectName: string, isArabic: boolean, subjectUrl?: string) {
   const name = subjectName.trim();
-  const linkLine = subjectUrl ? (isArabic ? `رابط الإعلان: ${subjectUrl}` : `Listing link: ${subjectUrl}`) : null;
+  const linkLine = subjectUrl ? (isArabic ? `رابط الصفحة: ${subjectUrl}` : `Page link: ${subjectUrl}`) : null;
   if (isArabic) {
     return [
       'السلام عليكم ورحمة الله وبركاته،',
