@@ -90,6 +90,8 @@ export * from './notificationDeliveryMetadata';
 export * from './notificationDeliveryStatus';
 export * from './payment';
 export * from './project';
+export * from './propertyRegistrationDetails';
+export * from './propertyRegistrationDetailsListingType';
 export * from './pushDeviceInput';
 export * from './pushDeviceInputPlatform';
 export * from './pushNotification';

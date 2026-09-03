@@ -9,6 +9,57 @@ export type OmanGovernorate = {
   wilayats: OmanWilayat[];
 };
 
+export type OmanArea = {
+  name: string;
+  nameAr: string;
+};
+
+export const omanWilayatAreas: Record<string, OmanArea[]> = {
+  Muscat: [
+    { name: 'Old Muscat', nameAr: 'مسقط القديمة' },
+    { name: 'Al Bustan', nameAr: 'البستان' },
+    { name: 'Sidab', nameAr: 'سداب' },
+    { name: 'Qantab', nameAr: 'قنتب' },
+  ],
+  Muttrah: [
+    { name: 'Muttrah Corniche', nameAr: 'كورنيش مطرح' },
+    { name: 'Ruwi', nameAr: 'روي' },
+    { name: 'Wadi Kabir', nameAr: 'وادي الكبير' },
+    { name: 'Darsait', nameAr: 'دارسيت' },
+    { name: 'Hamriyah', nameAr: 'الحمرية' },
+  ],
+  Bawshar: [
+    { name: 'Al Khuwair', nameAr: 'الخوير' },
+    { name: 'Madinat Al Sultan Qaboos', nameAr: 'مدينة السلطان قابوس' },
+    { name: 'Ghubrah', nameAr: 'الغبرة' },
+    { name: 'Azaiba', nameAr: 'العذيبة' },
+    { name: 'Bawshar', nameAr: 'بوشر' },
+    { name: 'Ghala', nameAr: 'غلا' },
+    { name: 'Ansab', nameAr: 'الأنصب' },
+  ],
+  'Al Seeb': [
+    { name: 'Al Maabilah', nameAr: 'المعبيلة' },
+    { name: 'Al Mawaleh', nameAr: 'الموالح' },
+    { name: 'Al Hail', nameAr: 'الحيل' },
+    { name: 'Al Khoudh', nameAr: 'الخوض' },
+    { name: 'Al Seeb', nameAr: 'السيب' },
+    { name: 'Al Koudh', nameAr: 'الخوض القديمة' },
+    { name: 'Hail Al Awamir', nameAr: 'حيل العوامر' },
+  ],
+  'Al Amarat': [
+    { name: 'Al Amarat', nameAr: 'العامرات' },
+    { name: 'Al Mahaj', nameAr: 'المحج' },
+    { name: 'Al Hajar', nameAr: 'الحاجر' },
+    { name: 'Jufainah', nameAr: 'الجفينة' },
+  ],
+  Qurayyat: [
+    { name: 'Qurayyat', nameAr: 'قريات' },
+    { name: 'Daghmar', nameAr: 'ضباب' },
+    { name: 'Fins', nameAr: 'فنس' },
+    { name: 'Wadi Dayqah', nameAr: 'وادي ضيقة' },
+  ],
+};
+
 export const omanGovernorates: OmanGovernorate[] = [
   {
     name: 'Muscat',

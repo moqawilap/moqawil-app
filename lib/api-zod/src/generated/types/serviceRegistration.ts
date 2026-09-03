@@ -5,6 +5,7 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
+import type { PropertyRegistrationDetails } from './propertyRegistrationDetails';
 import type { ServiceRegistrationCategory } from './serviceRegistrationCategory';
 import type { ServiceRegistrationStatus } from './serviceRegistrationStatus';
 
@@ -17,6 +18,7 @@ export interface ServiceRegistration {
   serviceWilayats: string[];
   servesAllGovernorates: boolean;
   deliveryAvailable: boolean;
+  propertyDetails?: PropertyRegistrationDetails | null;
   description: string;
   mediaUrls: string[];
   status: ServiceRegistrationStatus;

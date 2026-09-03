@@ -136,6 +136,14 @@ function validServiceWilayats(value: unknown) {
     && value.every((item) => typeof item === "string" && item.trim().length >= 2 && item.trim().length <= 100);
 }
 
+function validPropertyDetails(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const details = value as Record<string, unknown>;
+  return ["governorate", "wilayat", "area", "propertyType"].every((key) => typeof details[key] === "string" && String(details[key]).trim().length >= 2)
+    && ["sale", "rent"].includes(String(details.listingType))
+    && ["bedrooms", "livingRooms", "majlis", "kitchens", "bathrooms"].every((key) => Number.isInteger(details[key]) && Number(details[key]) >= 0 && Number(details[key]) <= 20);
+}
+
 const adStatuses = ["draft", "active", "paused", "completed"] as const;
 const adEditableStatuses = ["draft", "active", "paused"] as const;
 const adBillingModels = ["cpm", "cpc", "cpa"] as const;
@@ -1130,6 +1138,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
         && value.length <= 8_000_000
         && (/^data:(image|video)\//.test(value) || /^https:\/\//.test(value)));
     const totalMediaLength = mediaUrls.reduce((total: number, value: unknown) => total + (typeof value === "string" ? value.length : 0), 0);
+    const isProperty = input.category === "real-estate";
     if (
       typeof input.category !== "string"
       || !allowedCategories.includes(input.category)
@@ -1143,6 +1152,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       || input.city.trim().length < 2
       || input.city.length > 100
       || !validServiceWilayats(input.serviceWilayats)
+      || (isProperty && !validPropertyDetails(input.propertyDetails))
       || typeof input.servesAllGovernorates !== "boolean"
       || typeof input.deliveryAvailable !== "boolean"
       || typeof input.description !== "string"
@@ -1164,6 +1174,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       serviceWilayats: input.serviceWilayats.map((item: string) => item.trim()),
       servesAllGovernorates: input.servesAllGovernorates,
       deliveryAvailable: input.deliveryAvailable,
+      propertyDetails: isProperty ? input.propertyDetails : null,
       description: input.description.trim(),
       mediaUrls,
       status: "pending_review",
@@ -1178,6 +1189,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       serviceWilayats: registration.serviceWilayats,
       servesAllGovernorates: registration.servesAllGovernorates,
       deliveryAvailable: registration.deliveryAvailable,
+      propertyDetails: registration.propertyDetails,
       description: registration.description,
       mediaUrls: registration.mediaUrls,
       status: registration.status,
@@ -1205,7 +1217,7 @@ router.get("/me/reviews", requireUser, async (req, res, next) => {
       ...registrations.map((registration) => ({
         id: registration.id, kind: "registration", category: registration.category, title: registration.title,
         specialty: registration.specialty, city: registration.city, serviceWilayats: registration.serviceWilayats, servesAllGovernorates: registration.servesAllGovernorates,
-        deliveryAvailable: registration.deliveryAvailable, description: registration.description,
+        deliveryAvailable: registration.deliveryAvailable, propertyDetails: registration.propertyDetails, description: registration.description,
         mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
         createdAt: registration.createdAt.toISOString(),
       })),
@@ -1471,7 +1483,7 @@ router.get("/admin/reviews", requireUser, requireAdmin, async (req, res, next) =
       ...registrationRows.map(({ registration, ownerName, ownerEmail }) => ({
         id: registration.id, kind: "registration", category: registration.category, title: registration.title,
         specialty: registration.specialty, city: registration.city, serviceWilayats: registration.serviceWilayats, servesAllGovernorates: registration.servesAllGovernorates,
-        deliveryAvailable: registration.deliveryAvailable, description: registration.description,
+        deliveryAvailable: registration.deliveryAvailable, propertyDetails: registration.propertyDetails, description: registration.description,
         mediaUrls: registration.mediaUrls, status: registration.status, reviewNote: registration.reviewNote,
         createdAt: registration.createdAt.toISOString(), ownerName, ownerEmail,
       })),
@@ -1501,6 +1513,25 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
       const updated = await db.transaction(async (tx) => {
         const [registration] = await tx.update(serviceRegistrations).set({ status: nextStatus, reviewNote: note || null, updatedAt: new Date() }).where(eq(serviceRegistrations.id, id)).returning();
         if (action !== "approve") return registration;
+        if (existing.category === "real-estate" && existing.propertyDetails) {
+          const details = existing.propertyDetails;
+          await tx.insert(marketplaceListings).values({
+            id: crypto.randomUUID(),
+            title: existing.title,
+            titleArabic: existing.title,
+            type: details.listingType,
+            price: details.listingType === "sale" ? "Contact for price" : "Contact for rent",
+            location: `${details.area}, ${details.wilayat}, ${details.governorate}`,
+            locationArabic: `${details.area}، ${details.wilayat}، ${details.governorate}`,
+            bedrooms: details.bedrooms,
+            bathrooms: details.bathrooms,
+            area: "Not specified",
+            imageUrl: existing.mediaUrls[0] ?? null,
+            imageUrls: existing.mediaUrls,
+            isPublished: true,
+          });
+          return registration;
+        }
         const owner = await tx.query.users.findFirst({ where: eq(users.id, existing.userId) });
         if (!owner) throw new Error("Registration owner not found");
         let profile = await tx.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, existing.userId) });
@@ -1555,13 +1586,13 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
         }
         return registration;
       });
-      if (action === "approve") {
+      if (action === "approve" && existing.category !== "real-estate") {
         const owner = await db.query.users.findFirst({ where: eq(users.id, existing.userId) });
         if (owner) await promoteCustomerToContractor(owner.clerkUserId);
       }
       await createInAppNotification(existing.userId, action === "approve" ? "Service approved" : action === "reject" ? "Service registration cancelled" : "Service changes requested", note || (action === "approve" ? "Your service registration was approved." : "Your service registration was not approved."), { registrationId: id, reviewStatus: nextStatus });
       await logAudit(admin.id, `service_review_${action}`, "service_registration", id, { note });
-       res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+       res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, propertyDetails: updated.propertyDetails, description: updated.description, mediaUrls: updated.mediaUrls, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
       return;
     }
     const [existing] = await db.select({ project: projects, ownerId: contractorProfiles.userId }).from(projects).innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id)).where(eq(projects.id, id)).limit(1);

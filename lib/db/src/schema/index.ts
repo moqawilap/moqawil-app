@@ -117,6 +117,18 @@ export const serviceRegistrations = pgTable("service_registrations", {
   serviceWilayats: jsonb("service_wilayats").$type<string[]>().notNull().default([]),
   servesAllGovernorates: boolean("serves_all_governorates").notNull().default(false),
   deliveryAvailable: boolean("delivery_available").notNull().default(false),
+  propertyDetails: jsonb("property_details").$type<{
+    governorate: string;
+    wilayat: string;
+    area: string;
+    listingType: "sale" | "rent";
+    propertyType: string;
+    bedrooms: number;
+    livingRooms: number;
+    majlis: number;
+    kitchens: number;
+    bathrooms: number;
+  } | null>(),
   description: text("description").notNull(),
   mediaUrls: jsonb("media_urls").$type<string[]>().notNull().default([]),
   status: serviceRegistrationStatusEnum("status").notNull().default("pending_review"),

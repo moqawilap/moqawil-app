@@ -592,6 +592,47 @@ export interface ContractorProjectRegistration {
   createdAt: string;
 }
 
+export type PropertyRegistrationDetailsListingType = typeof PropertyRegistrationDetailsListingType[keyof typeof PropertyRegistrationDetailsListingType];
+
+
+export const PropertyRegistrationDetailsListingType = {
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+export interface PropertyRegistrationDetails {
+  governorate: string;
+  wilayat: string;
+  area: string;
+  listingType: PropertyRegistrationDetailsListingType;
+  propertyType: string;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  bedrooms: number;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  livingRooms: number;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  majlis: number;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  kitchens: number;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  bathrooms: number;
+}
+
 export type ServiceRegistrationCreateCategory = typeof ServiceRegistrationCreateCategory[keyof typeof ServiceRegistrationCreateCategory];
 
 
@@ -629,6 +670,7 @@ export interface ServiceRegistrationCreate {
   serviceWilayats: string[];
   servesAllGovernorates: boolean;
   deliveryAvailable: boolean;
+  propertyDetails?: PropertyRegistrationDetails | null;
   /**
      * @minLength 20
      * @maxLength 5000
@@ -673,6 +715,7 @@ export interface ServiceRegistration {
   serviceWilayats: string[];
   servesAllGovernorates: boolean;
   deliveryAvailable: boolean;
+  propertyDetails?: PropertyRegistrationDetails | null;
   description: string;
   mediaUrls: string[];
   status: ServiceRegistrationStatus;

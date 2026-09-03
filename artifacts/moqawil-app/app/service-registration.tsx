@@ -3,11 +3,11 @@ import { useAuth } from '@clerk/expo';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader, ServiceIcon } from '@/components/MoqawilUI';
 import { serviceItems, type ServiceId } from '@/data/mockData';
-import { omanGovernorates } from '@/data/omanLocations';
+import { omanGovernorates, omanWilayatAreas } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useCreateMyServiceRegistration } from '@workspace/api-client-react';
@@ -20,6 +20,23 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 24 * 1024 * 1024;
 const categories: RegistrationCategory[] = ['consultants', 'design', 'building', 'real-estate', 'maintenance'];
 const allWilayats = omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => ({ ...wilayat, governorate: governorate.name, governorateAr: governorate.nameAr })));
+const propertyTypes = [
+  { value: 'apartment', ar: 'شقة', en: 'Apartment' },
+  { value: 'villa', ar: 'فيلا', en: 'Villa' },
+  { value: 'house', ar: 'بيت', en: 'House' },
+  { value: 'land', ar: 'أرض', en: 'Land' },
+  { value: 'office', ar: 'مكتب', en: 'Office' },
+  { value: 'shop', ar: 'محل', en: 'Shop' },
+  { value: 'warehouse', ar: 'مخزن', en: 'Warehouse' },
+  { value: 'farm', ar: 'مزرعة', en: 'Farm' },
+] as const;
+const countFields = [
+  { key: 'bedrooms', ar: 'غرف النوم', en: 'Bedrooms' },
+  { key: 'livingRooms', ar: 'الصالات', en: 'Living rooms' },
+  { key: 'majlis', ar: 'المجالس', en: 'Majlis' },
+  { key: 'kitchens', ar: 'المطابخ', en: 'Kitchens' },
+  { key: 'bathrooms', ar: 'دورات المياه', en: 'Bathrooms' },
+] as const;
 
 const copy: Record<RegistrationCategory, {
   titleAr: string;
@@ -112,11 +129,24 @@ export default function ServiceRegistrationScreen() {
   const [form, setForm] = useState({ title: '', specialty: '', description: '' });
   const [serviceWilayats, setServiceWilayats] = useState<string[]>([]);
   const [deliveryAvailable, setDeliveryAvailable] = useState(false);
+  const [propertyGovernorate, setPropertyGovernorate] = useState('');
+  const [propertyWilayat, setPropertyWilayat] = useState('');
+  const [propertyArea, setPropertyArea] = useState('');
+  const [customPropertyArea, setCustomPropertyArea] = useState('');
+  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
+  const [propertyType, setPropertyType] = useState('');
+  const [propertyCounts, setPropertyCounts] = useState({ bedrooms: 0, livingRooms: 0, majlis: 0, kitchens: 0, bathrooms: 0 });
+  const [activeCount, setActiveCount] = useState<keyof typeof propertyCounts | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [mediaLoading, setMediaLoading] = useState(false);
   const totalBytes = useMemo(() => media.reduce((sum, item) => sum + item.size, 0), [media]);
   const servesAllGovernorates = serviceWilayats.length === allWilayats.length;
+  const isProperty = category === 'real-estate';
+  const selectedGovernorate = omanGovernorates.find((item) => item.name === propertyGovernorate);
+  const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === propertyWilayat);
+  const knownAreas = propertyWilayat ? omanWilayatAreas[propertyWilayat] ?? [] : [];
+  const finalPropertyArea = propertyArea === '__other__' ? customPropertyArea.trim() : propertyArea;
   const toggleWilayat = (name: string) => setServiceWilayats((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
 
   const createRegistration = useCreateMyServiceRegistration({ mutation: {
@@ -187,7 +217,8 @@ export default function ServiceRegistrationScreen() {
     'Do not publish client personal data, copied work, misleading content, or unlawful material.',
     'The administrator reviews the registration before it appears and may request changes, reject it, or remove it.',
   ];
-  const valid = form.title.trim().length >= 2 && form.specialty.trim().length >= 2 && serviceWilayats.length > 0 && form.description.trim().length >= 20 && media.length > 0 && termsAccepted;
+  const validProperty = !isProperty || (propertyGovernorate && propertyWilayat && finalPropertyArea.length >= 2 && propertyType);
+  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && termsAccepted;
   const primaryLocation = allWilayats.find((item) => item.name === serviceWilayats[0]);
 
   return (
@@ -201,8 +232,24 @@ export default function ServiceRegistrationScreen() {
             <View style={styles.bannerCopy}><Text style={styles.bannerTitle}>{isArabic ? service.labelAr : service.label}</Text><Text style={styles.bannerSubtitle}>{isArabic ? service.subtitleAr : service.subtitle}</Text></View>
           </View>
           <Field label={isArabic ? categoryCopy.nameAr : categoryCopy.nameEn} testID="registration-title" value={form.title} onChangeText={(value) => update('title', value)} placeholder={isArabic ? categoryCopy.namePlaceholderAr : categoryCopy.namePlaceholderEn} isArabic={isArabic} colors={colors} />
-          <Field label={isArabic ? categoryCopy.specialtyAr : categoryCopy.specialtyEn} testID="registration-specialty" value={form.specialty} onChangeText={(value) => update('specialty', value)} placeholder={isArabic ? categoryCopy.specialtyPlaceholderAr : categoryCopy.specialtyPlaceholderEn} isArabic={isArabic} colors={colors} />
-            <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+           {isProperty ? <>
+             <View testID="property-location-picker" style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+               <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع العقار' : 'Property location'}</Text>
+               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر المحافظة، ثم الولاية، ثم المنطقة.' : 'Choose the governorate, then wilayat, then area.'}</Text>
+               <ChoiceGrid options={omanGovernorates.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))} value={propertyGovernorate} onChange={(value) => { setPropertyGovernorate(value); setPropertyWilayat(''); setPropertyArea(''); setCustomPropertyArea(''); }} colors={colors} />
+               {selectedGovernorate ? <><Text style={[styles.stepLabel, { color: colors.primary }]}>{isArabic ? 'الولاية' : 'Wilayat'}</Text><ChoiceGrid options={selectedGovernorate.wilayats.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))} value={propertyWilayat} onChange={(value) => { setPropertyWilayat(value); setPropertyArea(''); setCustomPropertyArea(''); }} colors={colors} /></> : null}
+               {selectedWilayat ? <><Text style={[styles.stepLabel, { color: colors.primary }]}>{isArabic ? 'المنطقة' : 'Area'}</Text><ChoiceGrid options={[...knownAreas.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name })), { value: '__other__', label: isArabic ? 'منطقة أخرى' : 'Other area' }]} value={propertyArea} onChange={setPropertyArea} colors={colors} />{propertyArea === '__other__' ? <TextInput testID="property-custom-area" value={customPropertyArea} onChangeText={setCustomPropertyArea} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اكتب اسم المنطقة' : 'Enter the area name'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /> : null}</> : null}
+             </View>
+             <ChoiceSection title={isArabic ? 'الغرض من الإعلان' : 'Listing purpose'} options={[{ value: 'sale', label: isArabic ? 'بيع' : 'For sale' }, { value: 'rent', label: isArabic ? 'تأجير' : 'For rent' }]} value={listingType} onChange={(value) => setListingType(value as 'sale' | 'rent')} colors={colors} />
+             <ChoiceSection title={isArabic ? 'نوع العقار' : 'Property type'} options={propertyTypes.map((item) => ({ value: item.value, label: isArabic ? item.ar : item.en }))} value={propertyType} onChange={setPropertyType} colors={colors} />
+             <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+               <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'تفاصيل العقار بالأرقام' : 'Property details'}</Text>
+               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اضغط على أي خانة وحدد العدد من عجلة الاختيار.' : 'Tap a field and choose its number from the wheel.'}</Text>
+               <View style={styles.counterGrid}>{countFields.map((item) => <Pressable key={item.key} testID={`property-count-${item.key}`} onPress={() => setActiveCount(item.key)} style={[styles.counterCard, { borderColor: colors.border, backgroundColor: colors.background }]}><Text style={[styles.counterValue, { color: colors.primary }]}>{propertyCounts[item.key]}</Text><Text style={[styles.counterLabel, { color: colors.foreground }]}>{isArabic ? item.ar : item.en}</Text><Feather name="chevron-down" size={14} color={colors.mutedForeground} /></Pressable>)}</View>
+             </View>
+           </> : <>
+           <Field label={isArabic ? categoryCopy.specialtyAr : categoryCopy.specialtyEn} testID="registration-specialty" value={form.specialty} onChangeText={(value) => update('specialty', value)} placeholder={isArabic ? categoryCopy.specialtyPlaceholderAr : categoryCopy.specialtyPlaceholderEn} isArabic={isArabic} colors={colors} />
+             <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'الولايات التي تقدم فيها الخدمة' : 'Wilayats you serve'}</Text>
               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'يمكنك اختيار أكثر من ولاية.' : 'You can select more than one wilayat.'}</Text>
               <Pressable testID="coverage-all-oman" accessibilityRole="checkbox" accessibilityState={{ checked: servesAllGovernorates }} onPress={() => setServiceWilayats(servesAllGovernorates ? [] : allWilayats.map((item) => item.name))} style={[styles.choiceRow, { borderColor: servesAllGovernorates ? colors.primary : colors.border, backgroundColor: servesAllGovernorates ? colors.primarySoft : colors.background }]}>
@@ -224,7 +271,8 @@ export default function ServiceRegistrationScreen() {
                <Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'يوفر التوصيل أو الوصول إلى موقع العميل' : 'Delivery or travel to the customer is available'}</Text>
              </Pressable>
             </View>
-          <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نبذة عن الأعمال والخدمات' : 'About the work and services'}</Text><TextInput testID="registration-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? categoryCopy.descriptionPlaceholderAr : categoryCopy.descriptionPlaceholderEn} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
+           </>}
+           <View><Text style={[styles.label, { color: colors.foreground }]}>{isProperty ? (isArabic ? 'وصف العقار' : 'Property description') : (isArabic ? 'نبذة عن الأعمال والخدمات' : 'About the work and services')}</Text><TextInput testID="registration-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? categoryCopy.descriptionPlaceholderAr : categoryCopy.descriptionPlaceholderEn} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات الأعمال' : 'Work photos and videos'}</Text><Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? `${media.length}/15 · الحد الإجمالي 24 م.ب` : `${media.length}/15 · 24 MB total limit`}</Text></View>
           <View style={styles.mediaGrid}>
             {media.map((item) => <View key={item.id} style={[styles.mediaCard, { borderColor: colors.border }]}>{item.type === 'image' ? <Image source={{ uri: item.dataUrl }} style={styles.preview} /> : <View style={[styles.video, { backgroundColor: colors.primarySoft }]}><Feather name="video" size={23} color={colors.primary} /><Text numberOfLines={1} style={[styles.videoName, { color: colors.foreground }]}>{item.name}</Text></View>}<Pressable onPress={() => setMedia((current) => current.filter((mediaItem) => mediaItem.id !== item.id))} style={[styles.remove, { backgroundColor: colors.navy }]}><Feather name="x" size={13} color="#FFFFFF" /></Pressable></View>)}
@@ -235,15 +283,33 @@ export default function ServiceRegistrationScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-           <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || !primaryLocation) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'اختر ولاية واحدة على الأقل، وأكمل جميع الحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Select at least one wilayat, complete all fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: form.specialty.trim(), city: primaryLocation.governorate, serviceWilayats, servesAllGovernorates, deliveryAvailable, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
+            <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all choices and fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
         </View>
       </ScrollView>
+      <Modal visible={activeCount !== null} transparent animationType="fade" onRequestClose={() => setActiveCount(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setActiveCount(null)}>
+          <View style={[styles.wheelSheet, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.wheelTitle, { color: colors.foreground }]}>{isArabic ? 'حدد العدد' : 'Choose a number'}</Text>
+            <ScrollView style={styles.wheel} snapToInterval={48} decelerationRate="fast" showsVerticalScrollIndicator={false}>
+              {Array.from({ length: 21 }, (_, number) => <Pressable key={number} testID={`wheel-value-${number}`} onPress={() => { if (activeCount) setPropertyCounts((current) => ({ ...current, [activeCount]: number })); setActiveCount(null); }} style={styles.wheelItem}><Text style={[styles.wheelNumber, { color: activeCount && propertyCounts[activeCount] === number ? colors.primary : colors.foreground }]}>{number}</Text></Pressable>)}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 function Field({ label, testID, value, onChangeText, placeholder, isArabic, colors }: { label: string; testID: string; value: string; onChangeText: (value: string) => void; placeholder: string; isArabic: boolean; colors: ReturnType<typeof useColors> }) {
   return <View><Text style={[styles.label, { color: colors.foreground }]}>{label}</Text><TextInput testID={testID} value={value} onChangeText={onChangeText} textAlign={isArabic ? 'right' : 'left'} placeholder={placeholder} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>;
+}
+
+function ChoiceGrid({ options, value, onChange, colors }: { options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; colors: ReturnType<typeof useColors> }) {
+  return <View style={styles.wilayatGrid}>{options.map((option) => { const selected = option.value === value; return <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => onChange(option.value)} style={[styles.wilayatChoice, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.background }]}><Feather name={selected ? 'check-circle' : 'circle'} size={16} color={selected ? colors.primary : colors.mutedForeground} /><Text style={[styles.wilayatChoiceText, { color: colors.foreground }]}>{option.label}</Text></Pressable>; })}</View>;
+}
+
+function ChoiceSection({ title, options, value, onChange, colors }: { title: string; options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; colors: ReturnType<typeof useColors> }) {
+  return <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.label, { color: colors.foreground }]}>{title}</Text><ChoiceGrid options={options} value={value} onChange={onChange} colors={colors} /></View>;
 }
 
 const styles = StyleSheet.create({
@@ -265,9 +331,20 @@ const styles = StyleSheet.create({
   deliveryRow: { borderTopWidth: 1, paddingTop: 12, marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 9 },
   governorateGroup: { gap: 7, marginTop: 4 },
   governorateTitle: { fontSize: 12, fontWeight: '800' },
+  stepLabel: { fontSize: 11, fontWeight: '800', marginTop: 5 },
   wilayatGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   wilayatChoice: { minHeight: 40, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: '47%', flexGrow: 1, flexBasis: '47%' },
   wilayatChoiceText: { flexShrink: 1, fontSize: 11, fontWeight: '700' },
+  counterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  counterCard: { width: '31%', minHeight: 88, flexGrow: 1, borderWidth: 1, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 3, padding: 8 },
+  counterValue: { fontSize: 23, fontWeight: '900' },
+  counterLabel: { fontSize: 10, fontWeight: '700', textAlign: 'center' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(5,18,30,0.55)', justifyContent: 'flex-end', padding: 18 },
+  wheelSheet: { borderRadius: 24, padding: 18, maxHeight: 360 },
+  wheelTitle: { fontSize: 17, fontWeight: '900', textAlign: 'center', marginBottom: 10 },
+  wheel: { maxHeight: 280 },
+  wheelItem: { height: 48, alignItems: 'center', justifyContent: 'center' },
+  wheelNumber: { fontSize: 22, fontWeight: '800' },
   description: { minHeight: 122, paddingTop: 12, textAlignVertical: 'top' },
   mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   mediaCard: { width: 92, height: 92, borderRadius: 14, borderWidth: 1 },

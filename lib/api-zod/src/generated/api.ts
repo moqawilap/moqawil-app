@@ -1036,6 +1036,21 @@ export const createMyServiceRegistrationBodyServiceWilayatsItemMax = 100;
 
 export const createMyServiceRegistrationBodyServiceWilayatsMax = 61;
 
+export const createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMin = 0;
+export const createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMax = 20;
+
+export const createMyServiceRegistrationBodyPropertyDetailsOneLivingRoomsMin = 0;
+export const createMyServiceRegistrationBodyPropertyDetailsOneLivingRoomsMax = 20;
+
+export const createMyServiceRegistrationBodyPropertyDetailsOneMajlisMin = 0;
+export const createMyServiceRegistrationBodyPropertyDetailsOneMajlisMax = 20;
+
+export const createMyServiceRegistrationBodyPropertyDetailsOneKitchensMin = 0;
+export const createMyServiceRegistrationBodyPropertyDetailsOneKitchensMax = 20;
+
+export const createMyServiceRegistrationBodyPropertyDetailsOneBathroomsMin = 0;
+export const createMyServiceRegistrationBodyPropertyDetailsOneBathroomsMax = 20;
+
 export const createMyServiceRegistrationBodyDescriptionMin = 20;
 export const createMyServiceRegistrationBodyDescriptionMax = 5000;
 
@@ -1053,10 +1068,39 @@ export const CreateMyServiceRegistrationBody = zod.object({
   "serviceWilayats": zod.array(zod.string().min(createMyServiceRegistrationBodyServiceWilayatsItemMin).max(createMyServiceRegistrationBodyServiceWilayatsItemMax)).min(1).max(createMyServiceRegistrationBodyServiceWilayatsMax),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
+  "propertyDetails": zod.union([zod.object({
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "area": zod.string(),
+  "listingType": zod.enum(['sale', 'rent']),
+  "propertyType": zod.string(),
+  "bedrooms": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMin).max(createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMax),
+  "livingRooms": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneLivingRoomsMin).max(createMyServiceRegistrationBodyPropertyDetailsOneLivingRoomsMax),
+  "majlis": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneMajlisMin).max(createMyServiceRegistrationBodyPropertyDetailsOneMajlisMax),
+  "kitchens": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneKitchensMin).max(createMyServiceRegistrationBodyPropertyDetailsOneKitchensMax),
+  "bathrooms": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneBathroomsMin).max(createMyServiceRegistrationBodyPropertyDetailsOneBathroomsMax)
+}),zod.null()]).optional(),
   "description": zod.string().min(createMyServiceRegistrationBodyDescriptionMin).max(createMyServiceRegistrationBodyDescriptionMax),
   "mediaUrls": zod.array(zod.string().max(createMyServiceRegistrationBodyMediaUrlsItemMax)).min(1).max(createMyServiceRegistrationBodyMediaUrlsMax),
   "termsAccepted": zod.literal(true)
 })
+
+export const createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMin = 0;
+export const createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMax = 20;
+
+export const createMyServiceRegistrationResponsePropertyDetailsOneLivingRoomsMin = 0;
+export const createMyServiceRegistrationResponsePropertyDetailsOneLivingRoomsMax = 20;
+
+export const createMyServiceRegistrationResponsePropertyDetailsOneMajlisMin = 0;
+export const createMyServiceRegistrationResponsePropertyDetailsOneMajlisMax = 20;
+
+export const createMyServiceRegistrationResponsePropertyDetailsOneKitchensMin = 0;
+export const createMyServiceRegistrationResponsePropertyDetailsOneKitchensMax = 20;
+
+export const createMyServiceRegistrationResponsePropertyDetailsOneBathroomsMin = 0;
+export const createMyServiceRegistrationResponsePropertyDetailsOneBathroomsMax = 20;
+
+
 
 export const CreateMyServiceRegistrationResponse = zod.object({
   "id": zod.string(),
@@ -1067,6 +1111,18 @@ export const CreateMyServiceRegistrationResponse = zod.object({
   "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
+  "propertyDetails": zod.union([zod.object({
+  "governorate": zod.string(),
+  "wilayat": zod.string(),
+  "area": zod.string(),
+  "listingType": zod.enum(['sale', 'rent']),
+  "propertyType": zod.string(),
+  "bedrooms": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMin).max(createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMax),
+  "livingRooms": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneLivingRoomsMin).max(createMyServiceRegistrationResponsePropertyDetailsOneLivingRoomsMax),
+  "majlis": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneMajlisMin).max(createMyServiceRegistrationResponsePropertyDetailsOneMajlisMax),
+  "kitchens": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneKitchensMin).max(createMyServiceRegistrationResponsePropertyDetailsOneKitchensMax),
+  "bathrooms": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneBathroomsMin).max(createMyServiceRegistrationResponsePropertyDetailsOneBathroomsMax)
+}),zod.null()]).optional(),
   "description": zod.string(),
   "mediaUrls": zod.array(zod.string()),
   "status": zod.enum(['pending_review', 'approved', 'changes_requested', 'rejected']),
