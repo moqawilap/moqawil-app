@@ -1036,6 +1036,8 @@ export const createMyServiceRegistrationBodyServiceWilayatsItemMax = 100;
 
 export const createMyServiceRegistrationBodyServiceWilayatsMax = 61;
 
+export const createMyServiceRegistrationBodyPropertyDetailsOneSizeSquareMetersMax = 1000000;
+
 export const createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMin = 0;
 export const createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMax = 20;
 
@@ -1074,6 +1076,7 @@ export const CreateMyServiceRegistrationBody = zod.object({
   "area": zod.string(),
   "listingType": zod.enum(['sale', 'rent']),
   "propertyType": zod.string(),
+  "sizeSquareMeters": zod.number().min(1).max(createMyServiceRegistrationBodyPropertyDetailsOneSizeSquareMetersMax),
   "bedrooms": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMin).max(createMyServiceRegistrationBodyPropertyDetailsOneBedroomsMax),
   "livingRooms": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneLivingRoomsMin).max(createMyServiceRegistrationBodyPropertyDetailsOneLivingRoomsMax),
   "majlis": zod.number().min(createMyServiceRegistrationBodyPropertyDetailsOneMajlisMin).max(createMyServiceRegistrationBodyPropertyDetailsOneMajlisMax),
@@ -1084,6 +1087,8 @@ export const CreateMyServiceRegistrationBody = zod.object({
   "mediaUrls": zod.array(zod.string().max(createMyServiceRegistrationBodyMediaUrlsItemMax)).min(1).max(createMyServiceRegistrationBodyMediaUrlsMax),
   "termsAccepted": zod.literal(true)
 })
+
+export const createMyServiceRegistrationResponsePropertyDetailsOneSizeSquareMetersMax = 1000000;
 
 export const createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMin = 0;
 export const createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMax = 20;
@@ -1117,6 +1122,7 @@ export const CreateMyServiceRegistrationResponse = zod.object({
   "area": zod.string(),
   "listingType": zod.enum(['sale', 'rent']),
   "propertyType": zod.string(),
+  "sizeSquareMeters": zod.number().min(1).max(createMyServiceRegistrationResponsePropertyDetailsOneSizeSquareMetersMax),
   "bedrooms": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMin).max(createMyServiceRegistrationResponsePropertyDetailsOneBedroomsMax),
   "livingRooms": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneLivingRoomsMin).max(createMyServiceRegistrationResponsePropertyDetailsOneLivingRoomsMax),
   "majlis": zod.number().min(createMyServiceRegistrationResponsePropertyDetailsOneMajlisMin).max(createMyServiceRegistrationResponsePropertyDetailsOneMajlisMax),

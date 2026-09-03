@@ -123,6 +123,7 @@ export const serviceRegistrations = pgTable("service_registrations", {
     area: string;
     listingType: "sale" | "rent";
     propertyType: string;
+    sizeSquareMeters: number;
     bedrooms: number;
     livingRooms: number;
     majlis: number;

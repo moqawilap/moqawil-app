@@ -14,6 +14,11 @@ export interface PropertyRegistrationDetails {
   listingType: PropertyRegistrationDetailsListingType;
   propertyType: string;
   /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  sizeSquareMeters: number;
+  /**
      * @minimum 0
      * @maximum 20
      */

@@ -141,6 +141,7 @@ function validPropertyDetails(value: unknown) {
   const details = value as Record<string, unknown>;
   return ["governorate", "wilayat", "area", "propertyType"].every((key) => typeof details[key] === "string" && String(details[key]).trim().length >= 2)
     && ["sale", "rent"].includes(String(details.listingType))
+    && Number.isInteger(details.sizeSquareMeters) && Number(details.sizeSquareMeters) > 0 && Number(details.sizeSquareMeters) <= 1_000_000
     && ["bedrooms", "livingRooms", "majlis", "kitchens", "bathrooms"].every((key) => Number.isInteger(details[key]) && Number(details[key]) >= 0 && Number(details[key]) <= 20);
 }
 
@@ -1525,7 +1526,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
             locationArabic: `${details.area}، ${details.wilayat}، ${details.governorate}`,
             bedrooms: details.bedrooms,
             bathrooms: details.bathrooms,
-            area: "Not specified",
+            area: `${details.sizeSquareMeters} m²`,
             imageUrl: existing.mediaUrls[0] ?? null,
             imageUrls: existing.mediaUrls,
             isPublished: true,
