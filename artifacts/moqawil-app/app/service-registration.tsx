@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader, ServiceIcon } from '@/components/MoqawilUI';
 import { serviceItems, type ServiceId } from '@/data/mockData';
+import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useCreateMyServiceRegistration } from '@workspace/api-client-react';
@@ -18,6 +19,7 @@ const MAX_MEDIA = 15;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 24 * 1024 * 1024;
 const categories: RegistrationCategory[] = ['consultants', 'design', 'building', 'real-estate', 'maintenance'];
+const allWilayats = omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => ({ ...wilayat, governorate: governorate.name, governorateAr: governorate.nameAr })));
 
 const copy: Record<RegistrationCategory, {
   titleAr: string;
@@ -107,13 +109,15 @@ export default function ServiceRegistrationScreen() {
   const category = categories.includes(params.category as RegistrationCategory) ? params.category as RegistrationCategory : 'consultants';
   const categoryCopy = copy[category];
   const service = serviceItems.find((item) => item.id === category)!;
-  const [form, setForm] = useState({ title: '', specialty: '', city: '', description: '' });
-  const [servesAllGovernorates, setServesAllGovernorates] = useState(false);
+  const [form, setForm] = useState({ title: '', specialty: '', description: '' });
+  const [serviceWilayats, setServiceWilayats] = useState<string[]>([]);
   const [deliveryAvailable, setDeliveryAvailable] = useState(false);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [mediaLoading, setMediaLoading] = useState(false);
   const totalBytes = useMemo(() => media.reduce((sum, item) => sum + item.size, 0), [media]);
+  const servesAllGovernorates = serviceWilayats.length === allWilayats.length;
+  const toggleWilayat = (name: string) => setServiceWilayats((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
 
   const createRegistration = useCreateMyServiceRegistration({ mutation: {
     onSuccess: () => Alert.alert(
@@ -183,7 +187,8 @@ export default function ServiceRegistrationScreen() {
     'Do not publish client personal data, copied work, misleading content, or unlawful material.',
     'The administrator reviews the registration before it appears and may request changes, reject it, or remove it.',
   ];
-  const valid = form.title.trim().length >= 2 && form.specialty.trim().length >= 2 && form.city.trim().length >= 2 && form.description.trim().length >= 20 && media.length > 0 && termsAccepted;
+  const valid = form.title.trim().length >= 2 && form.specialty.trim().length >= 2 && serviceWilayats.length > 0 && form.description.trim().length >= 20 && media.length > 0 && termsAccepted;
+  const primaryLocation = allWilayats.find((item) => item.name === serviceWilayats[0]);
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}>
@@ -197,22 +202,28 @@ export default function ServiceRegistrationScreen() {
           </View>
           <Field label={isArabic ? categoryCopy.nameAr : categoryCopy.nameEn} testID="registration-title" value={form.title} onChangeText={(value) => update('title', value)} placeholder={isArabic ? categoryCopy.namePlaceholderAr : categoryCopy.namePlaceholderEn} isArabic={isArabic} colors={colors} />
           <Field label={isArabic ? categoryCopy.specialtyAr : categoryCopy.specialtyEn} testID="registration-specialty" value={form.specialty} onChangeText={(value) => update('specialty', value)} placeholder={isArabic ? categoryCopy.specialtyPlaceholderAr : categoryCopy.specialtyPlaceholderEn} isArabic={isArabic} colors={colors} />
-          <Field label={isArabic ? categoryCopy.locationAr : categoryCopy.locationEn} testID="registration-city" value={form.city} onChangeText={(value) => update('city', value)} placeholder={isArabic ? 'المحافظة أو الولاية' : 'Governorate or wilayat'} isArabic={isArabic} colors={colors} />
-           {category !== 'real-estate' ? <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-             <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نطاق تقديم الخدمة' : 'Service coverage'}</Text>
-             <Pressable testID="coverage-local" onPress={() => setServesAllGovernorates(false)} style={[styles.choiceRow, { borderColor: !servesAllGovernorates ? colors.primary : colors.border, backgroundColor: !servesAllGovernorates ? colors.primarySoft : colors.background }]}>
-               <Feather name={!servesAllGovernorates ? 'check-circle' : 'circle'} size={19} color={colors.primary} />
-               <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? `داخل ${form.city.trim() || 'الموقع المحدد'} فقط` : `Only in ${form.city.trim() || 'the selected location'}`}</Text></View>
-             </Pressable>
-             <Pressable testID="coverage-all-oman" onPress={() => setServesAllGovernorates(true)} style={[styles.choiceRow, { borderColor: servesAllGovernorates ? colors.primary : colors.border, backgroundColor: servesAllGovernorates ? colors.primarySoft : colors.background }]}>
-               <Feather name={servesAllGovernorates ? 'check-circle' : 'circle'} size={19} color={colors.primary} />
-               <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'جميع محافظات سلطنة عُمان' : 'All governorates of Oman'}</Text></View>
-             </Pressable>
+            <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'الولايات التي تقدم فيها الخدمة' : 'Wilayats you serve'}</Text>
+              <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'يمكنك اختيار أكثر من ولاية.' : 'You can select more than one wilayat.'}</Text>
+              <Pressable testID="coverage-all-oman" accessibilityRole="checkbox" accessibilityState={{ checked: servesAllGovernorates }} onPress={() => setServiceWilayats(servesAllGovernorates ? [] : allWilayats.map((item) => item.name))} style={[styles.choiceRow, { borderColor: servesAllGovernorates ? colors.primary : colors.border, backgroundColor: servesAllGovernorates ? colors.primarySoft : colors.background }]}>
+                <Feather name={servesAllGovernorates ? 'check-square' : 'square'} size={19} color={colors.primary} />
+                <View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'كل السلطنة' : 'All Oman'}</Text></View>
+              </Pressable>
+              {omanGovernorates.map((governorate) => <View key={governorate.name} style={styles.governorateGroup}>
+                <Text style={[styles.governorateTitle, { color: colors.foreground }]}>{isArabic ? governorate.nameAr : governorate.name}</Text>
+                <View style={styles.wilayatGrid}>{governorate.wilayats.map((wilayat) => {
+                  const selected = serviceWilayats.includes(wilayat.name);
+                  return <Pressable key={wilayat.name} testID={`coverage-wilayat-${wilayat.name}`} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => toggleWilayat(wilayat.name)} style={[styles.wilayatChoice, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.background }]}>
+                    <Feather name={selected ? 'check-square' : 'square'} size={16} color={selected ? colors.primary : colors.mutedForeground} />
+                    <Text style={[styles.wilayatChoiceText, { color: colors.foreground }]}>{isArabic ? wilayat.nameAr : wilayat.name}</Text>
+                  </Pressable>;
+                })}</View>
+              </View>)}
              <Pressable testID="delivery-available" accessibilityRole="checkbox" accessibilityState={{ checked: deliveryAvailable }} onPress={() => setDeliveryAvailable((current) => !current)} style={[styles.deliveryRow, { borderTopColor: colors.border }]}>
                <Feather name={deliveryAvailable ? 'check-square' : 'square'} size={20} color={colors.primary} />
                <Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'يوفر التوصيل أو الوصول إلى موقع العميل' : 'Delivery or travel to the customer is available'}</Text>
              </Pressable>
-           </View> : null}
+            </View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'نبذة عن الأعمال والخدمات' : 'About the work and services'}</Text><TextInput testID="registration-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? categoryCopy.descriptionPlaceholderAr : categoryCopy.descriptionPlaceholderEn} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات الأعمال' : 'Work photos and videos'}</Text><Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? `${media.length}/15 · الحد الإجمالي 24 م.ب` : `${media.length}/15 · 24 MB total limit`}</Text></View>
           <View style={styles.mediaGrid}>
@@ -224,7 +235,7 @@ export default function ServiceRegistrationScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-          <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: form.specialty.trim(), city: form.city.trim(), servesAllGovernorates: category === 'real-estate' ? false : servesAllGovernorates, deliveryAvailable: category === 'real-estate' ? false : deliveryAvailable, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
+           <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || !primaryLocation) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'اختر ولاية واحدة على الأقل، وأكمل جميع الحقول، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Select at least one wilayat, complete all fields, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: form.specialty.trim(), city: primaryLocation.governorate, serviceWilayats, servesAllGovernorates, deliveryAvailable, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), termsAccepted: true } }); }} />
         </View>
       </ScrollView>
     </View>
@@ -252,6 +263,11 @@ const styles = StyleSheet.create({
   choiceRow: { minHeight: 50, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 },
   choiceTitle: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   deliveryRow: { borderTopWidth: 1, paddingTop: 12, marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  governorateGroup: { gap: 7, marginTop: 4 },
+  governorateTitle: { fontSize: 12, fontWeight: '800' },
+  wilayatGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  wilayatChoice: { minHeight: 40, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: '47%', flexGrow: 1, flexBasis: '47%' },
+  wilayatChoiceText: { flexShrink: 1, fontSize: 11, fontWeight: '700' },
   description: { minHeight: 122, paddingTop: 12, textAlignVertical: 'top' },
   mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   mediaCard: { width: 92, height: 92, borderRadius: 14, borderWidth: 1 },

@@ -17,6 +17,7 @@ export interface MyServiceReview {
   specialty?: string | null;
   /** @nullable */
   city?: string | null;
+  serviceWilayats: string[];
   servesAllGovernorates: boolean;
   deliveryAvailable: boolean;
   description: string;

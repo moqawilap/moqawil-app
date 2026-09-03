@@ -222,3 +222,39 @@ test("customer can create only its first contractor profile", async () => {
   assert.equal(repeated.response.status, 403);
   assert.deepEqual(repeated.body, { error: "Contractor role required" });
 });
+
+test("approved services appear in every selected wilayat and nowhere else", async () => {
+  const submitted = await request("customer", "/me/service-registrations", {
+    method: "POST",
+    body: JSON.stringify({
+      category: "building",
+      title: "Permission Test Multi-Wilayat Workshop",
+      specialty: "Multi-Wilayat Construction",
+      city: "Ad Dakhiliyah",
+      serviceWilayats: ["Bahla", "Nizwa", "Muscat"],
+      servesAllGovernorates: false,
+      deliveryAvailable: true,
+      description: "Provides construction services across three selected Oman wilayats.",
+      mediaUrls: ["https://example.invalid/permission-test-workshop.jpg"],
+      termsAccepted: true,
+    }),
+  });
+  assert.equal(submitted.response.status, 201);
+
+  const approved = await request("admin", `/admin/reviews/registration/${submitted.body.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ action: "approve" }),
+  });
+  assert.equal(approved.response.status, 200);
+  assert.deepEqual(approved.body.serviceWilayats, ["Bahla", "Nizwa", "Muscat"]);
+
+  for (const wilayat of ["Bahla", "Nizwa", "Muscat"]) {
+    const directory = await request(undefined, `/contractors?category=building&wilayat=${encodeURIComponent(wilayat)}&limit=50`);
+    assert.equal(directory.response.status, 200);
+    assert.equal(directory.body.items.some((item) => item.businessName === "Permission Test Onboarding"), true);
+  }
+
+  const outsideCoverage = await request(undefined, "/contractors?category=building&wilayat=Salalah&limit=50");
+  assert.equal(outsideCoverage.response.status, 200);
+  assert.equal(outsideCoverage.body.items.some((item) => item.businessName === "Permission Test Onboarding"), false);
+});

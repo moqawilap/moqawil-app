@@ -24,6 +24,13 @@ export interface ServiceRegistrationCreate {
      * @maxLength 100
      */
   city: string;
+  /**
+     * @minItems 1
+     * @maxItems 61
+     * @items.minLength 2
+     * @items.maxLength 100
+     */
+  serviceWilayats: string[];
   servesAllGovernorates: boolean;
   deliveryAvailable: boolean;
   /**

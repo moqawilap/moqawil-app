@@ -6,3 +6,4 @@
 - [Marketplace image galleries](marketplace-image-galleries.md) — managed profiles and property listings keep a gallery while the first image remains the legacy cover.
 - [Homepage ad placement](homepage-ad-placement.md) — eligible campaigns appear below the home hero and rotate every five seconds when several match the current location.
 - [Expo package targeting](expo-package-targeting.md) — native Expo dependencies must be added to the mobile artifact, not the pnpm workspace root.
+- [Service-specific location coverage](service-specific-location-coverage.md) — multi-wilayat coverage belongs to each approved service so one provider can use different areas per specialty.

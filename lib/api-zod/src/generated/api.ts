@@ -1031,6 +1031,11 @@ export const createMyServiceRegistrationBodySpecialtyMax = 200;
 export const createMyServiceRegistrationBodyCityMin = 2;
 export const createMyServiceRegistrationBodyCityMax = 100;
 
+export const createMyServiceRegistrationBodyServiceWilayatsItemMin = 2;
+export const createMyServiceRegistrationBodyServiceWilayatsItemMax = 100;
+
+export const createMyServiceRegistrationBodyServiceWilayatsMax = 61;
+
 export const createMyServiceRegistrationBodyDescriptionMin = 20;
 export const createMyServiceRegistrationBodyDescriptionMax = 5000;
 
@@ -1045,6 +1050,7 @@ export const CreateMyServiceRegistrationBody = zod.object({
   "title": zod.string().min(createMyServiceRegistrationBodyTitleMin).max(createMyServiceRegistrationBodyTitleMax),
   "specialty": zod.string().min(createMyServiceRegistrationBodySpecialtyMin).max(createMyServiceRegistrationBodySpecialtyMax),
   "city": zod.string().min(createMyServiceRegistrationBodyCityMin).max(createMyServiceRegistrationBodyCityMax),
+  "serviceWilayats": zod.array(zod.string().min(createMyServiceRegistrationBodyServiceWilayatsItemMin).max(createMyServiceRegistrationBodyServiceWilayatsItemMax)).min(1).max(createMyServiceRegistrationBodyServiceWilayatsMax),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
   "description": zod.string().min(createMyServiceRegistrationBodyDescriptionMin).max(createMyServiceRegistrationBodyDescriptionMax),
@@ -1058,6 +1064,7 @@ export const CreateMyServiceRegistrationResponse = zod.object({
   "title": zod.string(),
   "specialty": zod.string(),
   "city": zod.string(),
+  "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
@@ -1075,6 +1082,7 @@ export const ListMyServiceReviewsResponseItem = zod.object({
   "title": zod.string(),
   "specialty": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
@@ -1099,6 +1107,11 @@ export const resubmitMyServiceReviewBodySpecialtyMax = 200;
 export const resubmitMyServiceReviewBodyCityMin = 2;
 export const resubmitMyServiceReviewBodyCityMax = 100;
 
+export const resubmitMyServiceReviewBodyServiceWilayatsItemMin = 2;
+export const resubmitMyServiceReviewBodyServiceWilayatsItemMax = 100;
+
+export const resubmitMyServiceReviewBodyServiceWilayatsMax = 61;
+
 export const resubmitMyServiceReviewBodyDescriptionMin = 20;
 export const resubmitMyServiceReviewBodyDescriptionMax = 5000;
 
@@ -1112,6 +1125,7 @@ export const ResubmitMyServiceReviewBody = zod.object({
   "title": zod.string().min(resubmitMyServiceReviewBodyTitleMin).max(resubmitMyServiceReviewBodyTitleMax),
   "specialty": zod.string().max(resubmitMyServiceReviewBodySpecialtyMax).nullish(),
   "city": zod.string().min(resubmitMyServiceReviewBodyCityMin).max(resubmitMyServiceReviewBodyCityMax),
+  "serviceWilayats": zod.array(zod.string().min(resubmitMyServiceReviewBodyServiceWilayatsItemMin).max(resubmitMyServiceReviewBodyServiceWilayatsItemMax)).min(1).max(resubmitMyServiceReviewBodyServiceWilayatsMax).optional(),
   "servesAllGovernorates": zod.boolean().optional(),
   "deliveryAvailable": zod.boolean().optional(),
   "description": zod.string().min(resubmitMyServiceReviewBodyDescriptionMin).max(resubmitMyServiceReviewBodyDescriptionMax),
@@ -1125,6 +1139,7 @@ export const ResubmitMyServiceReviewResponse = zod.object({
   "title": zod.string(),
   "specialty": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
@@ -1151,6 +1166,7 @@ export const ListAdminServiceReviewsResponse = zod.object({
   "title": zod.string(),
   "specialty": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),
@@ -1186,6 +1202,7 @@ export const UpdateAdminServiceReviewResponse = zod.object({
   "title": zod.string(),
   "specialty": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
   "description": zod.string(),

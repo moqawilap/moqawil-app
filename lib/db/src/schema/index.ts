@@ -86,6 +86,8 @@ export const services = pgTable("services", {
   category: varchar("category", { length: 100 }).notNull(),
   description: text("description"),
   priceFromOmaniRial: numeric("price_from_omani_rial", { precision: 10, scale: 3 }),
+  serviceWilayats: jsonb("service_wilayats").$type<string[]>().notNull().default([]),
+  servesAllGovernorates: boolean("serves_all_governorates").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   ...timestamps,
 }, (table) => [index("services_category_idx").on(table.category), index("services_contractor_idx").on(table.contractorId)]);
@@ -112,6 +114,7 @@ export const serviceRegistrations = pgTable("service_registrations", {
   title: varchar("title", { length: 200 }).notNull(),
   specialty: varchar("specialty", { length: 200 }).notNull(),
   city: varchar("city", { length: 100 }).notNull(),
+  serviceWilayats: jsonb("service_wilayats").$type<string[]>().notNull().default([]),
   servesAllGovernorates: boolean("serves_all_governorates").notNull().default(false),
   deliveryAvailable: boolean("delivery_available").notNull().default(false),
   description: text("description").notNull(),
