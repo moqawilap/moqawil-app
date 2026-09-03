@@ -147,6 +147,38 @@ export default function ServiceRegistrationScreen() {
   const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === propertyWilayat);
   const knownAreas = propertyWilayat ? omanWilayatAreas[propertyWilayat] ?? [] : [];
   const finalPropertyArea = propertyArea === '__other__' ? customPropertyArea.trim() : propertyArea;
+  const locationLevel = !propertyGovernorate ? 'governorate' : !propertyWilayat ? 'wilayat' : 'area';
+  const locationLevelTitle = locationLevel === 'governorate' ? (isArabic ? 'المحافظة' : 'Governorate') : locationLevel === 'wilayat' ? (isArabic ? 'الولاية' : 'Wilayat') : (isArabic ? 'المنطقة' : 'Area');
+  const locationOptions = locationLevel === 'governorate'
+    ? omanGovernorates.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))
+    : locationLevel === 'wilayat'
+      ? (selectedGovernorate?.wilayats ?? []).map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))
+      : [...knownAreas.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name })), { value: '__other__', label: isArabic ? 'منطقة أخرى' : 'Other area' }];
+  const goBackLocationLevel = () => {
+    if (locationLevel === 'area') {
+      setPropertyArea('');
+      setCustomPropertyArea('');
+      setPropertyWilayat('');
+    } else if (locationLevel === 'wilayat') {
+      setPropertyGovernorate('');
+      setPropertyWilayat('');
+    }
+  };
+  const chooseLocationOption = (value: string) => {
+    if (locationLevel === 'governorate') {
+      setPropertyGovernorate(value);
+      setPropertyWilayat('');
+      setPropertyArea('');
+      setCustomPropertyArea('');
+    } else if (locationLevel === 'wilayat') {
+      setPropertyWilayat(value);
+      setPropertyArea('');
+      setCustomPropertyArea('');
+    } else {
+      setPropertyArea(value);
+      setCustomPropertyArea('');
+    }
+  };
   const toggleWilayat = (name: string) => setServiceWilayats((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
 
   const createRegistration = useCreateMyServiceRegistration({ mutation: {
@@ -235,10 +267,14 @@ export default function ServiceRegistrationScreen() {
            {isProperty ? <>
              <View testID="property-location-picker" style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع العقار' : 'Property location'}</Text>
-               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر المحافظة، ثم الولاية، ثم المنطقة.' : 'Choose the governorate, then wilayat, then area.'}</Text>
-               <ChoiceGrid options={omanGovernorates.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))} value={propertyGovernorate} onChange={(value) => { setPropertyGovernorate(value); setPropertyWilayat(''); setPropertyArea(''); setCustomPropertyArea(''); }} colors={colors} />
-               {selectedGovernorate ? <><Text style={[styles.stepLabel, { color: colors.primary }]}>{isArabic ? 'الولاية' : 'Wilayat'}</Text><ChoiceGrid options={selectedGovernorate.wilayats.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))} value={propertyWilayat} onChange={(value) => { setPropertyWilayat(value); setPropertyArea(''); setCustomPropertyArea(''); }} colors={colors} /></> : null}
-               {selectedWilayat ? <><Text style={[styles.stepLabel, { color: colors.primary }]}>{isArabic ? 'المنطقة' : 'Area'}</Text><ChoiceGrid options={[...knownAreas.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name })), { value: '__other__', label: isArabic ? 'منطقة أخرى' : 'Other area' }]} value={propertyArea} onChange={setPropertyArea} colors={colors} />{propertyArea === '__other__' ? <TextInput testID="property-custom-area" value={customPropertyArea} onChangeText={setCustomPropertyArea} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اكتب اسم المنطقة' : 'Enter the area name'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /> : null}</> : null}
+               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر الموقع خطوة بخطوة داخل نفس القائمة.' : 'Choose the location step by step in the same list.'}</Text>
+               <View style={[styles.locationPath, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                 {locationLevel !== 'governorate' ? <Pressable testID="property-location-back" accessibilityLabel={isArabic ? 'العودة للمستوى السابق' : 'Go back'} onPress={goBackLocationLevel} style={styles.locationBack}><Feather name={isArabic ? 'chevron-right' : 'chevron-left'} size={20} color={colors.primary} /></Pressable> : null}
+                 <View style={{ flex: 1 }}><Text style={[styles.locationLevel, { color: colors.primary }]}>{locationLevelTitle}</Text><Text style={[styles.locationSelection, { color: colors.foreground }]} numberOfLines={1}>{propertyArea && propertyArea !== '__other__' ? propertyArea : propertyWilayat || propertyGovernorate || (isArabic ? 'اختر من القائمة' : 'Choose from the list')}</Text></View>
+                 <Feather name="list" size={18} color={colors.mutedForeground} />
+               </View>
+               <ChoiceGrid options={locationOptions} value={locationLevel === 'governorate' ? propertyGovernorate : locationLevel === 'wilayat' ? propertyWilayat : propertyArea} onChange={chooseLocationOption} colors={colors} />
+               {propertyArea === '__other__' ? <TextInput testID="property-custom-area" value={customPropertyArea} onChangeText={setCustomPropertyArea} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اكتب اسم المنطقة' : 'Enter the area name'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /> : null}
              </View>
              <ChoiceSection title={isArabic ? 'الغرض من الإعلان' : 'Listing purpose'} options={[{ value: 'sale', label: isArabic ? 'بيع' : 'For sale' }, { value: 'rent', label: isArabic ? 'تأجير' : 'For rent' }]} value={listingType} onChange={(value) => setListingType(value as 'sale' | 'rent')} colors={colors} />
              <ChoiceSection title={isArabic ? 'نوع العقار' : 'Property type'} options={propertyTypes.map((item) => ({ value: item.value, label: isArabic ? item.ar : item.en }))} value={propertyType} onChange={setPropertyType} colors={colors} />
@@ -328,6 +364,10 @@ const styles = StyleSheet.create({
   coverageCard: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 9 },
   choiceRow: { minHeight: 50, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 },
   choiceTitle: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: '700' },
+  locationPath: { minHeight: 54, borderWidth: 1, borderRadius: 13, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  locationBack: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  locationLevel: { fontSize: 10, fontWeight: '800' },
+  locationSelection: { fontSize: 13, fontWeight: '800', marginTop: 2 },
   deliveryRow: { borderTopWidth: 1, paddingTop: 12, marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 9 },
   governorateGroup: { gap: 7, marginTop: 4 },
   governorateTitle: { fontSize: 12, fontWeight: '800' },
