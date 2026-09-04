@@ -47,6 +47,11 @@ export interface ServiceRegistrationCreate {
      * @items.maxLength 8000000
      */
   mediaUrls: string[];
+  /**
+     * @maxLength 8000000
+     * @nullable
+     */
+  commercialRegistrationPdf?: string | null;
   subscriptionPlanCode: ServiceRegistrationCreateSubscriptionPlanCode;
   /**
      * @maxLength 24

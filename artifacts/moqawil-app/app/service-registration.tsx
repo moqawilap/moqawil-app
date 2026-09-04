@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@clerk/expo';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -146,6 +147,8 @@ export default function ServiceRegistrationScreen() {
   const [subscriptionPlanCode, setSubscriptionPlanCode] = useState<SubscriptionPlanCode | ''>('');
   const [couponCode, setCouponCode] = useState('');
   const [mediaLoading, setMediaLoading] = useState(false);
+  const [commercialRegistrationPdf, setCommercialRegistrationPdf] = useState('');
+  const [commercialRegistrationName, setCommercialRegistrationName] = useState('');
   const totalBytes = useMemo(() => media.reduce((sum, item) => sum + item.size, 0), [media]);
   const servesAllGovernorates = serviceWilayats.length === allWilayats.length;
   const isProperty = category === 'real-estate';
@@ -252,6 +255,18 @@ export default function ServiceRegistrationScreen() {
       setMediaLoading(false);
     }
   };
+  const pickCommercialRegistration = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if ((asset.size ?? 0) > 5 * 1024 * 1024) {
+      Alert.alert(isArabic ? 'الملف كبير' : 'File too large', isArabic ? 'الحد الأقصى لملف السجل التجاري 5 ميجابايت.' : 'The commercial registration PDF must be 5 MB or smaller.');
+      return;
+    }
+    const dataUrl = await blobToDataUrl(await (await fetch(asset.uri)).blob());
+    setCommercialRegistrationPdf(dataUrl);
+    setCommercialRegistrationName(asset.name);
+  };
 
   if (!isSignedIn) return <View style={[styles.page, styles.center, { backgroundColor: colors.background }]}><Text style={[styles.centerTitle, { color: colors.foreground }]}>{isArabic ? 'سجّل الدخول لإضافة خدمتك' : 'Sign in to add your service'}</Text><ActionButton label={isArabic ? 'تسجيل الدخول' : 'Sign in'} onPress={() => router.push('/sign-in')} /></View>;
 
@@ -269,7 +284,7 @@ export default function ServiceRegistrationScreen() {
     'The administrator reviews the registration before it appears and may request changes, reject it, or remove it.',
   ];
   const validProperty = !isProperty || (propertyGovernorate && propertyWilayat && finalPropertyArea.length >= 2 && propertyType && Number(propertySize) > 0);
-  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && subscriptionPlanCode.length > 0 && termsAccepted;
+  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && (category === 'maintenance' || !!commercialRegistrationPdf) && subscriptionPlanCode.length > 0 && termsAccepted;
   const primaryLocation = allWilayats.find((item) => item.name === serviceWilayats[0]);
 
   return (
@@ -330,13 +345,14 @@ export default function ServiceRegistrationScreen() {
             {media.map((item) => <View key={item.id} style={[styles.mediaCard, { borderColor: colors.border }]}>{item.type === 'image' ? <Image source={{ uri: item.dataUrl }} style={styles.preview} /> : <View style={[styles.video, { backgroundColor: colors.primarySoft }]}><Feather name="video" size={23} color={colors.primary} /><Text numberOfLines={1} style={[styles.videoName, { color: colors.foreground }]}>{item.name}</Text></View>}<Pressable onPress={() => setMedia((current) => current.filter((mediaItem) => mediaItem.id !== item.id))} style={[styles.remove, { backgroundColor: colors.navy }]}><Feather name="x" size={13} color="#FFFFFF" /></Pressable></View>)}
             {media.length < MAX_MEDIA ? <Pressable testID="add-registration-media" onPress={pickMedia} disabled={mediaLoading} style={[styles.addMedia, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>{mediaLoading ? <ActivityIndicator color={colors.primary} /> : <><Feather name="plus" size={23} color={colors.primary} /><Text style={[styles.addMediaText, { color: colors.primary }]}>{isArabic ? 'إضافة وسائط' : 'Add media'}</Text></>}</Pressable> : null}
           </View>
+           {category !== 'maintenance' ? <View style={[styles.termsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'السجل التجاري (PDF) *' : 'Commercial registration (PDF) *'}</Text><Pressable testID="pick-commercial-registration" onPress={pickCommercialRegistration} style={[styles.addMedia, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}><Feather name={commercialRegistrationPdf ? 'check-circle' : 'file-text'} size={22} color={colors.primary} /><Text numberOfLines={1} style={[styles.addMediaText, { color: colors.primary }]}>{commercialRegistrationName || (isArabic ? 'اختيار ملف PDF' : 'Choose PDF file')}</Text></Pressable></View> : null}
            <SubscriptionPlanSelector category={isProperty ? 'real-estate' : 'service'} value={subscriptionPlanCode} onChange={(code) => { setSubscriptionPlanCode(code); setCouponCode(''); }} couponCode={couponCode} onCouponChange={setCouponCode} />
           <View style={[styles.termsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.termsTitle, { color: colors.foreground }]}>{isArabic ? 'شروط التسجيل والإعلان' : 'Registration and advertising terms'}</Text>
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-            <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، واختر الباقة، وأضف ملفًا واحدًا على الأقل، ثم وافق على الشروط.' : 'Complete all choices and fields, choose a plan, add at least one media file, and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} />
+            <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأرفق السجل التجاري PDF (ما عدا الصيانة)، ثم وافق على الشروط.' : 'Complete all fields, attach the commercial registration PDF (except maintenance), and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf: category === 'maintenance' ? null : commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} />
         </View>
       </ScrollView>
       <Modal visible={activeCount !== null} transparent animationType="fade" onRequestClose={() => setActiveCount(null)}>

@@ -1166,6 +1166,9 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       || input.city.trim().length < 2
       || input.city.length > 100
       || !selectedPlan
+      || typeof input.commercialRegistrationPdf !== "string"
+      || !/^data:application\/pdf(?:;[^,]*)?;base64,/.test(input.commercialRegistrationPdf)
+      || input.commercialRegistrationPdf.length > 8_000_000
       || input.termsAccepted !== true
       || !validMedia
       || totalMediaLength > 32_000_000
@@ -1191,6 +1194,7 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       imageUrls: mediaUrls,
       subscriptionPlanCode: selectedPlan.code,
       couponCode,
+      commercialRegistrationPdf: input.commercialRegistrationPdf,
       isPublished: false,
       reviewStatus: "pending_review",
     }).returning();
@@ -1246,6 +1250,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       || input.description.trim().length < 20
       || input.description.length > 5000
       || !selectedPlan
+      || (input.category !== "maintenance" && (typeof input.commercialRegistrationPdf !== "string" || !/^data:application\/pdf(?:;[^,]*)?;base64,/.test(input.commercialRegistrationPdf) || input.commercialRegistrationPdf.length > 8_000_000))
       || input.termsAccepted !== true
       || !validMedia
       || totalMediaLength > 32_000_000
@@ -1276,6 +1281,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       mediaUrls,
       subscriptionPlanCode: selectedPlan.code,
       couponCode,
+      commercialRegistrationPdf: input.category === "maintenance" ? null : input.commercialRegistrationPdf,
       status: "pending_review",
     }).returning();
     await logAudit(user.id, "service_registration_submitted", "service_registration", registration.id, { category: input.category, mediaCount: mediaUrls.length });

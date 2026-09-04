@@ -29,6 +29,8 @@ export interface ContractorProjectCreate {
      * @items.maxLength 8000000
      */
   mediaUrls: string[];
+  /** @maxLength 8000000 */
+  commercialRegistrationPdf: string;
   subscriptionPlanCode: ContractorProjectCreateSubscriptionPlanCode;
   /**
      * @maxLength 24

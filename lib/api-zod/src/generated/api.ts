@@ -1300,6 +1300,8 @@ export const createMyContractorProjectBodyMediaUrlsItemMax = 8000000;
 
 export const createMyContractorProjectBodyMediaUrlsMax = 15;
 
+export const createMyContractorProjectBodyCommercialRegistrationPdfMax = 8000000;
+
 export const createMyContractorProjectBodyCouponCodeMax = 24;
 
 
@@ -1309,6 +1311,7 @@ export const CreateMyContractorProjectBody = zod.object({
   "description": zod.string().min(createMyContractorProjectBodyDescriptionMin).max(createMyContractorProjectBodyDescriptionMax),
   "city": zod.string().min(createMyContractorProjectBodyCityMin).max(createMyContractorProjectBodyCityMax),
   "mediaUrls": zod.array(zod.string().max(createMyContractorProjectBodyMediaUrlsItemMax)).min(1).max(createMyContractorProjectBodyMediaUrlsMax),
+  "commercialRegistrationPdf": zod.string().max(createMyContractorProjectBodyCommercialRegistrationPdfMax),
   "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual']),
   "couponCode": zod.string().max(createMyContractorProjectBodyCouponCodeMax).nullish(),
   "termsAccepted": zod.literal(true)
@@ -1365,6 +1368,8 @@ export const createMyServiceRegistrationBodyMediaUrlsItemMax = 8000000;
 
 export const createMyServiceRegistrationBodyMediaUrlsMax = 15;
 
+export const createMyServiceRegistrationBodyCommercialRegistrationPdfMax = 8000000;
+
 export const createMyServiceRegistrationBodyCouponCodeMax = 24;
 
 
@@ -1392,6 +1397,7 @@ export const CreateMyServiceRegistrationBody = zod.object({
 }),zod.null()]).optional(),
   "description": zod.string().min(createMyServiceRegistrationBodyDescriptionMin).max(createMyServiceRegistrationBodyDescriptionMax),
   "mediaUrls": zod.array(zod.string().max(createMyServiceRegistrationBodyMediaUrlsItemMax)).min(1).max(createMyServiceRegistrationBodyMediaUrlsMax),
+  "commercialRegistrationPdf": zod.string().max(createMyServiceRegistrationBodyCommercialRegistrationPdfMax).nullish(),
   "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
   "couponCode": zod.string().max(createMyServiceRegistrationBodyCouponCodeMax).nullish(),
   "termsAccepted": zod.literal(true)
