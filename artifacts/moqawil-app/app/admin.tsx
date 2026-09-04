@@ -29,6 +29,14 @@ import {
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not process this request.';
 const text = (isArabic: boolean, english: string, arabic: string) => isArabic ? arabic : english;
+const AD_DAILY_PRICE_USD = 6;
+const AD_DAILY_PRICE_OMR = 2.310;
+const adCampaignDays = (startDate: string, endDate: string) => {
+  const start = Date.parse(`${startDate}T00:00:00.000Z`);
+  const end = Date.parse(`${endDate}T00:00:00.000Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0;
+  return Math.floor((end - start) / 86_400_000) + 1;
+};
 const statusText = (isArabic: boolean, status: string) => ({
   free_trial: text(isArabic, 'Free trial', 'تجربة مجانية'),
   active: text(isArabic, 'Active', 'نشط'),
@@ -989,10 +997,10 @@ const blankAdCampaign = () => {
     audienceWilayats: [] as string[],
     audienceService: '',
     frequencyCapPerDay: '3',
-    totalBudgetOmaniRial: '25',
-    dailyBudgetOmaniRial: '5',
-    billingModel: 'cpc' as const,
-    unitRateOmaniRial: '0.5',
+    totalBudgetOmaniRial: String(AD_DAILY_PRICE_OMR * 31),
+    dailyBudgetOmaniRial: String(AD_DAILY_PRICE_OMR),
+    billingModel: 'cpm' as const,
+    unitRateOmaniRial: String(AD_DAILY_PRICE_OMR),
     startAt: start.toISOString().slice(0, 10),
     endAt: end.toISOString().slice(0, 10),
     status: 'draft' as const,
@@ -1130,12 +1138,13 @@ function AdvertisingTab() {
     setShowForm(true);
   };
   const save = () => {
-    const total = Number(form.totalBudgetOmaniRial);
-    const daily = Number(form.dailyBudgetOmaniRial);
-    const rate = Number(form.unitRateOmaniRial);
+    const days = adCampaignDays(form.startAt, form.endAt);
+    const total = Number((days * AD_DAILY_PRICE_OMR).toFixed(3));
+    const daily = AD_DAILY_PRICE_OMR;
+    const rate = AD_DAILY_PRICE_OMR;
     const cap = Number(form.frequencyCapPerDay);
-    if (!form.contractorId || form.title.trim().length < 2 || !form.media.length || !Number.isFinite(total) || !Number.isFinite(daily) || daily > total || !Number.isFinite(rate) || !Number.isInteger(cap) || cap < 1 || !form.startAt || !form.endAt) {
-      Alert.alert(text(isArabic, 'Missing campaign details', 'بيانات الحملة غير مكتملة'), text(isArabic, 'Choose an advertiser, media, dates, and valid budgets. Daily budget cannot exceed total budget.', 'اختر المعلن والوسائط والتواريخ وأدخل ميزانيات صحيحة. لا يمكن أن تتجاوز الميزانية اليومية الإجمالية.'));
+    if (!form.contractorId || form.title.trim().length < 2 || !form.media.length || days < 1 || !Number.isInteger(cap) || cap < 1 || !form.startAt || !form.endAt) {
+      Alert.alert(text(isArabic, 'Missing campaign details', 'بيانات الحملة غير مكتملة'), text(isArabic, 'Choose an advertiser, media, and valid start and end dates.', 'اختر المعلن والوسائط وتاريخ بداية ونهاية صحيحين.'));
       return;
     }
     const data = {
@@ -1153,7 +1162,7 @@ function AdvertisingTab() {
       frequencyCapPerDay: cap,
       totalBudgetOmaniRial: total,
       dailyBudgetOmaniRial: daily,
-      billingModel: form.billingModel,
+      billingModel: 'cpm',
       unitRateOmaniRial: rate,
       startAt: new Date(`${form.startAt}T00:00:00.000Z`).toISOString(),
       endAt: new Date(`${form.endAt}T23:59:59.000Z`).toISOString(),
@@ -1164,6 +1173,9 @@ function AdvertisingTab() {
   };
   const imageCount = form.media.filter((item: AdMediaItem) => item.type === 'image').length;
   const videoCount = form.media.filter((item: AdMediaItem) => item.type === 'video').length;
+  const campaignDays = adCampaignDays(form.startAt, form.endAt);
+  const campaignTotalUsd = campaignDays * AD_DAILY_PRICE_USD;
+  const campaignTotalOmr = campaignDays * AD_DAILY_PRICE_OMR;
   const addMedia = async (type: AdMediaItem['type']) => {
     const remaining = type === 'image' ? 15 - imageCount : 2 - videoCount;
     if (remaining <= 0) {
@@ -1289,23 +1301,39 @@ function AdvertisingTab() {
               ))}
             </ScrollView>
           ) : <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Add at least one image or video. Maximum 15 images and 2 videos.', 'أضف صورة أو فيديو واحدًا على الأقل. الحد الأقصى 15 صورة وفيديوهان.')}</Text>}
-          <View style={styles.formGrid}>
-            {[
-              ['totalBudgetOmaniRial', 'Total budget (OMR)', 'الميزانية الإجمالية (ر.ع.)'],
-              ['dailyBudgetOmaniRial', 'Daily budget (OMR)', 'الميزانية اليومية (ر.ع.)'],
-              ['unitRateOmaniRial', 'Rate per event (OMR)', 'سعر الحدث (ر.ع.)'],
-              ['frequencyCapPerDay', 'Views per customer/day', 'ظهور العميل يوميًا'],
-            ].map(([key, label, labelAr]) => <View key={key} style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text><TextInput value={String((form as any)[key])} onChangeText={(value) => set(key, value)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /></View>)}
+          <View style={[styles.adPriceCard, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
+            <View style={styles.adPriceHeader}>
+              <View>
+                <Text style={[styles.adPriceTitle, { color: colors.foreground }]}>{text(isArabic, 'Fixed daily advertising price', 'سعر الإعلان اليومي الثابت')}</Text>
+                <Text style={[styles.adPriceValue, { color: colors.primary }]}>$6 / 2.310 {text(isArabic, 'OMR per day', 'ر.ع يوميًا')}</Text>
+              </View>
+              <Feather name="calendar" size={22} color={colors.primary} />
+            </View>
+            <View style={[styles.adPriceSummary, { borderTopColor: colors.border }]}>
+              <Text style={[styles.cardMeta, { color: colors.foreground }]}>{campaignDays} {text(isArabic, 'days', 'يومًا')}</Text>
+              <Text style={[styles.adPriceTotal, { color: colors.foreground }]}>${campaignTotalUsd} / {campaignTotalOmr.toFixed(3)} {text(isArabic, 'OMR total', 'ر.ع إجمالي')}</Text>
+            </View>
           </View>
-          <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Billing model', 'نموذج الفوترة')}</Text>
-          <View style={styles.formActions}>
-            {(['cpm', 'cpc', 'cpa'] as const).map((model) => <Pressable key={model} onPress={() => setForm((current: any) => ({ ...current, billingModel: model }))} style={[styles.statusPill, form.billingModel === model ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.billingModel === model ? colors.background : colors.foreground }]}>{model.toUpperCase()}</Text></Pressable>)}
+          <View style={styles.formGroupFull}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Views per customer/day', 'ظهور الإعلان لكل عميل يوميًا')}</Text>
+            <TextInput value={String(form.frequencyCapPerDay)} onChangeText={(value) => set('frequencyCapPerDay', value)} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+          <View testID="ad-payment-methods" style={[styles.adPaymentCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.adPaymentHeading}>
+              <Feather name="lock" size={15} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.foreground, marginBottom: 0 }]}>{text(isArabic, 'Payment methods', 'طرق الدفع')}</Text>
+            </View>
+            <View style={styles.adPaymentMethods}>
+              <View style={[styles.adPaymentMethod, { borderColor: colors.border }]}><Text style={[styles.adPaymentBrand, { color: colors.primary }]}>VISA</Text></View>
+              <View style={[styles.adPaymentMethod, { borderColor: colors.border }]}><Text style={[styles.adPaymentBrand, { color: colors.foreground }]}>Mastercard</Text></View>
+              <View style={[styles.adPaymentMethod, { borderColor: colors.border }]}><Feather name="smartphone" size={16} color={colors.foreground} /><Text style={[styles.adPaymentBrand, { color: colors.foreground }]}>Apple Pay</Text></View>
+            </View>
+            <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Payment activates after the payment gateway is connected.', 'يتم تفعيل الخصم بعد ربط بوابة الدفع.')}</Text>
           </View>
           <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Campaign state', 'حالة الحملة')}</Text>
           <View style={styles.formActions}>
             {(['draft', 'active', 'paused'] as const).map((state) => <Pressable key={state} onPress={() => setForm((current: any) => ({ ...current, status: state }))} style={[styles.statusPill, form.status === state ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.statusPillText, { color: form.status === state ? colors.background : colors.foreground }]}>{statusText(isArabic, state)}</Text></Pressable>)}
           </View>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Payment is reserved for the campaign budget; Visa/Apple Pay activation will be added after the payment connection is enabled.', 'المبلغ محجوز لميزانية الحملة؛ سيتم تفعيل Visa وApple Pay بعد ربط بوابة الدفع.')}</Text>
           <View style={styles.formActions}>
             <Pressable testID="save-ad-campaign" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}><Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Save campaign', 'حفظ الحملة')}</Text></Pressable>
             <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}><Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text></Pressable>
@@ -1319,7 +1347,7 @@ function AdvertisingTab() {
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>{campaign.title}</Text>
             <View style={[styles.badge, { backgroundColor: campaign.status === 'active' ? '#D9F8F2' : campaign.status === 'paused' ? '#FFF2D6' : colors.muted }]}><Text style={[styles.badgeText, { color: campaign.status === 'active' ? '#0B6E6B' : colors.mutedForeground }]}>{statusText(isArabic, campaign.status)}</Text></View>
           </View>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.advertiserNameArabic || campaign.advertiserName} • {campaign.billingModel.toUpperCase()} • {campaign.totalBudgetOmaniRial.toFixed(3)} OMR {text(isArabic, 'budget', 'ميزانية')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.advertiserNameArabic || campaign.advertiserName} • $6 / 2.310 {text(isArabic, 'OMR daily', 'ر.ع يوميًا')} • {campaign.totalBudgetOmaniRial.toFixed(3)} {text(isArabic, 'OMR total', 'ر.ع إجمالي')}</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Target wilayats', 'الولايات المستهدفة')}: {campaign.audience.wilayats?.length ? campaign.audience.wilayats.join('، ') : text(isArabic, 'All Oman', 'كل السلطنة')}</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Spent', 'المصروف')}: {campaign.spentOmaniRial.toFixed(3)} • {text(isArabic, 'Remaining', 'المتبقي')}: {campaign.remainingOmaniRial.toFixed(3)} • {text(isArabic, 'Today', 'اليوم')}: {campaign.dailySpentOmaniRial.toFixed(3)} / {campaign.dailyBudgetOmaniRial.toFixed(3)} OMR</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.impressionCount} {text(isArabic, 'impressions', 'ظهور')} • {campaign.clickCount} {text(isArabic, 'clicks', 'نقرات')} • {campaign.conversionCount} {text(isArabic, 'results', 'نتائج')} • {text(isArabic, 'up to', 'حتى')} {campaign.frequencyCapPerDay} / {text(isArabic, 'customer/day', 'عميل/يوم')}</Text>
@@ -1826,6 +1854,17 @@ const styles = StyleSheet.create({
   formGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 },
   formGroup: { width: '50%', paddingHorizontal: 6, marginBottom: 12 },
   formGroupFull: { marginBottom: 12 },
+  adPriceCard: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 },
+  adPriceHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  adPriceTitle: { fontSize: 12, fontWeight: '800', marginBottom: 4 },
+  adPriceValue: { fontSize: 20, fontWeight: '900' },
+  adPriceSummary: { borderTopWidth: 1, paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  adPriceTotal: { fontSize: 13, fontWeight: '800' },
+  adPaymentCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 9 },
+  adPaymentHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  adPaymentMethods: { flexDirection: 'row', gap: 7 },
+  adPaymentMethod: { flex: 1, minHeight: 48, borderWidth: 1, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 5 },
+  adPaymentBrand: { fontSize: 10, fontWeight: '900', textAlign: 'center' },
   label: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
   input: { borderWidth: 1, borderRadius: 8, height: 40, paddingHorizontal: 12, fontSize: 14 },
   inputMulti: { borderWidth: 1, borderRadius: 8, minHeight: 80, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, textAlignVertical: 'top' },
