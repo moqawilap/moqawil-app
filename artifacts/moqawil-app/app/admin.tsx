@@ -1774,6 +1774,27 @@ function SettingsTab() {
       return { ...current, plans: newPlans };
     });
   };
+  const addCoupon = () => setForm((current) => current ? ({
+    ...current,
+    coupons: [...current.coupons, {
+      id: `coupon-${Date.now()}`,
+      code: '',
+      discountType: 'percent',
+      discountValue: 10,
+      scopes: ['service'],
+      startsAt: new Date().toISOString(),
+      endsAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      maxUses: null,
+      enabled: false,
+      approvalStatus: 'draft',
+    }],
+  }) : current);
+  const updateCoupon = (index: number, changes: Record<string, unknown>) => setForm((current) => {
+    if (!current) return current;
+    const coupons = [...current.coupons];
+    coupons[index] = { ...coupons[index], ...changes } as typeof coupons[number];
+    return { ...current, coupons };
+  });
 
   const renderColorInput = (key: keyof MarketplaceSettings['appearance'], labelEn: string, labelAr: string) => (
     <View style={styles.formGroup} key={key}>
@@ -1900,6 +1921,40 @@ function SettingsTab() {
                 <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Price (OMR)', 'السعر (ر.ع)')}</Text>
                 <TextInput value={String(plan.priceOmaniRial)} onChangeText={v => updatePlan(i, 'priceOmaniRial', v)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} />
               </View>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.homepageSectionHeader}>
+          <View>
+            <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Coupons', 'الكوبونات')}</Text>
+            <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Only approved and enabled coupons can be used.', 'لا يمكن استخدام الكوبون إلا بعد اعتماده وتفعيله.')}</Text>
+          </View>
+          <Pressable testID="add-coupon" onPress={addCoupon} style={[styles.denseButton, { borderColor: colors.primary }]}><Feather name="plus" size={15} color={colors.primary} /><Text style={[styles.denseButtonText, { color: colors.primary }]}>{text(isArabic, 'Add', 'إضافة')}</Text></Pressable>
+        </View>
+        {form.coupons.map((coupon, index) => (
+          <View key={coupon.id} style={[styles.denseCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.formGrid}>
+              <View style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Coupon code', 'رمز الكوبون')}</Text><TextInput value={coupon.code} onChangeText={(value) => updateCoupon(index, { code: value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })} autoCapitalize="characters" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} /></View>
+              <View style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Discount value', 'قيمة الخصم')}</Text><TextInput value={String(coupon.discountValue)} onChangeText={(value) => updateCoupon(index, { discountValue: Number(value) || 0 })} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} /></View>
+              <View style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Start date', 'تاريخ البداية')}</Text><TextInput value={coupon.startsAt.slice(0, 10)} onChangeText={(value) => updateCoupon(index, { startsAt: `${value}T00:00:00.000Z` })} placeholder="YYYY-MM-DD" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} /></View>
+              <View style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'End date', 'تاريخ النهاية')}</Text><TextInput value={coupon.endsAt.slice(0, 10)} onChangeText={(value) => updateCoupon(index, { endsAt: `${value}T23:59:59.000Z` })} placeholder="YYYY-MM-DD" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} /></View>
+              <View style={styles.formGroup}><Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Maximum uses', 'الحد الأقصى للاستخدام')}</Text><TextInput value={coupon.maxUses === null ? '' : String(coupon.maxUses)} onChangeText={(value) => updateCoupon(index, { maxUses: value ? Math.max(1, Number(value) || 1) : null })} keyboardType="number-pad" placeholder={text(isArabic, 'Unlimited', 'غير محدود')} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} /></View>
+            </View>
+            <View style={styles.formActions}>
+              {(['percent', 'fixed_usd'] as const).map((kind) => <Pressable key={kind} onPress={() => updateCoupon(index, { discountType: kind })} style={[styles.statusPill, { borderColor: coupon.discountType === kind ? colors.primary : colors.border, backgroundColor: coupon.discountType === kind ? colors.primarySoft : colors.card }]}><Text style={[styles.statusPillText, { color: colors.foreground }]}>{kind === 'percent' ? text(isArabic, 'Percent %', 'نسبة %') : text(isArabic, 'Fixed USD', 'دولار ثابت')}</Text></Pressable>)}
+            </View>
+            <View style={styles.formActions}>
+              {(['service', 'real-estate'] as const).map((scope) => {
+                const selected = coupon.scopes.includes(scope);
+                return <Pressable key={scope} onPress={() => updateCoupon(index, { scopes: selected ? coupon.scopes.filter((item) => item !== scope) : [...coupon.scopes, scope] })} style={[styles.statusPill, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.card }]}><Text style={[styles.statusPillText, { color: colors.foreground }]}>{scope}</Text></Pressable>;
+              })}
+            </View>
+            <View style={styles.formActions}>
+              <Pressable onPress={() => updateCoupon(index, { approvalStatus: coupon.approvalStatus === 'approved' ? 'draft' : 'approved', enabled: coupon.approvalStatus !== 'approved' })} style={[styles.denseButtonPrimary, { backgroundColor: coupon.approvalStatus === 'approved' ? colors.mutedForeground : colors.primary, flex: 1 }]}><Feather name={coupon.approvalStatus === 'approved' ? 'pause' : 'check'} size={15} color={colors.primaryForeground} /><Text style={[styles.denseButtonText, { color: colors.primaryForeground }]}>{coupon.approvalStatus === 'approved' ? text(isArabic, 'Suspend', 'إيقاف') : text(isArabic, 'Approve', 'اعتماد')}</Text></Pressable>
+              <Pressable onPress={() => setForm((current) => current ? ({ ...current, coupons: current.coupons.filter((_, itemIndex) => itemIndex !== index) }) : current)} style={[styles.denseButton, { borderColor: colors.destructive }]}><Feather name="trash-2" size={15} color={colors.destructive} /></Pressable>
             </View>
           </View>
         ))}

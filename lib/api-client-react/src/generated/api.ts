@@ -46,6 +46,8 @@ import type {
   ContractorProjectCreate,
   ContractorProjectRegistration,
   ContractorProvisioning,
+  CouponQuote,
+  CouponQuoteInput,
   DeleteAdminContractorParams,
   DevelopmentPaymentRequest,
   GetListingEngagementParams,
@@ -1866,6 +1868,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCancelMySubscriptionMutationOptions(options));
+    }
+
+export const getQuoteCouponUrl = () => {
+
+
+
+
+  return `/api/coupons/quote`
+}
+
+export const quoteCoupon = async (couponQuoteInput: CouponQuoteInput, options?: Parameters<typeof customFetch>[1]): Promise<CouponQuote> => {
+
+  return customFetch<CouponQuote>(getQuoteCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(couponQuoteInput)
+  }
+);}
+
+
+
+
+
+export const getQuoteCouponMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof quoteCoupon>>, TError,{data: BodyType<CouponQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof quoteCoupon>>, TError,{data: BodyType<CouponQuoteInput>}, TContext> => {
+
+const mutationKey = ['quoteCoupon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof quoteCoupon>>, {data: BodyType<CouponQuoteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  quoteCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type QuoteCouponMutationResult = NonNullable<Awaited<ReturnType<typeof quoteCoupon>>>
+    export type QuoteCouponMutationBody = BodyType<CouponQuoteInput>
+    export type QuoteCouponMutationError = ErrorType<BadRequestResponse>
+
+    export const useQuoteCoupon = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof quoteCoupon>>, TError,{data: BodyType<CouponQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof quoteCoupon>>,
+        TError,
+        {data: BodyType<CouponQuoteInput>},
+        TContext
+      > => {
+      return useMutation(getQuoteCouponMutationOptions(options));
     }
 
 export const getListMyPaymentsUrl = () => {

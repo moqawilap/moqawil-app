@@ -5,6 +5,7 @@ import {
   DEFAULT_ADVERTISING_SETTINGS,
   DEFAULT_APPEARANCE,
   DEFAULT_BRANDING,
+  type CouponSetting,
   normalizeAdvertisingSettings,
   normalizeAppearance,
   normalizeBranding,
@@ -61,6 +62,7 @@ export async function ensureMarketplaceDefaults() {
       { key: "appearance", value: DEFAULT_APPEARANCE, description: "Safe semantic theme configuration" },
       { key: "branding", value: DEFAULT_BRANDING, description: "Global bilingual branding and contact content" },
       { key: "advertising", value: DEFAULT_ADVERTISING_SETTINGS, description: "Advertising rate configuration" },
+      { key: "coupons", value: [], description: "Administrator-controlled discount coupons" },
     ]).onConflictDoNothing({ target: marketplaceSettings.key });
   });
 }
@@ -77,7 +79,7 @@ export function addMonths(date: Date, months: number) {
 }
 
 export async function getSettings() {
-  const rows = await db.select().from(marketplaceSettings).where(sql`${marketplaceSettings.key} in ('subscription', 'ranking', 'homepage', 'appearance', 'branding', 'advertising')`);
+  const rows = await db.select().from(marketplaceSettings).where(sql`${marketplaceSettings.key} in ('subscription', 'ranking', 'homepage', 'appearance', 'branding', 'advertising', 'coupons')`);
   const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   const subscription = values.subscription as Partial<typeof DEFAULT_SETTINGS> | undefined;
   const plans = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true));
@@ -98,6 +100,7 @@ export async function getSettings() {
       priceUsd: Number(plan.priceUsd),
       priceOmaniRial: Number(plan.priceOmaniRial),
     })),
+    coupons: Array.isArray(values.coupons) ? values.coupons as CouponSetting[] : [],
   };
 }
 

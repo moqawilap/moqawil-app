@@ -617,6 +617,11 @@ export interface ContractorProjectCreate {
      */
   mediaUrls: string[];
   subscriptionPlanCode: ContractorProjectCreateSubscriptionPlanCode;
+  /**
+     * @maxLength 24
+     * @nullable
+     */
+  couponCode?: string | null;
   termsAccepted: true;
 }
 
@@ -753,6 +758,11 @@ export interface ServiceRegistrationCreate {
      */
   mediaUrls: string[];
   subscriptionPlanCode: ServiceRegistrationCreateSubscriptionPlanCode;
+  /**
+     * @maxLength 24
+     * @nullable
+     */
+  couponCode?: string | null;
   termsAccepted: true;
 }
 
@@ -1051,6 +1061,96 @@ export interface AdvertisingSettings {
   usdToOmaniRial: number;
 }
 
+export type CouponSettingDiscountType = typeof CouponSettingDiscountType[keyof typeof CouponSettingDiscountType];
+
+
+export const CouponSettingDiscountType = {
+  percent: 'percent',
+  fixed_usd: 'fixed_usd',
+} as const;
+
+export type CouponSettingScopesItem = typeof CouponSettingScopesItem[keyof typeof CouponSettingScopesItem];
+
+
+export const CouponSettingScopesItem = {
+  service: 'service',
+  'real-estate': 'real-estate',
+  advertising: 'advertising',
+} as const;
+
+export type CouponSettingApprovalStatus = typeof CouponSettingApprovalStatus[keyof typeof CouponSettingApprovalStatus];
+
+
+export const CouponSettingApprovalStatus = {
+  draft: 'draft',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface CouponSetting {
+  id: string;
+  /** @pattern ^[A-Z0-9_-]{3,24}$ */
+  code: string;
+  discountType: CouponSettingDiscountType;
+  /** @minimum 0.01 */
+  discountValue: number;
+  /** @minItems 1 */
+  scopes: CouponSettingScopesItem[];
+  startsAt: string;
+  endsAt: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  maxUses: number | null;
+  enabled: boolean;
+  approvalStatus: CouponSettingApprovalStatus;
+}
+
+export type CouponQuoteInputScope = typeof CouponQuoteInputScope[keyof typeof CouponQuoteInputScope];
+
+
+export const CouponQuoteInputScope = {
+  service: 'service',
+  'real-estate': 'real-estate',
+  advertising: 'advertising',
+} as const;
+
+export interface CouponQuoteInput {
+  /**
+     * @minLength 3
+     * @maxLength 24
+     */
+  code: string;
+  scope: CouponQuoteInputScope;
+  /** @nullable */
+  planCode?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 365
+     * @nullable
+     */
+  days?: number | null;
+}
+
+export type CouponQuoteDiscountType = typeof CouponQuoteDiscountType[keyof typeof CouponQuoteDiscountType];
+
+
+export const CouponQuoteDiscountType = {
+  percent: 'percent',
+  fixed_usd: 'fixed_usd',
+} as const;
+
+export interface CouponQuote {
+  code: string;
+  discountType: CouponQuoteDiscountType;
+  discountValue: number;
+  baseUsd: number;
+  discountUsd: number;
+  finalUsd: number;
+  finalOmaniRial: number;
+}
+
 export interface PublicAppSettings {
   appearance: AppAppearance;
   branding: AppBranding;
@@ -1074,6 +1174,8 @@ export interface MarketplaceSettings {
      * @maxItems 4
      */
   plans: SubscriptionPlan[];
+  /** @maxItems 200 */
+  coupons: CouponSetting[];
 }
 
 export interface AdminOverview {

@@ -102,6 +102,7 @@ export const projects = pgTable("projects", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
   imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
   subscriptionPlanCode: varchar("subscription_plan_code", { length: 64 }),
+  couponCode: varchar("coupon_code", { length: 24 }),
   isPublished: boolean("is_published").notNull().default(true),
   reviewStatus: serviceRegistrationStatusEnum("review_status").notNull().default("approved"),
   reviewNote: text("review_note"),
@@ -134,6 +135,7 @@ export const serviceRegistrations = pgTable("service_registrations", {
   description: text("description").notNull(),
   mediaUrls: jsonb("media_urls").$type<string[]>().notNull().default([]),
   subscriptionPlanCode: varchar("subscription_plan_code", { length: 64 }),
+  couponCode: varchar("coupon_code", { length: 24 }),
   status: serviceRegistrationStatusEnum("status").notNull().default("pending_review"),
   reviewNote: text("review_note"),
   ...timestamps,
@@ -382,6 +384,7 @@ export const adCampaigns = pgTable("ad_campaigns", {
   clickCount: integer("click_count").notNull().default(0),
   conversionCount: integer("conversion_count").notNull().default(0),
   spentOmaniRial: numeric("spent_omani_rial", { precision: 14, scale: 6 }).notNull().default("0.000000"),
+  couponCode: varchar("coupon_code", { length: 24 }),
   ...timestamps,
 }, (table) => [
   index("ad_campaigns_contractor_idx").on(table.contractorId, table.createdAt),

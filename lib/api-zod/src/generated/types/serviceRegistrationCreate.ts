@@ -48,5 +48,10 @@ export interface ServiceRegistrationCreate {
      */
   mediaUrls: string[];
   subscriptionPlanCode: ServiceRegistrationCreateSubscriptionPlanCode;
+  /**
+     * @maxLength 24
+     * @nullable
+     */
+  couponCode?: string | null;
   termsAccepted: true;
 }

@@ -15,7 +15,7 @@ import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
 import { emailAdminContact, emailAdminServiceRequest } from "../lib/email";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getHomepageSettings, getSettings, isDirectoryEligible, isHomepageSettings, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
-import { isAdvertisingSettings, isAppearance, isBranding } from "../lib/appSettings";
+import { isAdvertisingSettings, isAppearance, isBranding, isCoupons, type CouponSetting } from "../lib/appSettings";
 
 type MarketplaceAuthHandlers = {
   requireUser: RequestHandler;
@@ -35,6 +35,44 @@ const promoteCustomerToContractor = auth.promoteCustomerToContractor ?? (async (
 });
 const router: IRouter = Router();
 const decimal = (value: string | null) => value === null ? null : Number(value);
+async function getCouponQuote(input: { code: unknown; scope: unknown; planCode?: unknown; days?: unknown }) {
+  const code = typeof input.code === "string" ? input.code.trim().toUpperCase() : "";
+  const scope = String(input.scope ?? "") as "service" | "real-estate" | "advertising";
+  const settings = await getSettings();
+  const coupon = settings.coupons.find((item: CouponSetting) => item.code.toUpperCase() === code);
+  const now = Date.now();
+  if (!coupon || !coupon.enabled || coupon.approvalStatus !== "approved" || !coupon.scopes.includes(scope) || Date.parse(coupon.startsAt) > now || Date.parse(coupon.endsAt) < now) {
+    throw new Error("INVALID_COUPON");
+  }
+  const [projectUses, registrationUses, campaignUses] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(projects).where(eq(projects.couponCode, code)),
+    db.select({ count: sql<number>`count(*)` }).from(serviceRegistrations).where(eq(serviceRegistrations.couponCode, code)),
+    db.select({ count: sql<number>`count(*)` }).from(adCampaigns).where(eq(adCampaigns.couponCode, code)),
+  ]);
+  const useCount = Number(projectUses[0]?.count ?? 0) + Number(registrationUses[0]?.count ?? 0) + Number(campaignUses[0]?.count ?? 0);
+  if (coupon.maxUses !== null && useCount >= coupon.maxUses) throw new Error("COUPON_LIMIT_REACHED");
+  let baseUsd = 0;
+  if (scope === "advertising") {
+    const days = Number(input.days);
+    if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error("INVALID_COUPON_CONTEXT");
+    baseUsd = settings.advertising.dailyPriceUsd * days;
+  } else {
+    const plan = settings.plans.find((item) => item.code === input.planCode && item.category === scope);
+    if (!plan) throw new Error("INVALID_COUPON_CONTEXT");
+    baseUsd = plan.priceUsd;
+  }
+  const discountUsd = Math.min(baseUsd, coupon.discountType === "percent" ? baseUsd * coupon.discountValue / 100 : coupon.discountValue);
+  const finalUsd = Math.max(0, baseUsd - discountUsd);
+  return {
+    code,
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue,
+    baseUsd: Number(baseUsd.toFixed(2)),
+    discountUsd: Number(discountUsd.toFixed(2)),
+    finalUsd: Number(finalUsd.toFixed(2)),
+    finalOmaniRial: Number((finalUsd * settings.advertising.usdToOmaniRial).toFixed(3)),
+  };
+}
 router.get("/subscription-plans", async (_req, res, next) => {
   try {
     const settings = await getSettings();
@@ -49,6 +87,17 @@ router.get("/subscription-plans", async (_req, res, next) => {
       priceOmaniRial: Number(plan.priceOmaniRial),
     })));
   } catch (error) { next(error); }
+});
+router.post("/coupons/quote", requireUser, async (req, res, next) => {
+  try {
+    res.json(await getCouponQuote(req.body ?? {}));
+  } catch (error) {
+    if (error instanceof Error && ["INVALID_COUPON", "COUPON_LIMIT_REACHED", "INVALID_COUPON_CONTEXT"].includes(error.message)) {
+      res.status(400).json({ error: error.message === "COUPON_LIMIT_REACHED" ? "Coupon usage limit reached" : "Coupon is invalid or unavailable" });
+      return;
+    }
+    next(error);
+  }
 });
 async function logAudit(actorUserId: string, action: string, entityType: string, entityId: string, metadata: Record<string, unknown> = {}) {
   await db.insert(auditEvents).values({ actorUserId, action, entityType, entityId, metadata });
@@ -1124,6 +1173,15 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       res.status(400).json({ error: "Invalid contractor project fields" });
       return;
     }
+    let couponCode: string | null = null;
+    if (typeof input.couponCode === "string" && input.couponCode.trim()) {
+      try {
+        couponCode = (await getCouponQuote({ code: input.couponCode, scope: "service", planCode: selectedPlan.code })).code;
+      } catch {
+        res.status(400).json({ error: "Coupon is invalid or unavailable" });
+        return;
+      }
+    }
     const [project] = await db.insert(projects).values({
       contractorId: profile.id,
       title: input.title.trim(),
@@ -1132,6 +1190,7 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
       city: input.city.trim(),
       imageUrls: mediaUrls,
       subscriptionPlanCode: selectedPlan.code,
+      couponCode,
       isPublished: false,
       reviewStatus: "pending_review",
     }).returning();
@@ -1194,6 +1253,15 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       res.status(400).json({ error: "Invalid service registration fields" });
       return;
     }
+    let couponCode: string | null = null;
+    if (typeof input.couponCode === "string" && input.couponCode.trim()) {
+      try {
+        couponCode = (await getCouponQuote({ code: input.couponCode, scope: expectedPlanCategory, planCode: selectedPlan.code })).code;
+      } catch {
+        res.status(400).json({ error: "Coupon is invalid or unavailable" });
+        return;
+      }
+    }
     const [registration] = await db.insert(serviceRegistrations).values({
       userId: user.id,
       category: input.category,
@@ -1207,6 +1275,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       description: input.description.trim(),
       mediaUrls,
       subscriptionPlanCode: selectedPlan.code,
+      couponCode,
       status: "pending_review",
     }).returning();
     await logAudit(user.id, "service_registration_submitted", "service_registration", registration.id, { category: input.category, mediaCount: mediaUrls.length });
@@ -2178,7 +2247,7 @@ router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) 
       && Number.isFinite(plan.priceUsd) && Number(plan.priceUsd) >= 0
       && Number.isFinite(plan.priceOmaniRial) && Number(plan.priceOmaniRial) >= 0
     );
-    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success || !isHomepageSettings(homepage) || !isAppearance(settings?.appearance) || !isBranding(settings?.branding) || !isAdvertisingSettings(settings?.advertising) || !validPlans) {
+    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success || !isHomepageSettings(homepage) || !isAppearance(settings?.appearance) || !isBranding(settings?.branding) || !isAdvertisingSettings(settings?.advertising) || !isCoupons(settings?.coupons) || !validPlans) {
       res.status(400).json({ error: "Invalid marketplace settings" });
       return;
     }
@@ -2189,6 +2258,7 @@ router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) 
       { key: "appearance", value: settings.appearance, description: "Safe semantic theme configuration" },
       { key: "branding", value: settings.branding, description: "Global bilingual branding and contact content" },
       { key: "advertising", value: settings.advertising, description: "Advertising rate configuration" },
+      { key: "coupons", value: settings.coupons, description: "Administrator-controlled discount coupons" },
     ]).onConflictDoUpdate({ target: marketplaceSettings.key, set: { value: sql`excluded.value`, updatedAt: new Date() } });
     for (const plan of settings.plans as Array<{ code: string; name: string; priceUsd: number; priceOmaniRial: number }>) {
       await db.update(subscriptionPlans).set({

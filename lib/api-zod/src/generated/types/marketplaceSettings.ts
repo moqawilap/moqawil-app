@@ -8,6 +8,7 @@
 import type { AdvertisingSettings } from './advertisingSettings';
 import type { AppAppearance } from './appAppearance';
 import type { AppBranding } from './appBranding';
+import type { CouponSetting } from './couponSetting';
 import type { HomepageSettings } from './homepageSettings';
 import type { RankingWeights } from './rankingWeights';
 import type { SubscriptionPlan } from './subscriptionPlan';
@@ -27,4 +28,6 @@ export interface MarketplaceSettings {
      * @maxItems 4
      */
   plans: SubscriptionPlan[];
+  /** @maxItems 200 */
+  coupons: CouponSetting[];
 }

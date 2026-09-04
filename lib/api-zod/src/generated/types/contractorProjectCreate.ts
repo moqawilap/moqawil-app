@@ -30,5 +30,10 @@ export interface ContractorProjectCreate {
      */
   mediaUrls: string[];
   subscriptionPlanCode: ContractorProjectCreateSubscriptionPlanCode;
+  /**
+     * @maxLength 24
+     * @nullable
+     */
+  couponCode?: string | null;
   termsAccepted: true;
 }

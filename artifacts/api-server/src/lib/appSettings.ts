@@ -26,6 +26,19 @@ export const DEFAULT_ADVERTISING_SETTINGS = {
   usdToOmaniRial: 0.385,
 };
 
+export type CouponSetting = {
+  id: string;
+  code: string;
+  discountType: "percent" | "fixed_usd";
+  discountValue: number;
+  scopes: Array<"service" | "real-estate" | "advertising">;
+  startsAt: string;
+  endsAt: string;
+  maxUses: number | null;
+  enabled: boolean;
+  approvalStatus: "draft" | "approved" | "rejected";
+};
+
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const safeText = (value: unknown, max: number) => typeof value === "string" && value.trim().length <= max;
 const safeOptionalUrl = (value: unknown) => typeof value === "string" && (
@@ -64,6 +77,30 @@ export function isAdvertisingSettings(value: unknown): value is typeof DEFAULT_A
     && Number.isFinite(candidate.usdToOmaniRial)
     && Number(candidate.usdToOmaniRial) >= 0.001
     && Number(candidate.usdToOmaniRial) <= 10;
+}
+
+export function isCoupons(value: unknown): value is CouponSetting[] {
+  if (!Array.isArray(value) || value.length > 200) return false;
+  const codes = new Set<string>();
+  return value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const coupon = item as Record<string, unknown>;
+    const code = String(coupon.code ?? "").trim().toUpperCase();
+    if (!/^[A-Z0-9_-]{3,24}$/.test(code) || codes.has(code)) return false;
+    codes.add(code);
+    return typeof coupon.id === "string" && coupon.id.length >= 8
+      && ["percent", "fixed_usd"].includes(String(coupon.discountType))
+      && Number.isFinite(coupon.discountValue) && Number(coupon.discountValue) > 0
+      && (coupon.discountType !== "percent" || Number(coupon.discountValue) <= 100)
+      && Array.isArray(coupon.scopes) && coupon.scopes.length > 0
+      && coupon.scopes.every((scope) => ["service", "real-estate", "advertising"].includes(String(scope)))
+      && typeof coupon.startsAt === "string" && Number.isFinite(Date.parse(coupon.startsAt))
+      && typeof coupon.endsAt === "string" && Number.isFinite(Date.parse(coupon.endsAt))
+      && Date.parse(coupon.endsAt) > Date.parse(coupon.startsAt)
+      && (coupon.maxUses === null || (Number.isInteger(coupon.maxUses) && Number(coupon.maxUses) >= 1))
+      && typeof coupon.enabled === "boolean"
+      && ["draft", "approved", "rejected"].includes(String(coupon.approvalStatus));
+  });
 }
 
 export function normalizeAppearance(value: unknown) {

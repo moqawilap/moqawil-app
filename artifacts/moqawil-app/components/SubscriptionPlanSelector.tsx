@@ -1,22 +1,34 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useListSubscriptionPlans } from '@workspace/api-client-react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useListSubscriptionPlans, useQuoteCoupon, type CouponQuote } from '@workspace/api-client-react';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 export type SubscriptionPlanCode = 'service-monthly' | 'service-annual' | 'real-estate-monthly' | 'real-estate-annual';
 export type ServiceSubscriptionPlanCode = 'service-monthly' | 'service-annual';
 
-export function SubscriptionPlanSelector({ category, value, onChange }: {
+export function SubscriptionPlanSelector({ category, value, onChange, onCouponChange }: {
   category: 'service' | 'real-estate';
   value: string;
   onChange: (code: SubscriptionPlanCode) => void;
+  couponCode?: string;
+  onCouponChange?: (code: string) => void;
 }) {
   const colors = useColors();
   const { isArabic } = useApp();
   const plans = useListSubscriptionPlans();
   const options = plans.data?.filter((plan) => plan.category === category) ?? [];
+  const [couponInput, setCouponInput] = React.useState('');
+  const [quote, setQuote] = React.useState<CouponQuote | null>(null);
+  const coupon = useQuoteCoupon({ mutation: {
+    onSuccess: (result) => { setQuote(result); onCouponChange?.(result.code); },
+    onError: () => {
+      setQuote(null);
+      onCouponChange?.('');
+      Alert.alert(isArabic ? 'الكوبون غير متاح' : 'Coupon unavailable', isArabic ? 'تحقق من الرمز أو صلاحيته.' : 'Check the code and its validity.');
+    },
+  } });
 
   return (
     <View testID="subscription-plan-selector" style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -52,6 +64,14 @@ export function SubscriptionPlanSelector({ category, value, onChange }: {
             </Pressable>
           );
         })}
+      </View>
+      <View style={[styles.couponCard, { borderColor: colors.border, backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.foreground }]}>{isArabic ? 'هل لديك كوبون؟' : 'Have a coupon?'}</Text>
+        <View style={styles.couponRow}>
+          <TextInput value={couponInput} onChangeText={(input) => { setCouponInput(input.toUpperCase()); setQuote(null); onCouponChange?.(''); }} autoCapitalize="characters" placeholder={isArabic ? 'رمز الكوبون' : 'Coupon code'} placeholderTextColor={colors.mutedForeground} style={[styles.couponInput, { color: colors.foreground, borderColor: colors.border }]} />
+          <Pressable disabled={!value || coupon.isPending || couponInput.trim().length < 3} onPress={() => coupon.mutate({ data: { code: couponInput.trim(), scope: category, planCode: value } })} style={[styles.applyButton, { backgroundColor: colors.primary, opacity: !value || coupon.isPending ? 0.5 : 1 }]}><Text style={{ color: colors.primaryForeground, fontWeight: '800' }}>{coupon.isPending ? '…' : (isArabic ? 'تطبيق' : 'Apply')}</Text></Pressable>
+        </View>
+        {quote ? <Text style={[styles.discount, { color: colors.primary }]}>{isArabic ? `تم الخصم $${quote.discountUsd} — السعر الجديد $${quote.finalUsd} / ${quote.finalOmaniRial.toFixed(3)} ر.ع` : `You save $${quote.discountUsd} — new price $${quote.finalUsd} / ${quote.finalOmaniRial.toFixed(3)} OMR`}</Text> : null}
       </View>
       <View testID="payment-methods" style={[styles.paymentCard, { borderTopColor: colors.border }]}>
         <View style={styles.paymentHeading}>
@@ -102,4 +122,9 @@ const styles = StyleSheet.create({
   visa: { fontSize: 14, fontWeight: '900', fontStyle: 'italic' },
   mastercard: { fontSize: 13, fontWeight: '900', letterSpacing: -2 },
   paymentLabel: { fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  couponCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
+  couponRow: { flexDirection: 'row', gap: 8 },
+  couponInput: { flex: 1, minHeight: 43, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontWeight: '800' },
+  applyButton: { minWidth: 76, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  discount: { fontSize: 11, fontWeight: '800', lineHeight: 17 },
 });

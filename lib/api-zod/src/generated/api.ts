@@ -1135,6 +1135,31 @@ export const CancelMySubscriptionResponse = zod.object({
 })
 
 
+export const quoteCouponBodyCodeMin = 3;
+export const quoteCouponBodyCodeMax = 24;
+
+export const quoteCouponBodyDaysMax = 365;
+
+
+
+export const QuoteCouponBody = zod.object({
+  "code": zod.string().min(quoteCouponBodyCodeMin).max(quoteCouponBodyCodeMax),
+  "scope": zod.enum(['service', 'real-estate', 'advertising']),
+  "planCode": zod.string().nullish(),
+  "days": zod.number().min(1).max(quoteCouponBodyDaysMax).nullish()
+})
+
+export const QuoteCouponResponse = zod.object({
+  "code": zod.string(),
+  "discountType": zod.enum(['percent', 'fixed_usd']),
+  "discountValue": zod.number(),
+  "baseUsd": zod.number(),
+  "discountUsd": zod.number(),
+  "finalUsd": zod.number(),
+  "finalOmaniRial": zod.number()
+})
+
+
 export const ListMyPaymentsResponseItem = zod.object({
   "id": zod.string(),
   "subscriptionId": zod.string(),
@@ -1275,6 +1300,8 @@ export const createMyContractorProjectBodyMediaUrlsItemMax = 8000000;
 
 export const createMyContractorProjectBodyMediaUrlsMax = 15;
 
+export const createMyContractorProjectBodyCouponCodeMax = 24;
+
 
 
 export const CreateMyContractorProjectBody = zod.object({
@@ -1283,6 +1310,7 @@ export const CreateMyContractorProjectBody = zod.object({
   "city": zod.string().min(createMyContractorProjectBodyCityMin).max(createMyContractorProjectBodyCityMax),
   "mediaUrls": zod.array(zod.string().max(createMyContractorProjectBodyMediaUrlsItemMax)).min(1).max(createMyContractorProjectBodyMediaUrlsMax),
   "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual']),
+  "couponCode": zod.string().max(createMyContractorProjectBodyCouponCodeMax).nullish(),
   "termsAccepted": zod.literal(true)
 })
 
@@ -1337,6 +1365,8 @@ export const createMyServiceRegistrationBodyMediaUrlsItemMax = 8000000;
 
 export const createMyServiceRegistrationBodyMediaUrlsMax = 15;
 
+export const createMyServiceRegistrationBodyCouponCodeMax = 24;
+
 
 
 export const CreateMyServiceRegistrationBody = zod.object({
@@ -1363,6 +1393,7 @@ export const CreateMyServiceRegistrationBody = zod.object({
   "description": zod.string().min(createMyServiceRegistrationBodyDescriptionMin).max(createMyServiceRegistrationBodyDescriptionMax),
   "mediaUrls": zod.array(zod.string().max(createMyServiceRegistrationBodyMediaUrlsItemMax)).min(1).max(createMyServiceRegistrationBodyMediaUrlsMax),
   "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
+  "couponCode": zod.string().max(createMyServiceRegistrationBodyCouponCodeMax).nullish(),
   "termsAccepted": zod.literal(true)
 })
 
@@ -2482,6 +2513,13 @@ export const getAdminSettingsResponseAdvertisingUsdToOmaniRialMax = 10;
 export const getAdminSettingsResponsePlansMin = 4;
 export const getAdminSettingsResponsePlansMax = 4;
 
+export const getAdminSettingsResponseCouponsItemCodeRegExp = new RegExp('^[A-Z0-9_-]{3,24}$');
+export const getAdminSettingsResponseCouponsItemDiscountValueMin = 0.01;
+
+
+
+export const getAdminSettingsResponseCouponsMax = 200;
+
 
 
 export const GetAdminSettingsResponse = zod.object({
@@ -2606,7 +2644,19 @@ export const GetAdminSettingsResponse = zod.object({
   "trialMonths": zod.literal(1),
   "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
-})).min(getAdminSettingsResponsePlansMin).max(getAdminSettingsResponsePlansMax)
+})).min(getAdminSettingsResponsePlansMin).max(getAdminSettingsResponsePlansMax),
+  "coupons": zod.array(zod.object({
+  "id": zod.string(),
+  "code": zod.string().regex(getAdminSettingsResponseCouponsItemCodeRegExp),
+  "discountType": zod.enum(['percent', 'fixed_usd']),
+  "discountValue": zod.number().min(getAdminSettingsResponseCouponsItemDiscountValueMin),
+  "scopes": zod.array(zod.enum(['service', 'real-estate', 'advertising'])).min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "maxUses": zod.number().min(1).nullable(),
+  "enabled": zod.boolean(),
+  "approvalStatus": zod.enum(['draft', 'approved', 'rejected'])
+})).max(getAdminSettingsResponseCouponsMax)
 })
 
 
@@ -2758,6 +2808,13 @@ export const updateAdminSettingsBodyAdvertisingUsdToOmaniRialMax = 10;
 export const updateAdminSettingsBodyPlansMin = 4;
 export const updateAdminSettingsBodyPlansMax = 4;
 
+export const updateAdminSettingsBodyCouponsItemCodeRegExp = new RegExp('^[A-Z0-9_-]{3,24}$');
+export const updateAdminSettingsBodyCouponsItemDiscountValueMin = 0.01;
+
+
+
+export const updateAdminSettingsBodyCouponsMax = 200;
+
 
 
 export const UpdateAdminSettingsBody = zod.object({
@@ -2882,7 +2939,19 @@ export const UpdateAdminSettingsBody = zod.object({
   "trialMonths": zod.literal(1),
   "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
-})).min(updateAdminSettingsBodyPlansMin).max(updateAdminSettingsBodyPlansMax)
+})).min(updateAdminSettingsBodyPlansMin).max(updateAdminSettingsBodyPlansMax),
+  "coupons": zod.array(zod.object({
+  "id": zod.string(),
+  "code": zod.string().regex(updateAdminSettingsBodyCouponsItemCodeRegExp),
+  "discountType": zod.enum(['percent', 'fixed_usd']),
+  "discountValue": zod.number().min(updateAdminSettingsBodyCouponsItemDiscountValueMin),
+  "scopes": zod.array(zod.enum(['service', 'real-estate', 'advertising'])).min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "maxUses": zod.number().min(1).nullable(),
+  "enabled": zod.boolean(),
+  "approvalStatus": zod.enum(['draft', 'approved', 'rejected'])
+})).max(updateAdminSettingsBodyCouponsMax)
 })
 
 
@@ -3033,6 +3102,13 @@ export const updateAdminSettingsResponseAdvertisingUsdToOmaniRialMax = 10;
 export const updateAdminSettingsResponsePlansMin = 4;
 export const updateAdminSettingsResponsePlansMax = 4;
 
+export const updateAdminSettingsResponseCouponsItemCodeRegExp = new RegExp('^[A-Z0-9_-]{3,24}$');
+export const updateAdminSettingsResponseCouponsItemDiscountValueMin = 0.01;
+
+
+
+export const updateAdminSettingsResponseCouponsMax = 200;
+
 
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -3157,7 +3233,19 @@ export const UpdateAdminSettingsResponse = zod.object({
   "trialMonths": zod.literal(1),
   "priceUsd": zod.number(),
   "priceOmaniRial": zod.number()
-})).min(updateAdminSettingsResponsePlansMin).max(updateAdminSettingsResponsePlansMax)
+})).min(updateAdminSettingsResponsePlansMin).max(updateAdminSettingsResponsePlansMax),
+  "coupons": zod.array(zod.object({
+  "id": zod.string(),
+  "code": zod.string().regex(updateAdminSettingsResponseCouponsItemCodeRegExp),
+  "discountType": zod.enum(['percent', 'fixed_usd']),
+  "discountValue": zod.number().min(updateAdminSettingsResponseCouponsItemDiscountValueMin),
+  "scopes": zod.array(zod.enum(['service', 'real-estate', 'advertising'])).min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "maxUses": zod.number().min(1).nullable(),
+  "enabled": zod.boolean(),
+  "approvalStatus": zod.enum(['draft', 'approved', 'rejected'])
+})).max(updateAdminSettingsResponseCouponsMax)
 })
 
 
