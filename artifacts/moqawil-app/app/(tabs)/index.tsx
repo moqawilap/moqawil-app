@@ -9,6 +9,7 @@ import { listings, maintenanceItems, mergeMarketplaceListings, serviceItems } fr
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useAppSettings } from '@/context/AppSettingsContext';
 import { getGetHomepageSettingsQueryKey, getListAdsQueryKey, getListListingsQueryKey, useGetHomepageSettings, useListAds, useListListings, type HomepageSettings } from '@workspace/api-client-react';
 
 type HomepageSectionId = HomepageSettings['sectionOrder'][number];
@@ -38,6 +39,7 @@ const DEFAULT_HOMEPAGE_SETTINGS: HomepageSettings = {
 
 export default function HomeScreen() {
   const colors = useColors();
+  const appSettings = useAppSettings();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isArabic, location, locationLoading, refreshLocation, selectLocation, savedIds, toggleSaved, setActiveService, managedProviders, engagementClientId } = useApp();
@@ -45,6 +47,7 @@ export default function HomeScreen() {
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
   const homepageSettingsQuery = useGetHomepageSettings({ query: { queryKey: getGetHomepageSettingsQueryKey(), staleTime: 30_000 } });
   const homepage = homepageSettingsQuery.data ?? DEFAULT_HOMEPAGE_SETTINGS;
+  const branding = appSettings?.branding;
   const locationWilayats = location.city === 'Muscat' && location.area === 'Al Khuwair' ? [location.area, 'Bawshar'] : [location.area];
   const adQuery = { city: location.city, wilayat: locationWilayats.filter(Boolean).join(','), limit: 5 };
   const ads = useListAds(adQuery, { query: { queryKey: getListAdsQueryKey(adQuery), refetchInterval: 30_000 } });
@@ -141,8 +144,8 @@ export default function HomeScreen() {
     );
   };
   const socialLinks = [
-    { icon: 'whatsapp' as const, label: isArabic ? 'واتساب' : 'WhatsApp', url: 'https://wa.me/96877224535' },
-    { icon: 'mail' as const, label: isArabic ? 'البريد' : 'Email', url: 'mailto:moqawil.ap@gmail.com' },
+    ...(branding?.whatsappNumber ? [{ icon: 'whatsapp' as const, label: isArabic ? 'واتساب' : 'WhatsApp', url: `https://wa.me/${branding.whatsappNumber.replace(/\D/g, '')}` }] : []),
+    ...(branding?.supportEmail ? [{ icon: 'mail' as const, label: isArabic ? 'البريد' : 'Email', url: `mailto:${branding.supportEmail}` }] : []),
     { icon: 'instagram' as const, label: 'Instagram', url: 'https://instagram.com/moqawil.om' },
   ];
 
@@ -151,7 +154,7 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 120 }}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <BrandMark />
+            {branding?.logoUrl ? <Image source={{ uri: branding.logoUrl }} style={styles.remoteLogo} resizeMode="contain" /> : <BrandMark />}
             <IconButton icon="bell" onPress={() => router.push('/profile')} accessibilityLabel="Open notifications" />
           </View>
           <Pressable accessibilityRole="button" testID="home-location-picker" accessibilityLabel={isArabic ? 'تغيير أو تحديد موقعك' : 'Change or detect your location'} onPress={() => setLocationPickerVisible(true)} style={[styles.locationButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -191,7 +194,9 @@ export default function HomeScreen() {
               </View>
             </View>
           </Modal>
-          {homepage.hero.visible ? <View style={[styles.heroCard, { backgroundColor: colors.navy, borderColor: '#C8A66A' }]}>
+          {homepage.hero.visible ? <View style={[styles.heroCard, { backgroundColor: colors.navy, borderColor: colors.accent }]}>
+            {branding?.heroImageUrl ? <Image source={{ uri: branding.heroImageUrl }} style={styles.heroImage} resizeMode="cover" /> : null}
+            {branding?.heroImageUrl ? <View style={[StyleSheet.absoluteFillObject, { backgroundColor: `${colors.navy}CC` }]} /> : null}
             <View style={[styles.heroRule, { backgroundColor: '#C8A66A' }]} />
             <View style={styles.greeting}>
               <Text style={[styles.eyebrow, { color: '#E0BD7A' }]}>{localized(homepage.hero.eyebrowEn, homepage.hero.eyebrowAr)}</Text>
@@ -203,8 +208,8 @@ export default function HomeScreen() {
           {homepage.showSponsoredAds && ads.data?.[activeAdIndex] && engagementClientId ? <AdBanner campaign={ads.data[activeAdIndex]} /> : null}
           {homepage.sectionOrder.map(renderSection)}
            <View style={[styles.aboutCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-             <Text style={[styles.aboutEyebrow, { color: colors.primary }]}>{isArabic ? 'عن مقاول' : 'ABOUT MOQAWIL'}</Text>
-             <Text style={[styles.aboutTitle, { color: colors.foreground }]}>{isArabic ? 'منصة واحدة لكل احتياجات البناء والعقارات.' : 'One platform for all your building and property needs.'}</Text>
+              <Text style={[styles.aboutEyebrow, { color: colors.primary }]}>{isArabic ? `عن ${branding?.appNameAr || 'مقاول'}` : `ABOUT ${(branding?.appNameEn || 'MOQAWIL').toUpperCase()}`}</Text>
+              <Text style={[styles.aboutTitle, { color: colors.foreground }]}>{isArabic ? (branding?.taglineAr || 'منصة واحدة لكل احتياجات البناء والعقارات.') : (branding?.taglineEn || 'One platform for all your building and property needs.')}</Text>
              <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>{isArabic ? 'مقاول منصة عُمانية تجمع العملاء بالمقاولين والورش ومقدمي خدمات الصيانة والعقارات، وتساعدك على العثور على الخدمة المناسبة والتواصل مع مقدمي الخدمة الموثوقين بسهولة.' : 'Moqawil is an Omani marketplace that connects customers with trusted contractors, workshops, maintenance providers, and property listings. Discover the right service, compare providers, and get in touch with confidence.'}</Text>
              <View style={styles.homeSocialLinks}>
                {socialLinks.map((item) => (
@@ -214,7 +219,7 @@ export default function HomeScreen() {
                ))}
              </View>
            </View>
-           <View style={styles.footer}><Image source={require('@/assets/images/moqawil-logo.png')} style={styles.footerMark} /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>Moqawil · مقاول</Text></View>
+            <View style={styles.footer}><Image source={branding?.logoUrl ? { uri: branding.logoUrl } : require('@/assets/images/moqawil-logo.png')} style={styles.footerMark} /><Text style={[styles.footerText, { color: colors.mutedForeground }]}>{branding?.appNameEn || 'Moqawil'} · {branding?.appNameAr || 'مقاول'}</Text></View>
         </View>
       </ScrollView>
     </View>
@@ -225,6 +230,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  remoteLogo: { width: 124, height: 48 },
+  heroImage: { ...StyleSheet.absoluteFillObject, width: undefined, height: undefined },
   locationButton: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24, borderWidth: 1, borderRadius: 17, padding: 8 },
   locationPin: { width: 33, height: 33, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   locationText: { flex: 1, gap: 2 },

@@ -995,6 +995,70 @@ export interface HomepageSettings {
   sections: HomepageSettingsSections;
 }
 
+export interface AppAppearance {
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  primary: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  primaryForeground: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  background: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  foreground: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  card: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  border: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  accent: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  primarySoft: string;
+  /**
+     * @minimum 6
+     * @maximum 28
+     */
+  radius: number;
+}
+
+export interface AppBranding {
+  /** @maxLength 60 */
+  appNameEn: string;
+  /** @maxLength 60 */
+  appNameAr: string;
+  /** @maxLength 160 */
+  taglineEn: string;
+  /** @maxLength 160 */
+  taglineAr: string;
+  /** @maxLength 2000000 */
+  logoUrl: string;
+  /** @maxLength 2000000 */
+  heroImageUrl: string;
+  /** @maxLength 160 */
+  supportEmail: string;
+  /** @maxLength 30 */
+  whatsappNumber: string;
+}
+
+export interface AdvertisingSettings {
+  /**
+     * @minimum 0.5
+     * @maximum 1000
+     */
+  dailyPriceUsd: number;
+  /**
+     * @minimum 0.001
+     * @maximum 10
+     */
+  usdToOmaniRial: number;
+}
+
+export interface PublicAppSettings {
+  appearance: AppAppearance;
+  branding: AppBranding;
+  advertising: AdvertisingSettings;
+  homepage: HomepageSettings;
+  plans: SubscriptionPlan[];
+}
+
 export interface MarketplaceSettings {
   /** @minimum 1 */
   trialMonths: number;
@@ -1002,6 +1066,14 @@ export interface MarketplaceSettings {
   defaultPriceOmaniRial: number;
   rankingWeights: RankingWeights;
   homepage: HomepageSettings;
+  appearance: AppAppearance;
+  branding: AppBranding;
+  advertising: AdvertisingSettings;
+  /**
+     * @minItems 4
+     * @maxItems 4
+     */
+  plans: SubscriptionPlan[];
 }
 
 export interface AdminOverview {

@@ -1,6 +1,14 @@
 import { and, eq, gt, lte, sql } from "drizzle-orm";
 import { db, marketplaceSettings, payments, subscriptionPlans, subscriptions, type RankingWeights } from "@workspace/db";
 import { DEFAULT_HOMEPAGE_SETTINGS, normalizeHomepageSettings } from "./homepageSettings";
+import {
+  DEFAULT_ADVERTISING_SETTINGS,
+  DEFAULT_APPEARANCE,
+  DEFAULT_BRANDING,
+  normalizeAdvertisingSettings,
+  normalizeAppearance,
+  normalizeBranding,
+} from "./appSettings";
 export { DEFAULT_HOMEPAGE_SETTINGS, HOMEPAGE_SECTION_IDS, isHomepageSettings, normalizeHomepageSettings } from "./homepageSettings";
 
 export const DEFAULT_SETTINGS = {
@@ -28,10 +36,7 @@ export async function ensureMarketplaceDefaults() {
       await tx.insert(subscriptionPlans).values({
         ...plan,
         isActive: true,
-      }).onConflictDoUpdate({
-        target: subscriptionPlans.code,
-        set: { ...plan, isActive: true, updatedAt: new Date() },
-      });
+      }).onConflictDoNothing({ target: subscriptionPlans.code });
     }
 
     await tx.insert(marketplaceSettings).values({
@@ -41,16 +46,7 @@ export async function ensureMarketplaceDefaults() {
         defaultPriceOmaniRial: DEFAULT_SETTINGS.defaultPriceOmaniRial,
       },
       description: "Subscription lifecycle configuration",
-    }).onConflictDoUpdate({
-      target: marketplaceSettings.key,
-      set: {
-        value: {
-          trialMonths: DEFAULT_SETTINGS.trialMonths,
-          defaultPriceOmaniRial: DEFAULT_SETTINGS.defaultPriceOmaniRial,
-        },
-        updatedAt: new Date(),
-      },
-    });
+    }).onConflictDoNothing({ target: marketplaceSettings.key });
     await tx.insert(marketplaceSettings).values([
       {
         key: "ranking",
@@ -62,6 +58,9 @@ export async function ensureMarketplaceDefaults() {
         value: DEFAULT_HOMEPAGE_SETTINGS,
         description: "Public homepage content configuration",
       },
+      { key: "appearance", value: DEFAULT_APPEARANCE, description: "Safe semantic theme configuration" },
+      { key: "branding", value: DEFAULT_BRANDING, description: "Global bilingual branding and contact content" },
+      { key: "advertising", value: DEFAULT_ADVERTISING_SETTINGS, description: "Advertising rate configuration" },
     ]).onConflictDoNothing({ target: marketplaceSettings.key });
   });
 }
@@ -78,14 +77,27 @@ export function addMonths(date: Date, months: number) {
 }
 
 export async function getSettings() {
-  const rows = await db.select().from(marketplaceSettings).where(sql`${marketplaceSettings.key} in ('subscription', 'ranking', 'homepage')`);
+  const rows = await db.select().from(marketplaceSettings).where(sql`${marketplaceSettings.key} in ('subscription', 'ranking', 'homepage', 'appearance', 'branding', 'advertising')`);
   const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   const subscription = values.subscription as Partial<typeof DEFAULT_SETTINGS> | undefined;
+  const plans = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true));
   return {
     trialMonths: Number(subscription?.trialMonths ?? DEFAULT_SETTINGS.trialMonths),
     defaultPriceOmaniRial: Number(subscription?.defaultPriceOmaniRial ?? DEFAULT_SETTINGS.defaultPriceOmaniRial),
     rankingWeights: (values.ranking as RankingWeights | undefined) ?? DEFAULT_SETTINGS.rankingWeights,
     homepage: normalizeHomepageSettings(values.homepage),
+    appearance: normalizeAppearance(values.appearance),
+    branding: normalizeBranding(values.branding),
+    advertising: normalizeAdvertisingSettings(values.advertising),
+    plans: plans.map((plan) => ({
+      code: plan.code,
+      name: plan.name,
+      category: plan.category,
+      billingMonths: plan.billingMonths,
+      trialMonths: Number(subscription?.trialMonths ?? DEFAULT_SETTINGS.trialMonths),
+      priceUsd: Number(plan.priceUsd),
+      priceOmaniRial: Number(plan.priceOmaniRial),
+    })),
   };
 }
 

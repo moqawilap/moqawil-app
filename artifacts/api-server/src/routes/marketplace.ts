@@ -15,6 +15,7 @@ import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
 import { emailAdminContact, emailAdminServiceRequest } from "../lib/email";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getHomepageSettings, getSettings, isDirectoryEligible, isHomepageSettings, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
+import { isAdvertisingSettings, isAppearance, isBranding } from "../lib/appSettings";
 
 type MarketplaceAuthHandlers = {
   requireUser: RequestHandler;
@@ -2030,6 +2031,11 @@ router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, n
       res.status(400).json({ error: "Campaign videos must be five seconds or shorter" });
       return;
     }
+    const marketplaceConfig = await getSettings();
+    const startAt = new Date(String(input.startAt));
+    const endAt = new Date(String(input.endAt));
+    const campaignDays = Math.max(1, Math.floor((Date.UTC(endAt.getUTCFullYear(), endAt.getUTCMonth(), endAt.getUTCDate()) - Date.UTC(startAt.getUTCFullYear(), startAt.getUTCMonth(), startAt.getUTCDate())) / 86_400_000) + 1);
+    const dailyPriceOmaniRial = marketplaceConfig.advertising.dailyPriceUsd * marketplaceConfig.advertising.usdToOmaniRial;
     const [created] = await db.insert(adCampaigns).values({
       contractorId,
       title: String(input.title).trim(),
@@ -2041,12 +2047,12 @@ router.post("/admin/ad-campaigns", requireUser, requireAdmin, async (req, res, n
       mediaItems: media,
       audience: input.audience as AdAudience,
       frequencyCapPerDay: Number(input.frequencyCapPerDay),
-      totalBudgetOmaniRial: Number(input.totalBudgetOmaniRial).toFixed(6),
-      dailyBudgetOmaniRial: Number(input.dailyBudgetOmaniRial).toFixed(6),
-      billingModel: input.billingModel as AdBillingModel,
-      unitRateOmaniRial: Number(input.unitRateOmaniRial).toFixed(6),
-      startAt: new Date(String(input.startAt)),
-      endAt: new Date(String(input.endAt)),
+      totalBudgetOmaniRial: (dailyPriceOmaniRial * campaignDays).toFixed(6),
+      dailyBudgetOmaniRial: dailyPriceOmaniRial.toFixed(6),
+      billingModel: "cpm",
+      unitRateOmaniRial: dailyPriceOmaniRial.toFixed(6),
+      startAt,
+      endAt,
       status: (input.status as AdStatus | undefined) ?? "draft",
     }).returning();
     res.status(201).json(adResponse(created, owner));
@@ -2114,6 +2120,15 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
     for (const field of ["startAt", "endAt"] as const) {
       if (input[field] !== undefined) updates[field] = new Date(String(input[field]));
     }
+    const marketplaceConfig = await getSettings();
+    const mergedStartAt = new Date(String(merged.startAt));
+    const mergedEndAt = new Date(String(merged.endAt));
+    const campaignDays = Math.max(1, Math.floor((Date.UTC(mergedEndAt.getUTCFullYear(), mergedEndAt.getUTCMonth(), mergedEndAt.getUTCDate()) - Date.UTC(mergedStartAt.getUTCFullYear(), mergedStartAt.getUTCMonth(), mergedStartAt.getUTCDate())) / 86_400_000) + 1);
+    const dailyPriceOmaniRial = marketplaceConfig.advertising.dailyPriceUsd * marketplaceConfig.advertising.usdToOmaniRial;
+    updates.totalBudgetOmaniRial = (dailyPriceOmaniRial * campaignDays).toFixed(6);
+    updates.dailyBudgetOmaniRial = dailyPriceOmaniRial.toFixed(6);
+    updates.billingModel = "cpm";
+    updates.unitRateOmaniRial = dailyPriceOmaniRial.toFixed(6);
     const [updated] = await db.update(adCampaigns).set(updates as Partial<typeof adCampaigns.$inferInsert>).where(eq(adCampaigns.id, existing.id)).returning();
     res.json(adResponse(updated, owner));
   } catch (error) { next(error); }
@@ -2138,13 +2153,32 @@ router.get("/admin/ad-campaigns/:id/report", requireUser, requireAdmin, async (r
   } catch (error) { next(error); }
 });
 router.get("/homepage-settings", async (_req, res, next) => { try { res.json(await getHomepageSettings()); } catch (error) { next(error); } });
+router.get("/app-settings", async (_req, res, next) => {
+  try {
+    const settings = await getSettings();
+    res.json({
+      appearance: settings.appearance,
+      branding: settings.branding,
+      advertising: settings.advertising,
+      homepage: settings.homepage,
+      plans: settings.plans,
+    });
+  } catch (error) { next(error); }
+});
 router.get("/admin/settings", requireUser, requireAdmin, async (_req, res, next) => { try { res.json(await getSettings()); } catch (error) { next(error); } });
 router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const settings = req.body;
     const currentSettings = await getSettings();
     const homepage = settings?.homepage ?? currentSettings.homepage;
-    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success || !isHomepageSettings(homepage)) {
+    const planCodes = new Set(["service-monthly", "service-annual", "real-estate-monthly", "real-estate-annual"]);
+    const validPlans = Array.isArray(settings?.plans) && settings.plans.length === 4 && settings.plans.every((plan: Record<string, unknown>) =>
+      planCodes.has(String(plan.code))
+      && typeof plan.name === "string" && plan.name.trim().length >= 2 && plan.name.trim().length <= 80
+      && Number.isFinite(plan.priceUsd) && Number(plan.priceUsd) >= 0
+      && Number.isFinite(plan.priceOmaniRial) && Number(plan.priceOmaniRial) >= 0
+    );
+    if (!Number.isInteger(settings?.trialMonths) || settings.trialMonths < 1 || !Number.isFinite(settings?.defaultPriceOmaniRial) || settings.defaultPriceOmaniRial < 0 || !rankingWeightsSchema.safeParse(settings?.rankingWeights).success || !isHomepageSettings(homepage) || !isAppearance(settings?.appearance) || !isBranding(settings?.branding) || !isAdvertisingSettings(settings?.advertising) || !validPlans) {
       res.status(400).json({ error: "Invalid marketplace settings" });
       return;
     }
@@ -2152,7 +2186,18 @@ router.put("/admin/settings", requireUser, requireAdmin, async (req, res, next) 
       { key: "subscription", value: { trialMonths: settings.trialMonths, defaultPriceOmaniRial: settings.defaultPriceOmaniRial }, description: "Subscription lifecycle configuration" },
       { key: "ranking", value: settings.rankingWeights, description: "Directory ranking weights" },
       { key: "homepage", value: homepage, description: "Public homepage content configuration" },
+      { key: "appearance", value: settings.appearance, description: "Safe semantic theme configuration" },
+      { key: "branding", value: settings.branding, description: "Global bilingual branding and contact content" },
+      { key: "advertising", value: settings.advertising, description: "Advertising rate configuration" },
     ]).onConflictDoUpdate({ target: marketplaceSettings.key, set: { value: sql`excluded.value`, updatedAt: new Date() } });
+    for (const plan of settings.plans as Array<{ code: string; name: string; priceUsd: number; priceOmaniRial: number }>) {
+      await db.update(subscriptionPlans).set({
+        name: plan.name.trim(),
+        priceUsd: Number(plan.priceUsd).toFixed(2),
+        priceOmaniRial: Number(plan.priceOmaniRial).toFixed(3),
+        updatedAt: new Date(),
+      }).where(eq(subscriptionPlans.code, plan.code));
+    }
     await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "marketplace_settings_updated", "marketplace_settings", "global");
     res.json(await getSettings());
   } catch (error) { next(error); }

@@ -1,5 +1,6 @@
 import { useColorScheme } from 'react-native';
 import colors from '@/constants/colors';
+import { useAppSettings } from '@/context/AppSettingsContext';
 
 /**
  * Returns the design tokens for the current color scheme.
@@ -14,10 +15,15 @@ import colors from '@/constants/colors';
  * device's appearance setting.
  */
 export function useColors() {
+  const appSettings = useAppSettings();
   const scheme = useColorScheme();
   const palette =
     scheme === 'dark' && 'dark' in colors
       ? (colors as Record<string, typeof colors.light>).dark
       : colors.light;
-  return { ...palette, radius: colors.radius };
+  return {
+    ...palette,
+    ...(appSettings?.appearance ?? {}),
+    radius: appSettings?.appearance.radius ?? colors.radius,
+  };
 }

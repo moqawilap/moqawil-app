@@ -9,22 +9,12 @@ import type { AdvertisingSettings } from './advertisingSettings';
 import type { AppAppearance } from './appAppearance';
 import type { AppBranding } from './appBranding';
 import type { HomepageSettings } from './homepageSettings';
-import type { RankingWeights } from './rankingWeights';
 import type { SubscriptionPlan } from './subscriptionPlan';
 
-export interface MarketplaceSettings {
-  /** @minimum 1 */
-  trialMonths: number;
-  /** @minimum 0 */
-  defaultPriceOmaniRial: number;
-  rankingWeights: RankingWeights;
-  homepage: HomepageSettings;
+export interface PublicAppSettings {
   appearance: AppAppearance;
   branding: AppBranding;
   advertising: AdvertisingSettings;
-  /**
-     * @minItems 4
-     * @maxItems 4
-     */
+  homepage: HomepageSettings;
   plans: SubscriptionPlan[];
 }

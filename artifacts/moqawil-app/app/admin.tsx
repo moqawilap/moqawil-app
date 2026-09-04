@@ -24,13 +24,12 @@ import {
   useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, processAdminAdVideo,
   useListAdminPushNotifications, getListAdminPushNotificationsQueryKey, useCreateAdminPushNotification,
   useListAdminServiceReviews, getListAdminServiceReviewsQueryKey, useUpdateAdminServiceReview,
-  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings, type AdminServiceReview
+  getGetAppSettingsQueryKey, getListSubscriptionPlansQueryKey,
+  type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings, type AdminServiceReview, type MarketplaceSettings
 } from '@workspace/api-client-react';
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'The server could not process this request.';
 const text = (isArabic: boolean, english: string, arabic: string) => isArabic ? arabic : english;
-const AD_DAILY_PRICE_USD = 6;
-const AD_DAILY_PRICE_OMR = 2.310;
 const adCampaignDays = (startDate: string, endDate: string) => {
   const start = Date.parse(`${startDate}T00:00:00.000Z`);
   const end = Date.parse(`${endDate}T00:00:00.000Z`);
@@ -997,10 +996,10 @@ const blankAdCampaign = () => {
     audienceWilayats: [] as string[],
     audienceService: '',
     frequencyCapPerDay: '3',
-    totalBudgetOmaniRial: String(AD_DAILY_PRICE_OMR * 31),
-    dailyBudgetOmaniRial: String(AD_DAILY_PRICE_OMR),
+    totalBudgetOmaniRial: String(2.310 * 31),
+    dailyBudgetOmaniRial: String(2.310),
     billingModel: 'cpm' as const,
-    unitRateOmaniRial: String(AD_DAILY_PRICE_OMR),
+    unitRateOmaniRial: String(2.310),
     startAt: start.toISOString().slice(0, 10),
     endAt: end.toISOString().slice(0, 10),
     status: 'draft' as const,
@@ -1097,6 +1096,7 @@ function AdvertisingTab() {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const { data: settings } = useGetAdminSettings();
   const campaigns = useListAdminAdCampaigns({ query: { queryKey: getListAdminAdCampaignsQueryKey() } });
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
   const [showForm, setShowForm] = useState(false);
@@ -1106,6 +1106,9 @@ function AdvertisingTab() {
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminAdCampaignsQueryKey() });
   const create = useCreateAdminAdCampaign({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankAdCampaign()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+
+  const adDailyPriceUsd = settings?.advertising?.dailyPriceUsd ?? 6;
+  const adDailyPriceOmr = adDailyPriceUsd * (settings?.advertising?.usdToOmaniRial ?? 0.385);
 
   const set = (key: string, value: string) => setForm((current: any) => ({ ...current, [key]: value }));
   const begin = (campaign?: AdCampaign) => {
@@ -1139,9 +1142,9 @@ function AdvertisingTab() {
   };
   const save = () => {
     const days = adCampaignDays(form.startAt, form.endAt);
-    const total = Number((days * AD_DAILY_PRICE_OMR).toFixed(3));
-    const daily = AD_DAILY_PRICE_OMR;
-    const rate = AD_DAILY_PRICE_OMR;
+    const total = Number((days * adDailyPriceOmr).toFixed(3));
+    const daily = adDailyPriceOmr;
+    const rate = adDailyPriceOmr;
     const cap = Number(form.frequencyCapPerDay);
     if (!form.contractorId || form.title.trim().length < 2 || !form.media.length || days < 1 || !Number.isInteger(cap) || cap < 1 || !form.startAt || !form.endAt) {
       Alert.alert(text(isArabic, 'Missing campaign details', 'بيانات الحملة غير مكتملة'), text(isArabic, 'Choose an advertiser, media, and valid start and end dates.', 'اختر المعلن والوسائط وتاريخ بداية ونهاية صحيحين.'));
@@ -1174,8 +1177,8 @@ function AdvertisingTab() {
   const imageCount = form.media.filter((item: AdMediaItem) => item.type === 'image').length;
   const videoCount = form.media.filter((item: AdMediaItem) => item.type === 'video').length;
   const campaignDays = adCampaignDays(form.startAt, form.endAt);
-  const campaignTotalUsd = campaignDays * AD_DAILY_PRICE_USD;
-  const campaignTotalOmr = campaignDays * AD_DAILY_PRICE_OMR;
+  const campaignTotalUsd = campaignDays * adDailyPriceUsd;
+  const campaignTotalOmr = campaignDays * adDailyPriceOmr;
   const addMedia = async (type: AdMediaItem['type']) => {
     const remaining = type === 'image' ? 15 - imageCount : 2 - videoCount;
     if (remaining <= 0) {
@@ -1305,13 +1308,13 @@ function AdvertisingTab() {
             <View style={styles.adPriceHeader}>
               <View>
                 <Text style={[styles.adPriceTitle, { color: colors.foreground }]}>{text(isArabic, 'Fixed daily advertising price', 'سعر الإعلان اليومي الثابت')}</Text>
-                <Text style={[styles.adPriceValue, { color: colors.primary }]}>$6 / 2.310 {text(isArabic, 'OMR per day', 'ر.ع يوميًا')}</Text>
+                <Text style={[styles.adPriceValue, { color: colors.primary }]}>${adDailyPriceUsd} / {adDailyPriceOmr.toFixed(3)} {text(isArabic, 'OMR per day', 'ر.ع يوميًا')}</Text>
               </View>
               <Feather name="calendar" size={22} color={colors.primary} />
             </View>
             <View style={[styles.adPriceSummary, { borderTopColor: colors.border }]}>
               <Text style={[styles.cardMeta, { color: colors.foreground }]}>{campaignDays} {text(isArabic, 'days', 'يومًا')}</Text>
-              <Text style={[styles.adPriceTotal, { color: colors.foreground }]}>${campaignTotalUsd} / {campaignTotalOmr.toFixed(3)} {text(isArabic, 'OMR total', 'ر.ع إجمالي')}</Text>
+              <Text style={[styles.adPriceTotal, { color: colors.foreground }]}>${campaignTotalUsd.toFixed(2)} / {campaignTotalOmr.toFixed(3)} {text(isArabic, 'OMR total', 'ر.ع إجمالي')}</Text>
             </View>
           </View>
           <View style={styles.formGroupFull}>
@@ -1347,7 +1350,7 @@ function AdvertisingTab() {
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>{campaign.title}</Text>
             <View style={[styles.badge, { backgroundColor: campaign.status === 'active' ? '#D9F8F2' : campaign.status === 'paused' ? '#FFF2D6' : colors.muted }]}><Text style={[styles.badgeText, { color: campaign.status === 'active' ? '#0B6E6B' : colors.mutedForeground }]}>{statusText(isArabic, campaign.status)}</Text></View>
           </View>
-          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.advertiserNameArabic || campaign.advertiserName} • $6 / 2.310 {text(isArabic, 'OMR daily', 'ر.ع يوميًا')} • {campaign.totalBudgetOmaniRial.toFixed(3)} {text(isArabic, 'OMR total', 'ر.ع إجمالي')}</Text>
+          <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.advertiserNameArabic || campaign.advertiserName} • ${adDailyPriceUsd} / {adDailyPriceOmr.toFixed(3)} {text(isArabic, 'OMR daily', 'ر.ع يوميًا')} • {campaign.totalBudgetOmaniRial.toFixed(3)} {text(isArabic, 'OMR total', 'ر.ع إجمالي')}</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Target wilayats', 'الولايات المستهدفة')}: {campaign.audience.wilayats?.length ? campaign.audience.wilayats.join('، ') : text(isArabic, 'All Oman', 'كل السلطنة')}</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Spent', 'المصروف')}: {campaign.spentOmaniRial.toFixed(3)} • {text(isArabic, 'Remaining', 'المتبقي')}: {campaign.remainingOmaniRial.toFixed(3)} • {text(isArabic, 'Today', 'اليوم')}: {campaign.dailySpentOmaniRial.toFixed(3)} / {campaign.dailyBudgetOmaniRial.toFixed(3)} OMR</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{campaign.impressionCount} {text(isArabic, 'impressions', 'ظهور')} • {campaign.clickCount} {text(isArabic, 'clicks', 'نقرات')} • {campaign.conversionCount} {text(isArabic, 'results', 'نتائج')} • {text(isArabic, 'up to', 'حتى')} {campaign.frequencyCapPerDay} / {text(isArabic, 'customer/day', 'عميل/يوم')}</Text>
@@ -1722,27 +1725,20 @@ function SettingsTab() {
     mutation: {
       onSuccess: () => {
         client.invalidateQueries({ queryKey: getGetAdminSettingsQueryKey() });
+        client.invalidateQueries({ queryKey: getGetAppSettingsQueryKey() });
+        client.invalidateQueries({ queryKey: getGetHomepageSettingsQueryKey() });
+        client.invalidateQueries({ queryKey: getListSubscriptionPlansQueryKey() });
         Alert.alert(text(isArabic, 'Success', 'تم'), text(isArabic, 'Settings updated', 'تم تحديث الإعدادات'));
       },
       onError: (e) => Alert.alert(text(isArabic, 'Error', 'خطأ'), errorMessage(e))
     }
   });
 
-  const [form, setForm] = useState<any>(null);
+  const [form, setForm] = useState<MarketplaceSettings | null>(null);
 
   useEffect(() => {
     if (settings && !form) {
-      setForm({
-        trialMonths: String(settings.trialMonths),
-        defaultPriceOmaniRial: String(settings.defaultPriceOmaniRial),
-        wRating: String(settings.rankingWeights.rating),
-        wReviews: String(settings.rankingWeights.reviews),
-        wProjects: String(settings.rankingWeights.projects),
-        wProfile: String(settings.rankingWeights.profile),
-        wVerification: String(settings.rankingWeights.verification),
-        wActivity: String(settings.rankingWeights.activity),
-        wEngagement: String(settings.rankingWeights.engagement),
-      });
+      setForm(JSON.parse(JSON.stringify(settings)));
     }
   }, [settings]);
 
@@ -1751,60 +1747,183 @@ function SettingsTab() {
   if (!form) return null;
 
   const save = () => {
-    updateSettings.mutate({
-      data: {
-        trialMonths: Number(form.trialMonths) || 1,
-        defaultPriceOmaniRial: Number(form.defaultPriceOmaniRial) || 0,
-        rankingWeights: {
-          rating: Number(form.wRating) || 0,
-          reviews: Number(form.wReviews) || 0,
-          projects: Number(form.wProjects) || 0,
-          profile: Number(form.wProfile) || 0,
-          verification: Number(form.wVerification) || 0,
-          activity: Number(form.wActivity) || 0,
-          engagement: Number(form.wEngagement) || 0,
-        },
-        homepage: settings!.homepage,
-      }
+    updateSettings.mutate({ data: form });
+  };
+
+  const updateAppearance = (key: keyof MarketplaceSettings['appearance'], value: string) => {
+    setForm(current => current ? { ...current, appearance: { ...current.appearance, [key]: value } } : current);
+  };
+
+  const updateBranding = (key: keyof MarketplaceSettings['branding'], value: string) => {
+    setForm(current => current ? { ...current, branding: { ...current.branding, [key]: value } } : current);
+  };
+
+  const updateAdvertising = (key: keyof MarketplaceSettings['advertising'], value: string) => {
+    setForm(current => current ? { ...current, advertising: { ...current.advertising, [key]: Number(value) || 0 } } : current);
+  };
+
+  const updateRanking = (key: keyof MarketplaceSettings['rankingWeights'], value: string) => {
+    setForm(current => current ? { ...current, rankingWeights: { ...current.rankingWeights, [key]: Number(value) || 0 } } : current);
+  };
+
+  const updatePlan = (index: number, key: string, value: string) => {
+    setForm(current => {
+      if (!current) return current;
+      const newPlans = [...current.plans];
+      newPlans[index] = { ...newPlans[index], [key]: key.includes('price') ? (Number(value) || 0) : value } as any;
+      return { ...current, plans: newPlans };
     });
   };
+
+  const renderColorInput = (key: keyof MarketplaceSettings['appearance'], labelEn: string, labelAr: string) => (
+    <View style={styles.formGroup} key={key}>
+      <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, labelEn, labelAr)}</Text>
+      <View style={[styles.colorInputContainer, { borderColor: colors.border, backgroundColor: colors.background }]}>
+        <View style={[styles.colorSwatch, { backgroundColor: form.appearance?.[key] as string ?? '#ffffff', borderColor: colors.border }]} />
+        <TextInput value={String(form.appearance?.[key] ?? '')} onChangeText={v => updateAppearance(key, v)} style={[styles.colorInput, { color: colors.foreground }]} autoCapitalize="none" />
+      </View>
+    </View>
+  );
 
   return (
     <View testID="admin-settings" style={styles.tabContainer}>
       <Text style={[styles.tabTitle, { color: colors.foreground, marginBottom: 16 }]}>{text(isArabic, 'Marketplace Settings', 'إعدادات السوق')}</Text>
 
       <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Billing Defaults', 'إعدادات الفوترة')}</Text>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Branding', 'العلامة التجارية')}</Text>
         <View style={styles.formGrid}>
+          {[
+            ['appNameEn', 'App Name (EN)', 'اسم التطبيق (إنجليزي)'],
+            ['appNameAr', 'App Name (AR)', 'اسم التطبيق (عربي)'],
+            ['taglineEn', 'Tagline (EN)', 'الشعار اللفظي (إنجليزي)'],
+            ['taglineAr', 'Tagline (AR)', 'الشعار اللفظي (عربي)'],
+            ['supportEmail', 'Support Email', 'بريد الدعم الفني'],
+            ['whatsappNumber', 'WhatsApp Number', 'رقم الواتساب']
+          ].map(([key, labelEn, labelAr]) => (
+            <View style={styles.formGroup} key={key}>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, labelEn, labelAr)}</Text>
+              <TextInput value={form.branding?.[key as keyof MarketplaceSettings['branding']] ?? ''} onChangeText={v => updateBranding(key as any, v)} textAlign={key.endsWith('Ar') ? 'right' : 'left'} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+            </View>
+          ))}
+        </View>
+        {[
+          ['logoUrl', 'Logo URL', 'رابط الشعار'],
+          ['heroImageUrl', 'Hero Image URL', 'رابط صورة البانر الرئيسي']
+        ].map(([key, labelEn, labelAr]) => (
+           <View style={[styles.formGroupFull, { marginTop: 12 }]} key={key}>
+              <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, labelEn, labelAr)}</Text>
+              <TextInput value={form.branding?.[key as keyof MarketplaceSettings['branding']] ?? ''} onChangeText={v => updateBranding(key as any, v)} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+              <Pressable
+                style={[styles.denseButton, { borderColor: colors.border, marginTop: 8 }]}
+                onPress={async () => {
+                  const images = await pickAdminImages(isArabic, 1);
+                  if (images[0]) updateBranding(key as 'logoUrl' | 'heroImageUrl', images[0]);
+                }}
+              >
+                <Feather name="image" size={15} color={colors.primary} />
+                <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Choose from device', 'اختيار من الجهاز')}</Text>
+              </Pressable>
+              {form.branding?.[key as keyof MarketplaceSettings['branding']] ? (
+                <View style={[styles.mediaPreview, { marginTop: 8, height: 60, width: 100, borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
+                  <Image source={{ uri: form.branding[key as keyof MarketplaceSettings['branding']] }} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />
+                </View>
+              ) : null}
+           </View>
+        ))}
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Appearance', 'المظهر')}</Text>
+        <View style={styles.formGrid}>
+          {renderColorInput('primary', 'Primary Color', 'اللون الأساسي')}
+          {renderColorInput('primaryForeground', 'Primary Foreground', 'لون نص الأساسي')}
+          {renderColorInput('background', 'Background', 'الخلفية')}
+          {renderColorInput('foreground', 'Text Color', 'لون النص')}
+          {renderColorInput('card', 'Card Background', 'خلفية البطاقة')}
+          {renderColorInput('border', 'Border Color', 'لون الحدود')}
+          {renderColorInput('accent', 'Accent Color', 'لون التمييز')}
+          {renderColorInput('primarySoft', 'Primary Soft', 'أساسي خفيف')}
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Trial Months', 'أشهر التجربة')}</Text>
-            <TextInput value={form.trialMonths} onChangeText={v => setForm({ ...form, trialMonths: v })} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
-          </View>
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Default Price (OMR)', 'السعر الافتراضي (ر.ع.)')}</Text>
-            <TextInput value={form.defaultPriceOmaniRial} onChangeText={v => setForm({ ...form, defaultPriceOmaniRial: v })} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Border Radius (px)', 'زاوية الانحناء (بكسل)')}</Text>
+            <TextInput value={String(form.appearance?.radius ?? 16)} onChangeText={v => setForm(current => current ? { ...current, appearance: { ...current.appearance, radius: Number(v) || 0 } } : current)} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
           </View>
         </View>
       </View>
 
       <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'General Settings', 'إعدادات عامة')}</Text>
+        <View style={styles.formGrid}>
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Trial Months', 'أشهر التجربة')}</Text>
+            <TextInput value={String(form.trialMonths)} onChangeText={v => setForm(current => current ? { ...current, trialMonths: Number(v) || 1 } : current)} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Default Price (OMR)', 'السعر الافتراضي (ر.ع.)')}</Text>
+            <TextInput value={String(form.defaultPriceOmaniRial)} onChangeText={v => setForm(current => current ? { ...current, defaultPriceOmaniRial: Number(v) || 0 } : current)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+        </View>
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Advertising & Exchange Rate', 'الإعلانات وسعر الصرف')}</Text>
+        <View style={styles.formGrid}>
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Daily Price (USD)', 'سعر اليوم (دولار)')}</Text>
+            <TextInput value={String(form.advertising?.dailyPriceUsd ?? 6)} onChangeText={v => updateAdvertising('dailyPriceUsd', v)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'USD to OMR Rate', 'سعر صرف الدولار للعماني')}</Text>
+            <TextInput value={String(form.advertising?.usdToOmaniRial ?? 0.385)} onChangeText={v => updateAdvertising('usdToOmaniRial', v)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+          </View>
+        </View>
+        <View style={[styles.adPriceCard, { backgroundColor: colors.primarySoft, borderColor: colors.primary, marginTop: 12 }]}>
+          <Text style={[styles.cardTitle, { color: colors.foreground, fontSize: 14 }]}>{text(isArabic, 'Calculated Daily Price', 'السعر اليومي المحسوب')}</Text>
+          <Text style={[styles.adPriceValue, { color: colors.primary }]}>${form.advertising?.dailyPriceUsd ?? 6} = {((form.advertising?.dailyPriceUsd ?? 6) * (form.advertising?.usdToOmaniRial ?? 0.385)).toFixed(3)} {text(isArabic, 'OMR', 'ر.ع')}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Subscription Plans', 'باقات الاشتراك')}</Text>
+        {form.plans?.map((plan, i) => (
+          <View key={plan.code} style={[styles.denseCard, { backgroundColor: colors.background, borderColor: colors.border, marginTop: i > 0 ? 12 : 0 }]}>
+            <Text style={[styles.label, { color: colors.foreground, fontWeight: '700', fontSize: 14, marginBottom: 8 }]}>{plan.code}</Text>
+            <View style={styles.formGrid}>
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Plan Name', 'اسم الباقة')}</Text>
+                <TextInput value={plan.name} onChangeText={v => updatePlan(i, 'name', v)} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Price (USD)', 'السعر (دولار)')}</Text>
+                <TextInput value={String(plan.priceUsd)} onChangeText={v => updatePlan(i, 'priceUsd', v)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Price (OMR)', 'السعر (ر.ع)')}</Text>
+                <TextInput value={String(plan.priceOmaniRial)} onChangeText={v => updatePlan(i, 'priceOmaniRial', v)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]} />
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'Ranking Weights', 'أوزان الترتيب')}</Text>
+        <Text style={[styles.cardMeta, { color: colors.mutedForeground, marginBottom: 12 }]}>{text(isArabic, 'Adjust algorithms that determine search order.', 'تعديل خوارزميات الترتيب في البحث.')}</Text>
         <View style={styles.formGrid}>
           {[
-            ['wRating', 'Rating', 'التقييم'], ['wReviews', 'Reviews', 'المراجعات'], ['wProjects', 'Projects', 'المشاريع'],
-            ['wProfile', 'Profile', 'الملف الشخصي'], ['wVerification', 'Verification', 'التوثيق'], ['wActivity', 'Activity', 'النشاط'],
-            ['wEngagement', 'Engagement', 'التفاعل']
+            ['rating', 'Rating', 'التقييم'], ['reviews', 'Reviews', 'المراجعات'], ['projects', 'Projects', 'المشاريع'],
+            ['profile', 'Profile', 'الملف الشخصي'], ['verification', 'Verification', 'التوثيق'], ['activity', 'Activity', 'النشاط'],
+            ['engagement', 'Engagement', 'التفاعل']
           ].map(([key, label, labelAr]) => (
             <View key={key} style={styles.formGroup}>
               <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, label, labelAr)}</Text>
-              <TextInput value={form[key]} onChangeText={v => setForm({ ...form, [key]: v })} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+              <TextInput value={String(form.rankingWeights?.[key as keyof MarketplaceSettings['rankingWeights']] ?? 0)} onChangeText={v => updateRanking(key as any, v)} keyboardType="decimal-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
             </View>
           ))}
         </View>
       </View>
 
-      <Pressable testID="save-settings" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, marginTop: 8 }]} onPress={save}>
-        <Text style={[styles.denseButtonText, { color: colors.background }]}>{updateSettings.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Settings', 'حفظ الإعدادات')}</Text>
+      <Pressable testID="save-settings" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, marginTop: 8, paddingVertical: 14 }]} onPress={save}>
+        <Text style={[styles.denseButtonText, { color: colors.background, fontSize: 15 }]}>{updateSettings.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Settings', 'حفظ الإعدادات')}</Text>
       </Pressable>
     </View>
   );
@@ -1926,4 +2045,7 @@ const styles = StyleSheet.create({
   reviewActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   reviewAction: { minHeight: 39, borderRadius: 9, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   reviewActionText: { fontSize: 11, fontWeight: '800' },
+  colorInputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, overflow: 'hidden' },
+  colorSwatch: { width: 44, height: 44, borderRightWidth: 1 },
+  colorInput: { flex: 1, height: 44, paddingHorizontal: 12, fontSize: 14 },
 });

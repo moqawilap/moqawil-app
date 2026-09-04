@@ -615,6 +615,265 @@ export const GetHomepageSettingsResponse = zod.object({
 })
 
 
+export const getAppSettingsResponseAppearancePrimaryRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearancePrimaryForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearanceBackgroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearanceForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearanceCardRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearanceBorderRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearanceAccentRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearancePrimarySoftRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAppSettingsResponseAppearanceRadiusMin = 6;
+export const getAppSettingsResponseAppearanceRadiusMax = 28;
+
+export const getAppSettingsResponseBrandingAppNameEnMax = 60;
+
+export const getAppSettingsResponseBrandingAppNameArMax = 60;
+
+export const getAppSettingsResponseBrandingTaglineEnMax = 160;
+
+export const getAppSettingsResponseBrandingTaglineArMax = 160;
+
+export const getAppSettingsResponseBrandingLogoUrlMax = 2000000;
+
+export const getAppSettingsResponseBrandingHeroImageUrlMax = 2000000;
+
+export const getAppSettingsResponseBrandingSupportEmailMax = 160;
+
+export const getAppSettingsResponseBrandingWhatsappNumberMax = 30;
+
+export const getAppSettingsResponseAdvertisingDailyPriceUsdMin = 0.5;
+export const getAppSettingsResponseAdvertisingDailyPriceUsdMax = 1000;
+
+export const getAppSettingsResponseAdvertisingUsdToOmaniRialMin = 0.001;
+export const getAppSettingsResponseAdvertisingUsdToOmaniRialMax = 10;
+
+export const getAppSettingsResponseHomepageHeroEyebrowEnMax = 120;
+
+export const getAppSettingsResponseHomepageHeroEyebrowArMax = 120;
+
+export const getAppSettingsResponseHomepageHeroTitleEnMax = 240;
+
+export const getAppSettingsResponseHomepageHeroTitleArMax = 240;
+
+export const getAppSettingsResponseHomepageHeroSubtitleEnMax = 500;
+
+export const getAppSettingsResponseHomepageHeroSubtitleArMax = 500;
+
+export const getAppSettingsResponseHomepageHeroSearchPlaceholderEnMax = 120;
+
+export const getAppSettingsResponseHomepageHeroSearchPlaceholderArMax = 120;
+
+export const getAppSettingsResponseHomepageSectionOrderMin = 5;
+export const getAppSettingsResponseHomepageSectionOrderMax = 5;
+
+export const getAppSettingsResponseHomepageSectionsServicesTitleEnMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsServicesTitleArMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsServicesSubtitleEnMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsServicesSubtitleArMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsServicesDetailEnMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsServicesDetailArMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsServicesActionEnMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsServicesActionArMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsServicesLimitMax = 12;
+
+export const getAppSettingsResponseHomepageSectionsLocationTitleEnMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsLocationTitleArMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsLocationSubtitleEnMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsLocationSubtitleArMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsLocationDetailEnMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsLocationDetailArMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsLocationActionEnMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsLocationActionArMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsLocationLimitMax = 12;
+
+export const getAppSettingsResponseHomepageSectionsProvidersTitleEnMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsProvidersTitleArMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsProvidersSubtitleEnMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsProvidersSubtitleArMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsProvidersDetailEnMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsProvidersDetailArMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsProvidersActionEnMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsProvidersActionArMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsProvidersLimitMax = 12;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesTitleEnMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesTitleArMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesSubtitleEnMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesSubtitleArMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesDetailEnMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesDetailArMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesActionEnMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesActionArMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsPropertiesLimitMax = 12;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceTitleEnMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceTitleArMax = 160;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceSubtitleEnMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceSubtitleArMax = 240;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceDetailEnMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceDetailArMax = 500;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceActionEnMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceActionArMax = 80;
+
+export const getAppSettingsResponseHomepageSectionsMaintenanceLimitMax = 12;
+
+
+
+export const GetAppSettingsResponse = zod.object({
+  "appearance": zod.object({
+  "primary": zod.string().regex(getAppSettingsResponseAppearancePrimaryRegExp),
+  "primaryForeground": zod.string().regex(getAppSettingsResponseAppearancePrimaryForegroundRegExp),
+  "background": zod.string().regex(getAppSettingsResponseAppearanceBackgroundRegExp),
+  "foreground": zod.string().regex(getAppSettingsResponseAppearanceForegroundRegExp),
+  "card": zod.string().regex(getAppSettingsResponseAppearanceCardRegExp),
+  "border": zod.string().regex(getAppSettingsResponseAppearanceBorderRegExp),
+  "accent": zod.string().regex(getAppSettingsResponseAppearanceAccentRegExp),
+  "primarySoft": zod.string().regex(getAppSettingsResponseAppearancePrimarySoftRegExp),
+  "radius": zod.number().min(getAppSettingsResponseAppearanceRadiusMin).max(getAppSettingsResponseAppearanceRadiusMax)
+}),
+  "branding": zod.object({
+  "appNameEn": zod.string().max(getAppSettingsResponseBrandingAppNameEnMax),
+  "appNameAr": zod.string().max(getAppSettingsResponseBrandingAppNameArMax),
+  "taglineEn": zod.string().max(getAppSettingsResponseBrandingTaglineEnMax),
+  "taglineAr": zod.string().max(getAppSettingsResponseBrandingTaglineArMax),
+  "logoUrl": zod.string().max(getAppSettingsResponseBrandingLogoUrlMax),
+  "heroImageUrl": zod.string().max(getAppSettingsResponseBrandingHeroImageUrlMax),
+  "supportEmail": zod.string().max(getAppSettingsResponseBrandingSupportEmailMax),
+  "whatsappNumber": zod.string().max(getAppSettingsResponseBrandingWhatsappNumberMax)
+}),
+  "advertising": zod.object({
+  "dailyPriceUsd": zod.number().min(getAppSettingsResponseAdvertisingDailyPriceUsdMin).max(getAppSettingsResponseAdvertisingDailyPriceUsdMax),
+  "usdToOmaniRial": zod.number().min(getAppSettingsResponseAdvertisingUsdToOmaniRialMin).max(getAppSettingsResponseAdvertisingUsdToOmaniRialMax)
+}),
+  "homepage": zod.object({
+  "showSponsoredAds": zod.boolean(),
+  "hero": zod.object({
+  "visible": zod.boolean(),
+  "eyebrowEn": zod.string().max(getAppSettingsResponseHomepageHeroEyebrowEnMax),
+  "eyebrowAr": zod.string().max(getAppSettingsResponseHomepageHeroEyebrowArMax),
+  "titleEn": zod.string().max(getAppSettingsResponseHomepageHeroTitleEnMax),
+  "titleAr": zod.string().max(getAppSettingsResponseHomepageHeroTitleArMax),
+  "subtitleEn": zod.string().max(getAppSettingsResponseHomepageHeroSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAppSettingsResponseHomepageHeroSubtitleArMax),
+  "searchPlaceholderEn": zod.string().max(getAppSettingsResponseHomepageHeroSearchPlaceholderEnMax),
+  "searchPlaceholderAr": zod.string().max(getAppSettingsResponseHomepageHeroSearchPlaceholderArMax)
+}),
+  "sectionOrder": zod.array(zod.enum(['services', 'location', 'providers', 'properties', 'maintenance'])).min(getAppSettingsResponseHomepageSectionOrderMin).max(getAppSettingsResponseHomepageSectionOrderMax),
+  "sections": zod.object({
+  "services": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAppSettingsResponseHomepageSectionsServicesTitleEnMax),
+  "titleAr": zod.string().max(getAppSettingsResponseHomepageSectionsServicesTitleArMax),
+  "subtitleEn": zod.string().max(getAppSettingsResponseHomepageSectionsServicesSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAppSettingsResponseHomepageSectionsServicesSubtitleArMax),
+  "detailEn": zod.string().max(getAppSettingsResponseHomepageSectionsServicesDetailEnMax),
+  "detailAr": zod.string().max(getAppSettingsResponseHomepageSectionsServicesDetailArMax),
+  "actionEn": zod.string().max(getAppSettingsResponseHomepageSectionsServicesActionEnMax),
+  "actionAr": zod.string().max(getAppSettingsResponseHomepageSectionsServicesActionArMax),
+  "limit": zod.number().min(1).max(getAppSettingsResponseHomepageSectionsServicesLimitMax)
+}),
+  "location": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAppSettingsResponseHomepageSectionsLocationTitleEnMax),
+  "titleAr": zod.string().max(getAppSettingsResponseHomepageSectionsLocationTitleArMax),
+  "subtitleEn": zod.string().max(getAppSettingsResponseHomepageSectionsLocationSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAppSettingsResponseHomepageSectionsLocationSubtitleArMax),
+  "detailEn": zod.string().max(getAppSettingsResponseHomepageSectionsLocationDetailEnMax),
+  "detailAr": zod.string().max(getAppSettingsResponseHomepageSectionsLocationDetailArMax),
+  "actionEn": zod.string().max(getAppSettingsResponseHomepageSectionsLocationActionEnMax),
+  "actionAr": zod.string().max(getAppSettingsResponseHomepageSectionsLocationActionArMax),
+  "limit": zod.number().min(1).max(getAppSettingsResponseHomepageSectionsLocationLimitMax)
+}),
+  "providers": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersTitleEnMax),
+  "titleAr": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersTitleArMax),
+  "subtitleEn": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersSubtitleArMax),
+  "detailEn": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersDetailEnMax),
+  "detailAr": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersDetailArMax),
+  "actionEn": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersActionEnMax),
+  "actionAr": zod.string().max(getAppSettingsResponseHomepageSectionsProvidersActionArMax),
+  "limit": zod.number().min(1).max(getAppSettingsResponseHomepageSectionsProvidersLimitMax)
+}),
+  "properties": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesTitleEnMax),
+  "titleAr": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesTitleArMax),
+  "subtitleEn": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesSubtitleArMax),
+  "detailEn": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesDetailEnMax),
+  "detailAr": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesDetailArMax),
+  "actionEn": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesActionEnMax),
+  "actionAr": zod.string().max(getAppSettingsResponseHomepageSectionsPropertiesActionArMax),
+  "limit": zod.number().min(1).max(getAppSettingsResponseHomepageSectionsPropertiesLimitMax)
+}),
+  "maintenance": zod.object({
+  "visible": zod.boolean(),
+  "titleEn": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceTitleEnMax),
+  "titleAr": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceTitleArMax),
+  "subtitleEn": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceSubtitleEnMax),
+  "subtitleAr": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceSubtitleArMax),
+  "detailEn": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceDetailEnMax),
+  "detailAr": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceDetailArMax),
+  "actionEn": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceActionEnMax),
+  "actionAr": zod.string().max(getAppSettingsResponseHomepageSectionsMaintenanceActionArMax),
+  "limit": zod.number().min(1).max(getAppSettingsResponseHomepageSectionsMaintenanceLimitMax)
+})
+})
+}),
+  "plans": zod.array(zod.object({
+  "code": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
+  "name": zod.string(),
+  "category": zod.enum(['service', 'real-estate']),
+  "billingMonths": zod.union([zod.literal(1),zod.literal(12)]),
+  "trialMonths": zod.literal(1),
+  "priceUsd": zod.number(),
+  "priceOmaniRial": zod.number()
+}))
+})
+
+
 export const RecordAdEventParams = zod.object({
   "id": zod.coerce.string()
 })
@@ -2187,6 +2446,42 @@ export const getAdminSettingsResponseHomepageSectionsMaintenanceActionArMax = 80
 
 export const getAdminSettingsResponseHomepageSectionsMaintenanceLimitMax = 12;
 
+export const getAdminSettingsResponseAppearancePrimaryRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearancePrimaryForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearanceBackgroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearanceForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearanceCardRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearanceBorderRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearanceAccentRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearancePrimarySoftRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getAdminSettingsResponseAppearanceRadiusMin = 6;
+export const getAdminSettingsResponseAppearanceRadiusMax = 28;
+
+export const getAdminSettingsResponseBrandingAppNameEnMax = 60;
+
+export const getAdminSettingsResponseBrandingAppNameArMax = 60;
+
+export const getAdminSettingsResponseBrandingTaglineEnMax = 160;
+
+export const getAdminSettingsResponseBrandingTaglineArMax = 160;
+
+export const getAdminSettingsResponseBrandingLogoUrlMax = 2000000;
+
+export const getAdminSettingsResponseBrandingHeroImageUrlMax = 2000000;
+
+export const getAdminSettingsResponseBrandingSupportEmailMax = 160;
+
+export const getAdminSettingsResponseBrandingWhatsappNumberMax = 30;
+
+export const getAdminSettingsResponseAdvertisingDailyPriceUsdMin = 0.5;
+export const getAdminSettingsResponseAdvertisingDailyPriceUsdMax = 1000;
+
+export const getAdminSettingsResponseAdvertisingUsdToOmaniRialMin = 0.001;
+export const getAdminSettingsResponseAdvertisingUsdToOmaniRialMax = 10;
+
+export const getAdminSettingsResponsePlansMin = 4;
+export const getAdminSettingsResponsePlansMax = 4;
+
 
 
 export const GetAdminSettingsResponse = zod.object({
@@ -2277,7 +2572,41 @@ export const GetAdminSettingsResponse = zod.object({
   "limit": zod.number().min(1).max(getAdminSettingsResponseHomepageSectionsMaintenanceLimitMax)
 })
 })
-})
+}),
+  "appearance": zod.object({
+  "primary": zod.string().regex(getAdminSettingsResponseAppearancePrimaryRegExp),
+  "primaryForeground": zod.string().regex(getAdminSettingsResponseAppearancePrimaryForegroundRegExp),
+  "background": zod.string().regex(getAdminSettingsResponseAppearanceBackgroundRegExp),
+  "foreground": zod.string().regex(getAdminSettingsResponseAppearanceForegroundRegExp),
+  "card": zod.string().regex(getAdminSettingsResponseAppearanceCardRegExp),
+  "border": zod.string().regex(getAdminSettingsResponseAppearanceBorderRegExp),
+  "accent": zod.string().regex(getAdminSettingsResponseAppearanceAccentRegExp),
+  "primarySoft": zod.string().regex(getAdminSettingsResponseAppearancePrimarySoftRegExp),
+  "radius": zod.number().min(getAdminSettingsResponseAppearanceRadiusMin).max(getAdminSettingsResponseAppearanceRadiusMax)
+}),
+  "branding": zod.object({
+  "appNameEn": zod.string().max(getAdminSettingsResponseBrandingAppNameEnMax),
+  "appNameAr": zod.string().max(getAdminSettingsResponseBrandingAppNameArMax),
+  "taglineEn": zod.string().max(getAdminSettingsResponseBrandingTaglineEnMax),
+  "taglineAr": zod.string().max(getAdminSettingsResponseBrandingTaglineArMax),
+  "logoUrl": zod.string().max(getAdminSettingsResponseBrandingLogoUrlMax),
+  "heroImageUrl": zod.string().max(getAdminSettingsResponseBrandingHeroImageUrlMax),
+  "supportEmail": zod.string().max(getAdminSettingsResponseBrandingSupportEmailMax),
+  "whatsappNumber": zod.string().max(getAdminSettingsResponseBrandingWhatsappNumberMax)
+}),
+  "advertising": zod.object({
+  "dailyPriceUsd": zod.number().min(getAdminSettingsResponseAdvertisingDailyPriceUsdMin).max(getAdminSettingsResponseAdvertisingDailyPriceUsdMax),
+  "usdToOmaniRial": zod.number().min(getAdminSettingsResponseAdvertisingUsdToOmaniRialMin).max(getAdminSettingsResponseAdvertisingUsdToOmaniRialMax)
+}),
+  "plans": zod.array(zod.object({
+  "code": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
+  "name": zod.string(),
+  "category": zod.enum(['service', 'real-estate']),
+  "billingMonths": zod.union([zod.literal(1),zod.literal(12)]),
+  "trialMonths": zod.literal(1),
+  "priceUsd": zod.number(),
+  "priceOmaniRial": zod.number()
+})).min(getAdminSettingsResponsePlansMin).max(getAdminSettingsResponsePlansMax)
 })
 
 
@@ -2393,6 +2722,42 @@ export const updateAdminSettingsBodyHomepageSectionsMaintenanceActionArMax = 80;
 
 export const updateAdminSettingsBodyHomepageSectionsMaintenanceLimitMax = 12;
 
+export const updateAdminSettingsBodyAppearancePrimaryRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearancePrimaryForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearanceBackgroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearanceForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearanceCardRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearanceBorderRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearanceAccentRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearancePrimarySoftRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsBodyAppearanceRadiusMin = 6;
+export const updateAdminSettingsBodyAppearanceRadiusMax = 28;
+
+export const updateAdminSettingsBodyBrandingAppNameEnMax = 60;
+
+export const updateAdminSettingsBodyBrandingAppNameArMax = 60;
+
+export const updateAdminSettingsBodyBrandingTaglineEnMax = 160;
+
+export const updateAdminSettingsBodyBrandingTaglineArMax = 160;
+
+export const updateAdminSettingsBodyBrandingLogoUrlMax = 2000000;
+
+export const updateAdminSettingsBodyBrandingHeroImageUrlMax = 2000000;
+
+export const updateAdminSettingsBodyBrandingSupportEmailMax = 160;
+
+export const updateAdminSettingsBodyBrandingWhatsappNumberMax = 30;
+
+export const updateAdminSettingsBodyAdvertisingDailyPriceUsdMin = 0.5;
+export const updateAdminSettingsBodyAdvertisingDailyPriceUsdMax = 1000;
+
+export const updateAdminSettingsBodyAdvertisingUsdToOmaniRialMin = 0.001;
+export const updateAdminSettingsBodyAdvertisingUsdToOmaniRialMax = 10;
+
+export const updateAdminSettingsBodyPlansMin = 4;
+export const updateAdminSettingsBodyPlansMax = 4;
+
 
 
 export const UpdateAdminSettingsBody = zod.object({
@@ -2483,7 +2848,41 @@ export const UpdateAdminSettingsBody = zod.object({
   "limit": zod.number().min(1).max(updateAdminSettingsBodyHomepageSectionsMaintenanceLimitMax)
 })
 })
-})
+}),
+  "appearance": zod.object({
+  "primary": zod.string().regex(updateAdminSettingsBodyAppearancePrimaryRegExp),
+  "primaryForeground": zod.string().regex(updateAdminSettingsBodyAppearancePrimaryForegroundRegExp),
+  "background": zod.string().regex(updateAdminSettingsBodyAppearanceBackgroundRegExp),
+  "foreground": zod.string().regex(updateAdminSettingsBodyAppearanceForegroundRegExp),
+  "card": zod.string().regex(updateAdminSettingsBodyAppearanceCardRegExp),
+  "border": zod.string().regex(updateAdminSettingsBodyAppearanceBorderRegExp),
+  "accent": zod.string().regex(updateAdminSettingsBodyAppearanceAccentRegExp),
+  "primarySoft": zod.string().regex(updateAdminSettingsBodyAppearancePrimarySoftRegExp),
+  "radius": zod.number().min(updateAdminSettingsBodyAppearanceRadiusMin).max(updateAdminSettingsBodyAppearanceRadiusMax)
+}),
+  "branding": zod.object({
+  "appNameEn": zod.string().max(updateAdminSettingsBodyBrandingAppNameEnMax),
+  "appNameAr": zod.string().max(updateAdminSettingsBodyBrandingAppNameArMax),
+  "taglineEn": zod.string().max(updateAdminSettingsBodyBrandingTaglineEnMax),
+  "taglineAr": zod.string().max(updateAdminSettingsBodyBrandingTaglineArMax),
+  "logoUrl": zod.string().max(updateAdminSettingsBodyBrandingLogoUrlMax),
+  "heroImageUrl": zod.string().max(updateAdminSettingsBodyBrandingHeroImageUrlMax),
+  "supportEmail": zod.string().max(updateAdminSettingsBodyBrandingSupportEmailMax),
+  "whatsappNumber": zod.string().max(updateAdminSettingsBodyBrandingWhatsappNumberMax)
+}),
+  "advertising": zod.object({
+  "dailyPriceUsd": zod.number().min(updateAdminSettingsBodyAdvertisingDailyPriceUsdMin).max(updateAdminSettingsBodyAdvertisingDailyPriceUsdMax),
+  "usdToOmaniRial": zod.number().min(updateAdminSettingsBodyAdvertisingUsdToOmaniRialMin).max(updateAdminSettingsBodyAdvertisingUsdToOmaniRialMax)
+}),
+  "plans": zod.array(zod.object({
+  "code": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
+  "name": zod.string(),
+  "category": zod.enum(['service', 'real-estate']),
+  "billingMonths": zod.union([zod.literal(1),zod.literal(12)]),
+  "trialMonths": zod.literal(1),
+  "priceUsd": zod.number(),
+  "priceOmaniRial": zod.number()
+})).min(updateAdminSettingsBodyPlansMin).max(updateAdminSettingsBodyPlansMax)
 })
 
 
@@ -2598,6 +2997,42 @@ export const updateAdminSettingsResponseHomepageSectionsMaintenanceActionArMax =
 
 export const updateAdminSettingsResponseHomepageSectionsMaintenanceLimitMax = 12;
 
+export const updateAdminSettingsResponseAppearancePrimaryRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearancePrimaryForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearanceBackgroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearanceForegroundRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearanceCardRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearanceBorderRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearanceAccentRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearancePrimarySoftRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateAdminSettingsResponseAppearanceRadiusMin = 6;
+export const updateAdminSettingsResponseAppearanceRadiusMax = 28;
+
+export const updateAdminSettingsResponseBrandingAppNameEnMax = 60;
+
+export const updateAdminSettingsResponseBrandingAppNameArMax = 60;
+
+export const updateAdminSettingsResponseBrandingTaglineEnMax = 160;
+
+export const updateAdminSettingsResponseBrandingTaglineArMax = 160;
+
+export const updateAdminSettingsResponseBrandingLogoUrlMax = 2000000;
+
+export const updateAdminSettingsResponseBrandingHeroImageUrlMax = 2000000;
+
+export const updateAdminSettingsResponseBrandingSupportEmailMax = 160;
+
+export const updateAdminSettingsResponseBrandingWhatsappNumberMax = 30;
+
+export const updateAdminSettingsResponseAdvertisingDailyPriceUsdMin = 0.5;
+export const updateAdminSettingsResponseAdvertisingDailyPriceUsdMax = 1000;
+
+export const updateAdminSettingsResponseAdvertisingUsdToOmaniRialMin = 0.001;
+export const updateAdminSettingsResponseAdvertisingUsdToOmaniRialMax = 10;
+
+export const updateAdminSettingsResponsePlansMin = 4;
+export const updateAdminSettingsResponsePlansMax = 4;
+
 
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -2688,7 +3123,41 @@ export const UpdateAdminSettingsResponse = zod.object({
   "limit": zod.number().min(1).max(updateAdminSettingsResponseHomepageSectionsMaintenanceLimitMax)
 })
 })
-})
+}),
+  "appearance": zod.object({
+  "primary": zod.string().regex(updateAdminSettingsResponseAppearancePrimaryRegExp),
+  "primaryForeground": zod.string().regex(updateAdminSettingsResponseAppearancePrimaryForegroundRegExp),
+  "background": zod.string().regex(updateAdminSettingsResponseAppearanceBackgroundRegExp),
+  "foreground": zod.string().regex(updateAdminSettingsResponseAppearanceForegroundRegExp),
+  "card": zod.string().regex(updateAdminSettingsResponseAppearanceCardRegExp),
+  "border": zod.string().regex(updateAdminSettingsResponseAppearanceBorderRegExp),
+  "accent": zod.string().regex(updateAdminSettingsResponseAppearanceAccentRegExp),
+  "primarySoft": zod.string().regex(updateAdminSettingsResponseAppearancePrimarySoftRegExp),
+  "radius": zod.number().min(updateAdminSettingsResponseAppearanceRadiusMin).max(updateAdminSettingsResponseAppearanceRadiusMax)
+}),
+  "branding": zod.object({
+  "appNameEn": zod.string().max(updateAdminSettingsResponseBrandingAppNameEnMax),
+  "appNameAr": zod.string().max(updateAdminSettingsResponseBrandingAppNameArMax),
+  "taglineEn": zod.string().max(updateAdminSettingsResponseBrandingTaglineEnMax),
+  "taglineAr": zod.string().max(updateAdminSettingsResponseBrandingTaglineArMax),
+  "logoUrl": zod.string().max(updateAdminSettingsResponseBrandingLogoUrlMax),
+  "heroImageUrl": zod.string().max(updateAdminSettingsResponseBrandingHeroImageUrlMax),
+  "supportEmail": zod.string().max(updateAdminSettingsResponseBrandingSupportEmailMax),
+  "whatsappNumber": zod.string().max(updateAdminSettingsResponseBrandingWhatsappNumberMax)
+}),
+  "advertising": zod.object({
+  "dailyPriceUsd": zod.number().min(updateAdminSettingsResponseAdvertisingDailyPriceUsdMin).max(updateAdminSettingsResponseAdvertisingDailyPriceUsdMax),
+  "usdToOmaniRial": zod.number().min(updateAdminSettingsResponseAdvertisingUsdToOmaniRialMin).max(updateAdminSettingsResponseAdvertisingUsdToOmaniRialMax)
+}),
+  "plans": zod.array(zod.object({
+  "code": zod.enum(['service-monthly', 'service-annual', 'real-estate-monthly', 'real-estate-annual']),
+  "name": zod.string(),
+  "category": zod.enum(['service', 'real-estate']),
+  "billingMonths": zod.union([zod.literal(1),zod.literal(12)]),
+  "trialMonths": zod.literal(1),
+  "priceUsd": zod.number(),
+  "priceOmaniRial": zod.number()
+})).min(updateAdminSettingsResponsePlansMin).max(updateAdminSettingsResponsePlansMax)
 })
 
 

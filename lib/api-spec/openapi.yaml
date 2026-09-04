@@ -155,6 +155,12 @@ paths:
       tags: [marketplace]
       responses:
         "200": { description: Public homepage content configuration, content: { application/json: { schema: { $ref: "#/components/schemas/HomepageSettings" } } } }
+  /app-settings:
+    get:
+      operationId: getAppSettings
+      tags: [marketplace]
+      responses:
+        "200": { description: Public safe application configuration, content: { application/json: { schema: { $ref: "#/components/schemas/PublicAppSettings" } } } }
   /ads/{id}/event:
     post:
       operationId: recordAdEvent
@@ -676,7 +682,58 @@ components:
             maintenance: { $ref: "#/components/schemas/LocalizedHomepageSection" }
           required: [services, location, providers, properties, maintenance]
       required: [showSponsoredAds, hero, sectionOrder, sections]
-    MarketplaceSettings: { type: object, properties: { trialMonths: { type: number, minimum: 1 }, defaultPriceOmaniRial: { type: number, minimum: 0 }, rankingWeights: { $ref: "#/components/schemas/RankingWeights" }, homepage: { $ref: "#/components/schemas/HomepageSettings" } }, required: [trialMonths, defaultPriceOmaniRial, rankingWeights, homepage] }
+    AppAppearance:
+      type: object
+      properties:
+        primary: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        primaryForeground: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        background: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        foreground: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        card: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        border: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        accent: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        primarySoft: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        radius: { type: number, minimum: 6, maximum: 28 }
+      required: [primary, primaryForeground, background, foreground, card, border, accent, primarySoft, radius]
+    AppBranding:
+      type: object
+      properties:
+        appNameEn: { type: string, maxLength: 60 }
+        appNameAr: { type: string, maxLength: 60 }
+        taglineEn: { type: string, maxLength: 160 }
+        taglineAr: { type: string, maxLength: 160 }
+        logoUrl: { type: string, maxLength: 2000000 }
+        heroImageUrl: { type: string, maxLength: 2000000 }
+        supportEmail: { type: string, maxLength: 160 }
+        whatsappNumber: { type: string, maxLength: 30 }
+      required: [appNameEn, appNameAr, taglineEn, taglineAr, logoUrl, heroImageUrl, supportEmail, whatsappNumber]
+    AdvertisingSettings:
+      type: object
+      properties:
+        dailyPriceUsd: { type: number, minimum: 0.5, maximum: 1000 }
+        usdToOmaniRial: { type: number, minimum: 0.001, maximum: 10 }
+      required: [dailyPriceUsd, usdToOmaniRial]
+    PublicAppSettings:
+      type: object
+      properties:
+        appearance: { $ref: "#/components/schemas/AppAppearance" }
+        branding: { $ref: "#/components/schemas/AppBranding" }
+        advertising: { $ref: "#/components/schemas/AdvertisingSettings" }
+        homepage: { $ref: "#/components/schemas/HomepageSettings" }
+        plans: { type: array, items: { $ref: "#/components/schemas/SubscriptionPlan" } }
+      required: [appearance, branding, advertising, homepage, plans]
+    MarketplaceSettings:
+      type: object
+      properties:
+        trialMonths: { type: number, minimum: 1 }
+        defaultPriceOmaniRial: { type: number, minimum: 0 }
+        rankingWeights: { $ref: "#/components/schemas/RankingWeights" }
+        homepage: { $ref: "#/components/schemas/HomepageSettings" }
+        appearance: { $ref: "#/components/schemas/AppAppearance" }
+        branding: { $ref: "#/components/schemas/AppBranding" }
+        advertising: { $ref: "#/components/schemas/AdvertisingSettings" }
+        plans: { type: array, minItems: 4, maxItems: 4, items: { $ref: "#/components/schemas/SubscriptionPlan" } }
+      required: [trialMonths, defaultPriceOmaniRial, rankingWeights, homepage, appearance, branding, advertising, plans]
     AdminOverview: { type: object, properties: { contractors: { type: number }, activeSubscriptions: { type: number }, paymentDueSubscriptions: { type: number }, paymentsRecorded: { type: number } }, required: [contractors, activeSubscriptions, paymentDueSubscriptions, paymentsRecorded] }
     AdAudience:
       type: object

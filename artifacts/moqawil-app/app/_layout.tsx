@@ -17,6 +17,7 @@ import {
 import { router, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProvider, useApp } from '@/context/AppContext';
+import { AppSettingsProvider } from '@/context/AppSettingsContext';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { getGetMeQueryKey, setAuthTokenGetter, setBaseUrl, useGetMe } from '@workspace/api-client-react';
@@ -148,8 +149,9 @@ export default function RootLayout() {
       <ErrorBoundary>
         <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ''} tokenCache={tokenCache}>
           <ApiAuthBridge>
-            <AppProvider>
-              <QueryClientProvider client={queryClient}>
+            <QueryClientProvider client={queryClient}>
+              <AppSettingsProvider>
+                <AppProvider>
                 <AuthUserSync />
                 <PushNotificationsBridge />
                 <GestureHandlerRootView style={{ flex: 1 }}>
@@ -157,8 +159,9 @@ export default function RootLayout() {
                     <RootLayoutNav />
                   </KeyboardProvider>
                 </GestureHandlerRootView>
-              </QueryClientProvider>
-            </AppProvider>
+                </AppProvider>
+              </AppSettingsProvider>
+            </QueryClientProvider>
           </ApiAuthBridge>
         </ClerkProvider>
       </ErrorBoundary>
