@@ -143,9 +143,11 @@ export default function HomeScreen() {
       </View>
     );
   };
+  const supportEmail = branding?.supportEmail?.trim() || 'moqawil.ap@gmail.com';
+  const whatsappNumber = branding?.whatsappNumber?.replace(/\D/g, '') || '96877224535';
   const socialLinks = [
-    ...(branding?.whatsappNumber ? [{ icon: 'whatsapp' as const, label: isArabic ? 'واتساب' : 'WhatsApp', url: `https://wa.me/${branding.whatsappNumber.replace(/\D/g, '')}` }] : []),
-    ...(branding?.supportEmail ? [{ icon: 'mail' as const, label: isArabic ? 'البريد' : 'Email', url: `mailto:${branding.supportEmail}` }] : []),
+    { icon: 'whatsapp' as const, label: isArabic ? 'واتساب' : 'WhatsApp', url: `https://wa.me/${whatsappNumber}` },
+    { icon: 'mail' as const, label: isArabic ? 'البريد' : 'Email', url: `mailto:${supportEmail}` },
     { icon: 'instagram' as const, label: 'Instagram', url: 'https://instagram.com/moqawil.om' },
   ];
 
