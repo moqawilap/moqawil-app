@@ -132,19 +132,6 @@ export default function ContractorProjectScreen() {
   if (me.isLoading || (isContractor && profile.isLoading)) {
     return <View style={[styles.page, styles.center, { backgroundColor: colors.background }]}><ActivityIndicator color={colors.primary} /></View>;
   }
-  if (!isContractor || !profile.data) {
-    return (
-      <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}>
-        <FixedBackButton onPress={() => router.back()} />
-        <View style={styles.center}>
-          <View style={[styles.blockIcon, { backgroundColor: colors.primarySoft }]}><Feather name="briefcase" size={27} color={colors.primary} /></View>
-          <Text style={[styles.blockTitle, { color: colors.foreground }]}>{isArabic ? 'هذه الفئة للمقاولين' : 'This category is for contractors'}</Text>
-          <Text style={[styles.blockText, { color: colors.mutedForeground }]}>{isArabic ? 'يجب إنشاء ملف مقاول أولًا قبل تسجيل مشروع أو نشر أعمال.' : 'Create a contractor profile before registering a project or publishing work.'}</Text>
-          <ActionButton label={isArabic ? 'إنشاء ملف مقاول' : 'Create contractor profile'} onPress={() => router.replace('/contractor-profile' as never)} />
-        </View>
-      </View>
-    );
-  }
 
   const totalBytes = media.reduce((total, item) => total + item.size, 0);
   const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && form.description.trim().length >= 20 && media.length >= 1 && !!commercialRegistrationPdf && subscriptionPlanCode.length > 0 && termsAccepted;
@@ -168,10 +155,10 @@ export default function ContractorProjectScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 72, paddingBottom: 48 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'تسجيل مشروع مقاول' : 'Register a contractor project'} subtitle={isArabic ? 'أضف مشروعك لعرضه بعد مراجعة الإدارة' : 'Add your project for administrator review'} />
-          <View style={[styles.ownerCard, { backgroundColor: colors.navy }]}>
-            <Feather name="shield" size={20} color="#FFFFFF" />
-            <View style={styles.ownerCopy}><Text style={styles.ownerTitle}>{profile.data.businessName}</Text><Text style={styles.ownerText}>{isArabic ? 'سيتم تسجيل المشروع تحت ملف المقاول هذا' : 'This project will be registered under this contractor profile'}</Text></View>
-          </View>
+           <View style={[styles.ownerCard, { backgroundColor: colors.navy }]}>
+             <Feather name="shield" size={20} color="#FFFFFF" />
+             <View style={styles.ownerCopy}><Text style={styles.ownerTitle}>{profile.data?.businessName ?? (isArabic ? 'تسجيل مشروع مقاول' : 'Contractor project')}</Text><Text style={styles.ownerText}>{profile.data ? (isArabic ? 'سيتم تسجيل المشروع تحت ملف المقاول هذا' : 'This project will be registered under this contractor profile') : (isArabic ? 'سيتم إنشاء بيانات المقاول تلقائيًا مع إرسال المشروع' : 'Contractor details will be created automatically when you submit')}</Text></View>
+           </View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'اسم المشروع' : 'Project name'}</Text><TextInput testID="project-title" value={form.title} onChangeText={(value) => update('title', value)} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'مثال: إنشاء فيلا سكنية' : 'Example: Residential villa construction'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع المشروع' : 'Project location'}</Text><TextInput testID="project-city" value={form.city} onChangeText={(value) => update('city', value)} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'المحافظة أو الولاية' : 'Governorate or wilayat'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'وصف المشروع' : 'Project description'}</Text><TextInput testID="project-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اشرح نوع المشروع، نطاق العمل، المواد، ومدة التنفيذ…' : 'Describe the project, scope, materials, and delivery period…'} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /><Text style={[styles.counter, { color: colors.mutedForeground }]}>{form.description.length}/5000</Text></View>

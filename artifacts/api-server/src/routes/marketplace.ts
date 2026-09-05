@@ -1139,14 +1139,10 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post("/me/projects", requireUser, requireContractor, async (req, res, next) => {
+router.post("/me/projects", requireUser, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
-    const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
-    if (!profile) {
-      res.status(404).json({ error: "A contractor profile is required" });
-      return;
-    }
+    let profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
     const input = req.body ?? {};
     const selectedPlan = typeof input.subscriptionPlanCode === "string"
       ? await db.query.subscriptionPlans.findFirst({ where: and(eq(subscriptionPlans.code, input.subscriptionPlanCode), eq(subscriptionPlans.category, "service"), eq(subscriptionPlans.isActive, true)) })
@@ -1187,6 +1183,25 @@ router.post("/me/projects", requireUser, requireContractor, async (req, res, nex
         res.status(400).json({ error: "Coupon is invalid or unavailable" });
         return;
       }
+    }
+    if (!profile) {
+      if (user.role === "customer") await promoteCustomerToContractor(user.clerkUserId);
+      [profile] = await db.insert(contractorProfiles).values({
+        userId: user.id,
+        businessName: typeof input.businessName === "string" && input.businessName.trim().length >= 2 ? input.businessName.trim() : input.title.trim(),
+        city: input.city.trim(),
+        wilayat: null,
+        bio: null,
+        serviceArea: null,
+        phone: null,
+        avatarUrl: null,
+        imageUrls: [],
+        lastActiveAt: new Date(),
+      }).onConflictDoUpdate({
+        target: contractorProfiles.userId,
+        set: { businessName: input.title.trim(), city: input.city.trim(), updatedAt: new Date(), lastActiveAt: new Date() },
+      }).returning();
+      await db.update(users).set({ role: "contractor", updatedAt: new Date() }).where(eq(users.id, user.id));
     }
     const [project] = await db.insert(projects).values({
       contractorId: profile.id,
