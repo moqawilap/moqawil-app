@@ -211,7 +211,7 @@ export default function HomeScreen() {
           {homepage.sectionOrder.map(renderSection)}
            <View style={[styles.aboutCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.aboutEyebrow, { color: colors.primary }]}>{isArabic ? `عن ${branding?.appNameAr || 'مقاول'}` : `ABOUT ${(branding?.appNameEn || 'MOQAWIL').toUpperCase()}`}</Text>
-              <Text style={[styles.aboutTitle, { color: colors.foreground }]}>{isArabic ? (branding?.taglineAr || 'منصة واحدة لكل احتياجات البناء والعقارات.') : (branding?.taglineEn || 'One platform for all your building and property needs.')}</Text>
+              <Text style={[styles.aboutTitle, { color: colors.foreground }]}>{isArabic ? 'منصة واحدة لكل احتياجات البناء والعقارات.' : 'One platform for all your building and property needs.'}</Text>
              <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>{isArabic ? 'مقاول منصة عُمانية تجمع العملاء بالمقاولين والورش ومقدمي خدمات الصيانة والعقارات، وتساعدك على العثور على الخدمة المناسبة والتواصل مع مقدمي الخدمة الموثوقين بسهولة.' : 'Moqawil is an Omani marketplace that connects customers with trusted contractors, workshops, maintenance providers, and property listings. Discover the right service, compare providers, and get in touch with confidence.'}</Text>
              <View style={styles.homeSocialLinks}>
                {socialLinks.map((item) => (
