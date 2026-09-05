@@ -55,6 +55,7 @@ export * from './contractor';
 export * from './contractorDetail';
 export * from './contractorDirectoryPage';
 export * from './contractorProfileUpsert';
+export * from './contractorProfileUpsertSubscriptionPlanCode';
 export * from './contractorProjectCreate';
 export * from './contractorProjectCreateSubscriptionPlanCode';
 export * from './contractorProjectRegistration';

@@ -1205,7 +1205,8 @@ export const GetMyContractorProfileResponse = zod.object({
   "serviceArea": zod.string().max(getMyContractorProfileResponseServiceAreaMax).nullish(),
   "phone": zod.string().max(getMyContractorProfileResponsePhoneMax).nullish(),
   "avatarUrl": zod.string().max(getMyContractorProfileResponseAvatarUrlMax).nullish(),
-  "imageUrls": zod.array(zod.string().max(getMyContractorProfileResponseImageUrlsItemMax)).max(getMyContractorProfileResponseImageUrlsMax).optional()
+  "imageUrls": zod.array(zod.string().max(getMyContractorProfileResponseImageUrlsItemMax)).max(getMyContractorProfileResponseImageUrlsMax).optional(),
+  "subscriptionPlanCode": zod.union([zod.literal('service-monthly'),zod.literal('service-annual'),zod.literal(null)]).nullish()
 })
 
 
@@ -1240,7 +1241,8 @@ export const UpsertMyContractorProfileBody = zod.object({
   "serviceArea": zod.string().max(upsertMyContractorProfileBodyServiceAreaMax).nullish(),
   "phone": zod.string().max(upsertMyContractorProfileBodyPhoneMax).nullish(),
   "avatarUrl": zod.string().max(upsertMyContractorProfileBodyAvatarUrlMax).nullish(),
-  "imageUrls": zod.array(zod.string().max(upsertMyContractorProfileBodyImageUrlsItemMax)).max(upsertMyContractorProfileBodyImageUrlsMax).optional()
+  "imageUrls": zod.array(zod.string().max(upsertMyContractorProfileBodyImageUrlsItemMax)).max(upsertMyContractorProfileBodyImageUrlsMax).optional(),
+  "subscriptionPlanCode": zod.union([zod.literal('service-monthly'),zod.literal('service-annual'),zod.literal(null)]).nullish()
 })
 
 export const upsertMyContractorProfileResponseContractorImageUrlsItemMax = 2000000;

@@ -1105,7 +1105,10 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
       return;
     }
     const input = req.body ?? {};
-    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || typeof input.wilayat !== "string" || input.wilayat.trim().length < 2 || input.wilayat.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls))) { res.status(400).json({ error: "Invalid contractor profile fields" }); return; }
+    const selectedPlan = typeof input.subscriptionPlanCode === "string"
+      ? await db.query.subscriptionPlans.findFirst({ where: and(eq(subscriptionPlans.code, input.subscriptionPlanCode), eq(subscriptionPlans.category, "service"), eq(subscriptionPlans.isActive, true)) })
+      : null;
+    if (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200 || typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100 || typeof input.wilayat !== "string" || input.wilayat.trim().length < 2 || input.wilayat.length > 100 || !validOptionalText(input.bio, 5000) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2048) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls)) || (!existingProfile && !selectedPlan)) { res.status(400).json({ error: "Choose a contractor subscription plan" }); return; }
     if (user.role === "customer") {
       await promoteCustomerToContractor(user.clerkUserId);
     }
@@ -1124,7 +1127,7 @@ router.put("/me/contractor-profile", requireUser, async (req, res, next) => {
       await tx.update(users).set({ role: "contractor", updatedAt: new Date() }).where(eq(users.id, user.id));
       let subscription = await tx.query.subscriptions.findFirst({ where: eq(subscriptions.contractorId, profile.id) });
       if (!subscription) {
-        const plan = await tx.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.isActive, true) });
+         const plan = selectedPlan ?? await tx.query.subscriptionPlans.findFirst({ where: and(eq(subscriptionPlans.category, "service"), eq(subscriptionPlans.isActive, true)) });
         if (!plan) throw new Error("No active subscription plan is configured");
         const now = new Date();
         [subscription] = await tx.insert(subscriptions).values({ contractorId: profile.id, planId: plan.id, status: "free_trial", trialStartedAt: now, trialEndsAt: addMonths(now, settings.trialMonths) }).returning();

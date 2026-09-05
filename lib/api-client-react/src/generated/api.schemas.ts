@@ -538,6 +538,17 @@ export interface AdminPaymentCreate {
   providerReference?: string;
 }
 
+/**
+ * @nullable
+ */
+export type ContractorProfileUpsertSubscriptionPlanCode = typeof ContractorProfileUpsertSubscriptionPlanCode[keyof typeof ContractorProfileUpsertSubscriptionPlanCode] | null;
+
+
+export const ContractorProfileUpsertSubscriptionPlanCode = {
+  'service-monthly': 'service-monthly',
+  'service-annual': 'service-annual',
+} as const;
+
 export interface ContractorProfileUpsert {
   /**
      * @minLength 2
@@ -579,6 +590,8 @@ export interface ContractorProfileUpsert {
      * @items.maxLength 8000000
      */
   imageUrls?: string[];
+  /** @nullable */
+  subscriptionPlanCode?: ContractorProfileUpsertSubscriptionPlanCode;
 }
 
 export interface ContractorProvisioning {
