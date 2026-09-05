@@ -13,8 +13,8 @@ export const DEFAULT_APPEARANCE = {
 export const DEFAULT_BRANDING = {
   appNameEn: "Moqawil",
   appNameAr: "مقاول",
-  taglineEn: "Oman's trusted marketplace",
-  taglineAr: "سوق عُمان الموثوق",
+  taglineEn: "One platform for all your building and property needs.",
+  taglineAr: "منصة واحدة لكل احتياجات البناء والعقارات.",
   logoUrl: "",
   heroImageUrl: "",
   supportEmail: "",

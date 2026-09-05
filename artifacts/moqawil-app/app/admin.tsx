@@ -1816,8 +1816,8 @@ function SettingsTab() {
           {[
             ['appNameEn', 'App Name (EN)', 'اسم التطبيق (إنجليزي)'],
             ['appNameAr', 'App Name (AR)', 'اسم التطبيق (عربي)'],
-            ['taglineEn', 'Tagline (EN)', 'الشعار اللفظي (إنجليزي)'],
-            ['taglineAr', 'Tagline (AR)', 'الشعار اللفظي (عربي)'],
+            ['taglineEn', 'Platform blurb (EN)', 'نبذة المنصة (إنجليزي)'],
+            ['taglineAr', 'Platform blurb (AR)', 'نبذة المنصة (عربي)'],
             ['supportEmail', 'Support Email', 'بريد الدعم الفني'],
             ['whatsappNumber', 'WhatsApp Number', 'رقم الواتساب']
           ].map(([key, labelEn, labelAr]) => (
