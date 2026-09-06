@@ -1031,6 +1031,10 @@ function PushNotificationPanel() {
     },
   });
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const choosePushImage = async () => {
+    const [image] = await pickAdminImages(isArabic, 1);
+    if (image) update('imageUrl', image);
+  };
   const submit = () => {
     if (!form.title.trim() || !form.body.trim()) {
       Alert.alert(text(isArabic, 'Missing content', 'المحتوى غير مكتمل'), text(isArabic, 'Enter a title and message.', 'أدخل عنوانًا ونصًا للإشعار.'));
@@ -1072,8 +1076,20 @@ function PushNotificationPanel() {
         <TextInput testID="push-body" value={form.body} onChangeText={(value) => update('body', value)} maxLength={1000} multiline style={[styles.inputMulti, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
       </View>
       <View style={styles.formGroupFull}>
-        <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Image URL (optional)', 'رابط الصورة (اختياري)')}</Text>
-        <TextInput testID="push-image-url" value={form.imageUrl} onChangeText={(value) => update('imageUrl', value)} autoCapitalize="none" keyboardType="url" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
+        <Text style={[styles.label, { color: colors.foreground }]}>{text(isArabic, 'Notification image (optional)', 'صورة الإشعار (اختياري)')}</Text>
+        <Pressable testID="pick-push-image" onPress={() => void choosePushImage()} style={[styles.imagePickerButton, { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}>
+          <Feather name={form.imageUrl ? 'check-circle' : 'image'} size={18} color={colors.primary} />
+          <Text style={[styles.denseButtonText, { color: colors.primary }]}>{form.imageUrl ? text(isArabic, 'Image selected', 'تم اختيار الصورة') : text(isArabic, 'Choose one image from device', 'اختيار صورة واحدة من الجهاز')}</Text>
+        </Pressable>
+        {form.imageUrl ? (
+          <View style={styles.pushImagePreview}>
+            <Image source={{ uri: form.imageUrl }} style={styles.pushImage} />
+            <Pressable testID="remove-push-image" onPress={() => update('imageUrl', '')} style={[styles.imageRemoveButton, { backgroundColor: colors.navy }]}>
+              <Feather name="x" size={14} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        ) : null}
+        <TextInput testID="push-image-url" value={form.imageUrl.startsWith('data:') ? '' : form.imageUrl} onChangeText={(value) => update('imageUrl', value)} placeholder={text(isArabic, 'Or paste an image URL', 'أو الصق رابط صورة')} autoCapitalize="none" keyboardType="url" style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
         <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'The Moqawil app icon appears automatically with the notification.', 'يظهر شعار تطبيق مقاول تلقائيًا مع الإشعار.')}</Text>
       </View>
       <Pressable testID="send-push-notification" disabled={send.isPending} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, alignSelf: 'flex-start', opacity: send.isPending ? 0.6 : 1 }]} onPress={submit}>
