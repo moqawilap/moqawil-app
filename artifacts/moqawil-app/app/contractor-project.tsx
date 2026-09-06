@@ -4,11 +4,12 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { SubscriptionPlanSelector, type ServiceSubscriptionPlanCode } from '@/components/SubscriptionPlanSelector';
 import { useApp } from '@/context/AppContext';
+import { omanGovernorates } from '@/data/omanLocations';
 import { useColors } from '@/hooks/useColors';
 import {
   getGetMeQueryKey,
@@ -55,6 +56,14 @@ export default function ContractorProjectScreen() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [commercialRegistrationPdf, setCommercialRegistrationPdf] = useState('');
   const [commercialRegistrationName, setCommercialRegistrationName] = useState('');
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [projectGovernorate, setProjectGovernorate] = useState('');
+  const [projectWilayat, setProjectWilayat] = useState('');
+  const selectedGovernorate = omanGovernorates.find((item) => item.name === projectGovernorate);
+  const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === projectWilayat);
+  const projectLocationLabel = projectGovernorate && projectWilayat
+    ? `${isArabic ? selectedGovernorate?.nameAr : projectGovernorate} — ${isArabic ? selectedWilayat?.nameAr : projectWilayat}`
+    : '';
 
   const createProject = useCreateMyContractorProject({ mutation: {
     onSuccess: () => {
@@ -160,7 +169,13 @@ export default function ContractorProjectScreen() {
              <View style={styles.ownerCopy}><Text style={styles.ownerTitle}>{profile.data?.businessName ?? (isArabic ? 'تسجيل مشروع مقاول' : 'Contractor project')}</Text><Text style={styles.ownerText}>{profile.data ? (isArabic ? 'سيتم تسجيل المشروع تحت ملف المقاول هذا' : 'This project will be registered under this contractor profile') : (isArabic ? 'سيتم إنشاء بيانات المقاول تلقائيًا مع إرسال المشروع' : 'Contractor details will be created automatically when you submit')}</Text></View>
            </View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'اسم المشروع' : 'Project name'}</Text><TextInput testID="project-title" value={form.title} onChangeText={(value) => update('title', value)} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'مثال: إنشاء فيلا سكنية' : 'Example: Residential villa construction'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
-          <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع المشروع' : 'Project location'}</Text><TextInput testID="project-city" value={form.city} onChangeText={(value) => update('city', value)} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'المحافظة أو الولاية' : 'Governorate or wilayat'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
+           <View>
+             <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع المشروع' : 'Project location'}</Text>
+             <Pressable testID="project-location-picker" accessibilityRole="button" onPress={() => setLocationPickerVisible(true)} style={[styles.locationInput, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+               <Text numberOfLines={1} style={[styles.locationInputText, { color: projectLocationLabel ? colors.foreground : colors.mutedForeground, textAlign: isArabic ? 'right' : 'left' }]}>{projectLocationLabel || (isArabic ? 'اختر المحافظة والولاية' : 'Choose governorate and wilayat')}</Text>
+               <Feather name="chevron-down" size={18} color={colors.primary} />
+             </Pressable>
+           </View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'وصف المشروع' : 'Project description'}</Text><TextInput testID="project-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اشرح نوع المشروع، نطاق العمل، المواد، ومدة التنفيذ…' : 'Describe the project, scope, materials, and delivery period…'} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /><Text style={[styles.counter, { color: colors.mutedForeground }]}>{form.description.length}/5000</Text></View>
           <View style={styles.mediaHeading}><View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات المشروع' : 'Project photos and videos'}</Text><Text style={[styles.mediaHint, { color: colors.mutedForeground }]}>{isArabic ? `المجموع ${media.length}/${MAX_MEDIA} · ${(totalBytes / 1024 / 1024).toFixed(1)} من 24 م.ب` : `${media.length}/${MAX_MEDIA} total · ${(totalBytes / 1024 / 1024).toFixed(1)} of 24 MB`}</Text></View></View>
           <View style={styles.mediaGrid}>
@@ -177,6 +192,39 @@ export default function ContractorProjectScreen() {
           <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
         </View>
       </ScrollView>
+      <Modal visible={locationPickerVisible} transparent animationType="slide" onRequestClose={() => setLocationPickerVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setLocationPickerVisible(false)}>
+          <Pressable style={[styles.locationSheet, { backgroundColor: colors.surface }]} onPress={() => undefined}>
+            <View style={styles.locationSheetHeader}>
+              <Text style={[styles.locationSheetTitle, { color: colors.foreground }]}>{isArabic ? 'اختر موقع المشروع' : 'Choose project location'}</Text>
+              <Pressable accessibilityLabel={isArabic ? 'إغلاق' : 'Close'} onPress={() => setLocationPickerVisible(false)}><Feather name="x" size={21} color={colors.foreground} /></Pressable>
+            </View>
+            <View style={[styles.pickerHeadings, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.pickerHeading, { color: colors.primary }]}>{isArabic ? 'المحافظة' : 'Governorate'}</Text>
+              <Text style={[styles.pickerHeading, { color: colors.primary }]}>{isArabic ? 'الولاية' : 'Wilayat'}</Text>
+            </View>
+            <View style={styles.pickerColumns}>
+              <ScrollView style={styles.pickerWheel} showsVerticalScrollIndicator={false} snapToInterval={48} decelerationRate="fast">
+                {omanGovernorates.map((item) => {
+                  const selected = projectGovernorate === item.name;
+                  return <Pressable key={item.name} testID={`project-governorate-${item.name}`} onPress={() => { setProjectGovernorate(item.name); setProjectWilayat(''); update('city', ''); }} style={[styles.pickerItem, selected && { backgroundColor: colors.primarySoft }]}><Text style={[styles.pickerItemText, { color: selected ? colors.primary : colors.foreground }]}>{isArabic ? item.nameAr : item.name}</Text></Pressable>;
+                })}
+              </ScrollView>
+              <View style={[styles.pickerDivider, { backgroundColor: colors.border }]} />
+              <ScrollView style={styles.pickerWheel} showsVerticalScrollIndicator={false} snapToInterval={48} decelerationRate="fast">
+                {(selectedGovernorate?.wilayats ?? []).map((item) => {
+                  const selected = projectWilayat === item.name;
+                  return <Pressable key={item.name} testID={`project-wilayat-${item.name}`} onPress={() => { setProjectWilayat(item.name); update('city', `${projectGovernorate} - ${item.name}`); }} style={[styles.pickerItem, selected && { backgroundColor: colors.primarySoft }]}><Text style={[styles.pickerItemText, { color: selected ? colors.primary : colors.foreground }]}>{isArabic ? item.nameAr : item.name}</Text></Pressable>;
+                })}
+                {!selectedGovernorate ? <View style={styles.pickerEmpty}><Text style={[styles.pickerEmptyText, { color: colors.mutedForeground }]}>{isArabic ? 'اختر المحافظة أولًا' : 'Choose a governorate first'}</Text></View> : null}
+              </ScrollView>
+            </View>
+            <Pressable testID="confirm-project-location" disabled={!projectGovernorate || !projectWilayat} onPress={() => { update('city', `${projectGovernorate} - ${projectWilayat}`); setLocationPickerVisible(false); }} style={[styles.locationConfirm, { backgroundColor: colors.primary, opacity: projectGovernorate && projectWilayat ? 1 : 0.45 }]}>
+              <Text style={[styles.locationConfirmText, { color: colors.primaryForeground }]}>{isArabic ? 'تأكيد الموقع' : 'Confirm location'}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -194,6 +242,23 @@ const styles = StyleSheet.create({
   ownerText: { color: '#D9E3EC', fontSize: 11 },
   label: { fontSize: 12, fontWeight: '800', marginBottom: 6 },
   input: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, fontSize: 14 },
+  locationInput: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  locationInputText: { flex: 1, fontSize: 14 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(5,18,30,0.55)', justifyContent: 'flex-end', padding: 14 },
+  locationSheet: { borderRadius: 24, padding: 17, maxHeight: '72%', gap: 10 },
+  locationSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  locationSheetTitle: { fontSize: 17, fontWeight: '900' },
+  pickerHeadings: { flexDirection: 'row', borderBottomWidth: 1, paddingBottom: 8 },
+  pickerHeading: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '900' },
+  pickerColumns: { height: 250, flexDirection: 'row' },
+  pickerWheel: { flex: 1 },
+  pickerDivider: { width: 1, marginVertical: 8 },
+  pickerItem: { minHeight: 48, borderRadius: 12, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
+  pickerItemText: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  pickerEmpty: { minHeight: 150, padding: 10, alignItems: 'center', justifyContent: 'center' },
+  pickerEmptyText: { fontSize: 11, textAlign: 'center' },
+  locationConfirm: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  locationConfirmText: { fontSize: 14, fontWeight: '900' },
   description: { minHeight: 125, paddingTop: 12, textAlignVertical: 'top' },
   counter: { fontSize: 10, marginTop: 4 },
   mediaHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
