@@ -59,6 +59,7 @@ export default function ContractorProjectScreen() {
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [projectGovernorate, setProjectGovernorate] = useState('');
   const [projectWilayat, setProjectWilayat] = useState('');
+  const [allOman, setAllOman] = useState(false);
   const selectedGovernorate = omanGovernorates.find((item) => item.name === projectGovernorate);
   const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === projectWilayat);
   const projectLocationLabel = projectGovernorate && projectWilayat
@@ -171,10 +172,27 @@ export default function ContractorProjectScreen() {
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'اسم المشروع' : 'Project name'}</Text><TextInput testID="project-title" value={form.title} onChangeText={(value) => update('title', value)} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'مثال: إنشاء فيلا سكنية' : 'Example: Residential villa construction'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
            <View>
              <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع المشروع' : 'Project location'}</Text>
-             <Pressable testID="project-location-picker" accessibilityRole="button" onPress={() => setLocationPickerVisible(true)} style={[styles.locationInput, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-               <Text numberOfLines={1} style={[styles.locationInputText, { color: projectLocationLabel ? colors.foreground : colors.mutedForeground, textAlign: isArabic ? 'right' : 'left' }]}>{projectLocationLabel || (isArabic ? 'اختر المحافظة والولاية' : 'Choose governorate and wilayat')}</Text>
-               <Feather name="chevron-down" size={18} color={colors.primary} />
-             </Pressable>
+              {!allOman ? (
+                <Pressable testID="project-location-picker" accessibilityRole="button" onPress={() => setLocationPickerVisible(true)} style={[styles.locationInput, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                  <Text numberOfLines={1} style={[styles.locationInputText, { color: projectLocationLabel ? colors.foreground : colors.mutedForeground, textAlign: isArabic ? 'right' : 'left' }]}>{projectLocationLabel || (isArabic ? 'اختر المحافظة والولاية' : 'Choose governorate and wilayat')}</Text>
+                  <Feather name="chevron-down" size={18} color={colors.primary} />
+                </Pressable>
+              ) : null}
+              <Pressable
+                testID="project-all-oman"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: allOman }}
+                onPress={() => {
+                  const next = !allOman;
+                  setAllOman(next);
+                  setLocationPickerVisible(false);
+                  update('city', next ? 'All Oman' : (projectGovernorate && projectWilayat ? `${projectGovernorate} - ${projectWilayat}` : ''));
+                }}
+                style={[styles.locationScopeRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              >
+                <Feather name={allOman ? 'check-square' : 'square'} size={21} color={colors.primary} />
+                <Text style={[styles.locationScopeText, { color: colors.foreground }]}>{isArabic ? 'كل السلطنة' : 'All Oman'}</Text>
+              </Pressable>
            </View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'وصف المشروع' : 'Project description'}</Text><TextInput testID="project-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اشرح نوع المشروع، نطاق العمل، المواد، ومدة التنفيذ…' : 'Describe the project, scope, materials, and delivery period…'} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /><Text style={[styles.counter, { color: colors.mutedForeground }]}>{form.description.length}/5000</Text></View>
           <View style={styles.mediaHeading}><View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات المشروع' : 'Project photos and videos'}</Text><Text style={[styles.mediaHint, { color: colors.mutedForeground }]}>{isArabic ? `المجموع ${media.length}/${MAX_MEDIA} · ${(totalBytes / 1024 / 1024).toFixed(1)} من 24 م.ب` : `${media.length}/${MAX_MEDIA} total · ${(totalBytes / 1024 / 1024).toFixed(1)} of 24 MB`}</Text></View></View>
@@ -244,6 +262,8 @@ const styles = StyleSheet.create({
   input: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, fontSize: 14 },
   locationInput: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
   locationInputText: { flex: 1, fontSize: 14 },
+  locationScopeRow: { minHeight: 47, marginTop: 9, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  locationScopeText: { flex: 1, fontSize: 14, fontWeight: '800' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(5,18,30,0.55)', justifyContent: 'flex-end', padding: 14 },
   locationSheet: { borderRadius: 24, padding: 17, maxHeight: '72%', gap: 10 },
   locationSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
