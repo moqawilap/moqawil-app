@@ -32,6 +32,7 @@ const propertyTypes = [
   { value: 'warehouse', ar: 'مخزن', en: 'Warehouse' },
   { value: 'farm', ar: 'مزرعة', en: 'Farm' },
 ] as const;
+const propertyTypesWithoutRoomCounts = new Set(['land', 'office', 'shop', 'warehouse', 'farm']);
 const countFields = [
   { key: 'bedrooms', ar: 'غرف النوم', en: 'Bedrooms' },
   { key: 'livingRooms', ar: 'الصالات', en: 'Living rooms' },
@@ -169,6 +170,7 @@ export default function ServiceRegistrationScreen() {
   const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === propertyWilayat);
   const knownAreas = propertyWilayat ? omanWilayatAreas[propertyWilayat] ?? [] : [];
   const finalPropertyArea = propertyArea === '__other__' ? customPropertyArea.trim() : propertyArea;
+  const showPropertyCounts = !propertyTypesWithoutRoomCounts.has(propertyType);
   const locationLevel = !propertyGovernorate ? 'governorate' : !propertyWilayat ? 'wilayat' : 'area';
   const locationLevelTitle = locationLevel === 'governorate' ? (isArabic ? 'المحافظة' : 'Governorate') : locationLevel === 'wilayat' ? (isArabic ? 'الولاية' : 'Wilayat') : (isArabic ? 'المنطقة' : 'Area');
   const locationOptions = locationLevel === 'governorate'
@@ -311,13 +313,20 @@ export default function ServiceRegistrationScreen() {
                {propertyArea === '__other__' ? <TextInput testID="property-custom-area" value={customPropertyArea} onChangeText={setCustomPropertyArea} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'اكتب اسم المنطقة' : 'Enter the area name'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} /> : null}
              </View>
              <ChoiceSection title={isArabic ? 'الغرض من الإعلان' : 'Listing purpose'} options={[{ value: 'sale', label: isArabic ? 'بيع' : 'For sale' }, { value: 'rent', label: isArabic ? 'تأجير' : 'For rent' }]} value={listingType} onChange={(value) => setListingType(value as 'sale' | 'rent')} colors={colors} />
-             <ChoiceSection title={isArabic ? 'نوع العقار' : 'Property type'} options={propertyTypes.map((item) => ({ value: item.value, label: isArabic ? item.ar : item.en }))} value={propertyType} onChange={setPropertyType} colors={colors} />
+              <ChoiceSection title={isArabic ? 'نوع العقار' : 'Property type'} options={propertyTypes.map((item) => ({ value: item.value, label: isArabic ? item.ar : item.en }))} value={propertyType} onChange={(value) => {
+                setPropertyType(value);
+                if (propertyTypesWithoutRoomCounts.has(value)) {
+                  setPropertyCounts({ bedrooms: 0, livingRooms: 0, majlis: 0, kitchens: 0, bathrooms: 0 });
+                }
+              }} colors={colors} />
              <View style={[styles.coverageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'مساحة العقار (متر مربع)' : 'Property size (square meters)'}</Text>
                <TextInput testID="property-size" value={propertySize} onChangeText={(value) => setPropertySize(value.replace(/[^0-9]/g, ''))} keyboardType="numeric" inputMode="numeric" textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'مثال: 120' : 'Example: 120'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} />
-               <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'تفاصيل العقار بالأرقام' : 'Property details'}</Text>
-               <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اضغط على أي خانة وحدد العدد من عجلة الاختيار.' : 'Tap a field and choose its number from the wheel.'}</Text>
-               <View style={styles.counterGrid}>{countFields.map((item) => <Pressable key={item.key} testID={`property-count-${item.key}`} onPress={() => setActiveCount(item.key)} style={[styles.counterCard, { borderColor: colors.border, backgroundColor: colors.background }]}><Text style={[styles.counterValue, { color: colors.primary }]}>{propertyCounts[item.key]}</Text><Text style={[styles.counterLabel, { color: colors.foreground }]}>{isArabic ? item.ar : item.en}</Text><Feather name="chevron-down" size={14} color={colors.mutedForeground} /></Pressable>)}</View>
+                {showPropertyCounts ? <>
+                  <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'تفاصيل العقار بالأرقام' : 'Property details'}</Text>
+                  <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? 'اضغط على أي خانة وحدد العدد من عجلة الاختيار.' : 'Tap a field and choose its number from the wheel.'}</Text>
+                  <View style={styles.counterGrid}>{countFields.map((item) => <Pressable key={item.key} testID={`property-count-${item.key}`} onPress={() => setActiveCount(item.key)} style={[styles.counterCard, { borderColor: colors.border, backgroundColor: colors.background }]}><Text style={[styles.counterValue, { color: colors.primary }]}>{propertyCounts[item.key]}</Text><Text style={[styles.counterLabel, { color: colors.foreground }]}>{isArabic ? item.ar : item.en}</Text><Feather name="chevron-down" size={14} color={colors.mutedForeground} /></Pressable>)}</View>
+                </> : null}
              </View>
            </> : <>
            <Field label={isArabic ? categoryCopy.specialtyAr : categoryCopy.specialtyEn} testID="registration-specialty" value={form.specialty} onChangeText={(value) => update('specialty', value)} placeholder={isArabic ? categoryCopy.specialtyPlaceholderAr : categoryCopy.specialtyPlaceholderEn} isArabic={isArabic} colors={colors} />
