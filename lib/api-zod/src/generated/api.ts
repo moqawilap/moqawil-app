@@ -336,7 +336,7 @@ export const createAdminPushNotificationBodyTitleMax = 120;
 
 export const createAdminPushNotificationBodyBodyMax = 1000;
 
-export const createAdminPushNotificationBodyImageUrlMax = 2000;
+export const createAdminPushNotificationBodyImageUrlMax = 2000000;
 
 export const createAdminPushNotificationBodyTargetUrlMax = 2000;
 

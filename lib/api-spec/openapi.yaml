@@ -941,7 +941,7 @@ components:
       properties:
         title: { type: string, minLength: 1, maxLength: 120 }
         body: { type: string, minLength: 1, maxLength: 1000 }
-        imageUrl: { type: [string, "null"], maxLength: 2000 }
+        imageUrl: { type: [string, "null"], maxLength: 2000000 }
         targetUrl: { type: [string, "null"], maxLength: 2000 }
       required: [title, body]
     PushNotification:

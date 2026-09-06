@@ -737,7 +737,10 @@ router.post("/admin/push-notifications", requireUser, requireAdmin, async (req, 
     const body = typeof input.body === "string" ? input.body.trim() : "";
     const imageUrl = input.imageUrl === null || input.imageUrl === undefined ? null : typeof input.imageUrl === "string" ? input.imageUrl.trim() : null;
     const targetUrl = input.targetUrl === null || input.targetUrl === undefined ? null : typeof input.targetUrl === "string" ? input.targetUrl.trim() : null;
-    if (!title || title.length > 120 || !body || body.length > 1000 || (imageUrl !== null && imageUrl.length > 2_000) || (targetUrl !== null && targetUrl.length > 2_000)) {
+    const validImage = imageUrl === null
+      || (/^https:\/\//.test(imageUrl) && imageUrl.length <= 2_000)
+      || (/^data:image\/(?:jpeg|jpg|png|webp);base64,/.test(imageUrl) && imageUrl.length <= 2_000_000);
+    if (!title || title.length > 120 || !body || body.length > 1000 || !validImage || (targetUrl !== null && targetUrl.length > 2_000)) {
       res.status(400).json({ error: "Title and body are required; optional links must be valid text" });
       return;
     }
