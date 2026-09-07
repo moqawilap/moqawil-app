@@ -21,9 +21,9 @@ import {
   useListAdminPayments, getListAdminPaymentsQueryKey, useCreateAdminPayment,
   useGetAdminSettings, getGetAdminSettingsQueryKey, getGetHomepageSettingsQueryKey, useUpdateAdminSettings,
   useListAdminListings, getListAdminListingsQueryKey, useCreateAdminListing, useUpdateAdminListing, useDeleteAdminListing,
-  useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, processAdminAdVideo,
+  useListAdminAdCampaigns, getListAdminAdCampaignsQueryKey, useCreateAdminAdCampaign, useUpdateAdminAdCampaign, useDeleteAdminAdCampaign, processAdminAdVideo,
   useListAdminPushNotifications, getListAdminPushNotificationsQueryKey, useCreateAdminPushNotification,
-  useListAdminServiceReviews, getListAdminServiceReviewsQueryKey, useUpdateAdminServiceReview,
+  useListAdminServiceReviews, getListAdminServiceReviewsQueryKey, useUpdateAdminServiceReview, useDeleteAdminServiceReview,
   getGetAppSettingsQueryKey, getListSubscriptionPlansQueryKey,
   type AdminContractor, type AdminContractorInput, type AdminListingInput, type MarketplaceListing, type AdCampaign, type AdMediaItem, type AdminAdCampaignInput, type HomepageSettings, type AdminServiceReview, type MarketplaceSettings
 } from '@workspace/api-client-react';
@@ -260,6 +260,13 @@ function ReviewsTab() {
     },
     onError: (error) => Alert.alert(text(isArabic, 'Review failed', 'تعذر تنفيذ المراجعة'), errorMessage(error)),
   } });
+  const removeReview = useDeleteAdminServiceReview({ mutation: {
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: getListAdminServiceReviewsQueryKey() });
+      Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
+    },
+    onError: (error) => Alert.alert(text(isArabic, 'Delete failed', 'تعذر الحذف'), errorMessage(error)),
+  } });
   const act = (item: AdminServiceReview, action: 'approve' | 'reject' | 'changes_requested') => {
     const note = (notes[item.id] ?? '').trim();
     if (action === 'changes_requested' && note.length < 4) {
@@ -303,6 +310,7 @@ function ReviewsTab() {
             <Pressable testID={`approve-review-${item.id}`} onPress={() => act(item, 'approve')} style={[styles.reviewAction, { backgroundColor: colors.primary }]}><Feather name="check" size={16} color={colors.primaryForeground} /><Text style={[styles.reviewActionText, { color: colors.primaryForeground }]}>{text(isArabic, 'Approve', 'اعتماد')}</Text></Pressable>
             <Pressable testID={`changes-review-${item.id}`} onPress={() => act(item, 'changes_requested')} style={[styles.reviewAction, { backgroundColor: colors.primarySoft }]}><Feather name="edit-3" size={16} color={colors.primary} /><Text style={[styles.reviewActionText, { color: colors.primary }]}>{text(isArabic, 'Needs changes', 'يحتاج تعديل')}</Text></Pressable>
             <Pressable testID={`reject-review-${item.id}`} onPress={() => act(item, 'reject')} style={[styles.reviewAction, { backgroundColor: colors.destructive }]}><Feather name="x" size={16} color="#FFFFFF" /><Text style={[styles.reviewActionText, { color: '#FFFFFF' }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text></Pressable>
+            <Pressable testID={`delete-review-${item.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'Delete this advertisement permanently? It will no longer appear to anyone.', 'هل تريد حذف هذا الإعلان نهائيًا؟ لن يظهر بعد ذلك لأي مستخدم.'), () => removeReview.mutate({ kind: item.kind, id: item.id }), text(isArabic, 'Back', 'رجوع'))} style={[styles.reviewAction, { backgroundColor: colors.destructive }]}><Feather name="trash-2" size={16} color="#FFFFFF" /><Text style={[styles.reviewActionText, { color: '#FFFFFF' }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
           </View>
         </View>
       )) : null}
@@ -484,8 +492,8 @@ function ContractorsTab() {
             <Pressable testID={`toggle-publish-${c.id}`} onPress={() => update.mutate({ id: c.id, data: { isPublished: !c.isPublished } })} style={styles.actionLink}>
               <Text style={[styles.actionText, { color: colors.foreground }]}>{c.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text>
             </Pressable>
-            <Pressable testID={`archive-contractor-${c.id}`} onPress={() => confirmAction(text(isArabic, 'Archive', 'أرشفة'), text(isArabic, 'This hides the profile permanently.', 'سيؤدي هذا إلى إخفاء الملف نهائيًا.'), () => archive.mutate({ id: c.id, params: { confirm: true } }), text(isArabic, 'Cancel', 'إلغاء'))} style={styles.actionLink}>
-              <Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Archive', 'أرشفة')}</Text>
+            <Pressable testID={`delete-contractor-${c.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'Delete this advertisement and hide all of its services and projects from everyone?', 'هل تريد حذف هذا الإعلان وإخفاء جميع خدماته ومشاريعه عن الجميع؟'), () => archive.mutate({ id: c.id, params: { confirm: true } }), text(isArabic, 'Back', 'رجوع'))} style={styles.actionLink}>
+              <Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text>
             </Pressable>
           </View>
         </View>
@@ -507,6 +515,10 @@ function WorkshopsTab() {
       onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)),
     },
   });
+  const remove = useDeleteAdminContractor({ mutation: {
+    onSuccess: () => client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() }),
+    onError: (error) => Alert.alert(text(isArabic, 'Delete failed', 'تعذر الحذف'), errorMessage(error)),
+  } });
   const [form, setForm] = useState(blankWorkshop());
   const [showForm, setShowForm] = useState(false);
   const set = (key: keyof ReturnType<typeof blankWorkshop>, value: string | boolean) => setForm((current) => ({ ...current, [key]: value }));
@@ -591,6 +603,9 @@ function WorkshopsTab() {
             </View>
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{workshop.city}{workshop.wilayat ? ` • ${workshop.wilayat}` : ''}</Text>
+          <View style={styles.cardActions}>
+            <Pressable testID={`delete-workshop-${workshop.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'Delete this workshop advertisement? It will no longer appear to anyone.', 'هل تريد حذف إعلان الورشة؟ لن يظهر بعد ذلك لأي مستخدم.'), () => remove.mutate({ id: workshop.id, params: { confirm: true } }), text(isArabic, 'Back', 'رجوع'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
+          </View>
         </View>
       ))}
     </View>
@@ -839,7 +854,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
             <Pressable testID={`edit-${kind}-${item.id}`} onPress={() => begin(item)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
             <Pressable testID={`toggle-verify-${kind}-${item.id}`} onPress={() => update.mutate({ id: item.id, data: { isVerified: !item.isVerified } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{item.isVerified ? text(isArabic, 'Unverify', 'إلغاء التوثيق') : text(isArabic, 'Verify', 'توثيق')}</Text></Pressable>
             <Pressable testID={`toggle-publish-${kind}-${item.id}`} onPress={() => update.mutate({ id: item.id, data: { isPublished: !item.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{item.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text></Pressable>
-            <Pressable testID={`archive-${kind}-${item.id}`} onPress={() => confirmAction(text(isArabic, 'Archive', 'أرشفة'), text(isArabic, 'This hides the profile permanently.', 'سيؤدي هذا إلى إخفاء الملف نهائيًا.'), () => archive.mutate({ id: item.id, params: { confirm: true } }), text(isArabic, 'Cancel', 'إلغاء'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Archive', 'أرشفة')}</Text></Pressable>
+            <Pressable testID={`delete-${kind}-${item.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'Delete this advertisement? It will no longer appear to anyone.', 'هل تريد حذف هذا الإعلان؟ لن يظهر بعد ذلك لأي مستخدم.'), () => archive.mutate({ id: item.id, params: { confirm: true } }), text(isArabic, 'Back', 'رجوع'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
           </View>
         </View>
       ))}
@@ -1122,6 +1137,7 @@ function AdvertisingTab() {
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminAdCampaignsQueryKey() });
   const create = useCreateAdminAdCampaign({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankAdCampaign()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
+  const remove = useDeleteAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Delete failed', 'تعذر الحذف'), errorMessage(e)) } });
 
   const adDailyPriceUsd = settings?.advertising?.dailyPriceUsd ?? 6;
   const adDailyPriceOmr = adDailyPriceUsd * (settings?.advertising?.usdToOmaniRial ?? 0.385);
@@ -1373,6 +1389,7 @@ function AdvertisingTab() {
           <View style={styles.cardActions}>
             <Pressable testID={`edit-ad-${campaign.id}`} onPress={() => begin(campaign)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
             {campaign.status !== 'completed' ? <Pressable testID={`toggle-ad-${campaign.id}`} onPress={() => update.mutate({ id: campaign.id, data: { status: campaign.status === 'active' ? 'paused' : 'active' } as any })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{campaign.status === 'active' ? text(isArabic, 'Pause', 'إيقاف') : text(isArabic, 'Activate', 'تشغيل')}</Text></Pressable> : null}
+            <Pressable testID={`delete-ad-${campaign.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'Delete this campaign permanently? It will stop appearing immediately.', 'هل تريد حذف هذه الحملة نهائيًا؟ سيتوقف ظهورها فورًا.'), () => remove.mutate({ id: campaign.id }), text(isArabic, 'Back', 'رجوع'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
           </View>
         </View>
       ))}

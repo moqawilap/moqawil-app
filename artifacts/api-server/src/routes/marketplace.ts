@@ -1766,7 +1766,44 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
   } catch (error) { next(error); }
 });
 router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, next) => {
-  try { res.json(await Promise.all((await db.select().from(contractorProfiles).orderBy(asc(contractorProfiles.businessName))).map(adminContractorResponse))); } catch (error) { next(error); }
+  try { res.json(await Promise.all((await db.select().from(contractorProfiles).where(isNull(contractorProfiles.archivedAt)).orderBy(asc(contractorProfiles.businessName))).map(adminContractorResponse))); } catch (error) { next(error); }
+});
+router.delete("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const kind = String(req.params.kind);
+    const id = String(req.params.id);
+    if (kind !== "project" && kind !== "registration") { res.status(400).json({ error: "Invalid submission kind" }); return; }
+    const deleted = await db.transaction(async (tx) => {
+      if (kind === "project") {
+        const [project] = await tx.delete(projects).where(eq(projects.id, id)).returning();
+        return project;
+      }
+      const registration = await tx.query.serviceRegistrations.findFirst({ where: eq(serviceRegistrations.id, id) });
+      if (!registration) return null;
+      if (registration.status === "approved" && registration.category === "real-estate" && registration.propertyDetails) {
+        const details = registration.propertyDetails;
+        await tx.delete(marketplaceListings).where(and(
+          eq(marketplaceListings.title, registration.title),
+          eq(marketplaceListings.location, `${details.area}, ${details.wilayat}, ${details.governorate}`),
+        ));
+      } else if (registration.status === "approved") {
+        const profile = await tx.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, registration.userId) });
+        if (profile) {
+          const serviceCategory = registration.category === "design" ? "consultants" : registration.category;
+          await tx.delete(services).where(and(
+            eq(services.contractorId, profile.id),
+            eq(services.category, serviceCategory),
+            eq(services.name, registration.specialty),
+          ));
+        }
+      }
+      const [removed] = await tx.delete(serviceRegistrations).where(eq(serviceRegistrations.id, id)).returning();
+      return removed;
+    });
+    if (!deleted) { res.status(404).json({ error: "Submission not found" }); return; }
+    await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "admin_submission_deleted", kind, id, { confirmation: true });
+    res.status(204).end();
+  } catch (error) { next(error); }
 });
 
 router.get("/admin/listings", requireUser, requireAdmin, async (_req, res, next) => {
@@ -1923,7 +1960,14 @@ router.patch("/admin/contractors/:id", requireUser, requireAdmin, async (req, re
 router.delete("/admin/contractors/:id", requireUser, requireAdmin, async (req, res, next) => {
   try {
     if (req.query.confirm !== "true") { res.status(400).json({ error: "Deletion requires confirm=true; the listing will be archived to preserve records" }); return; }
-    const [profile] = await db.update(contractorProfiles).set({ isPublished: false, archivedAt: new Date(), updatedAt: new Date() }).where(eq(contractorProfiles.id, String(req.params.id))).returning();
+    const profile = await db.transaction(async (tx) => {
+      const [archived] = await tx.update(contractorProfiles).set({ isPublished: false, archivedAt: new Date(), updatedAt: new Date() }).where(eq(contractorProfiles.id, String(req.params.id))).returning();
+      if (!archived) return null;
+      await tx.update(services).set({ isActive: false, updatedAt: new Date() }).where(eq(services.contractorId, archived.id));
+      await tx.update(projects).set({ isPublished: false, updatedAt: new Date() }).where(eq(projects.contractorId, archived.id));
+      await tx.update(adCampaigns).set({ status: "paused", updatedAt: new Date() }).where(eq(adCampaigns.contractorId, archived.id));
+      return archived;
+    });
     if (!profile) { res.status(404).json({ error: "Contractor not found" }); return; }
     await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "contractor_listing_archived", "contractor", profile.id, { confirmation: true });
     res.status(204).end();
@@ -2241,6 +2285,14 @@ router.patch("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, r
     updates.unitRateOmaniRial = dailyPriceOmaniRial.toFixed(6);
     const [updated] = await db.update(adCampaigns).set(updates as Partial<typeof adCampaigns.$inferInsert>).where(eq(adCampaigns.id, existing.id)).returning();
     res.json(adResponse(updated, owner));
+  } catch (error) { next(error); }
+});
+router.delete("/admin/ad-campaigns/:id", requireUser, requireAdmin, async (req, res, next) => {
+  try {
+    const [removed] = await db.delete(adCampaigns).where(eq(adCampaigns.id, String(req.params.id))).returning({ id: adCampaigns.id });
+    if (!removed) { res.status(404).json({ error: "Ad campaign not found" }); return; }
+    await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "ad_campaign_deleted", "ad_campaign", removed.id, { confirmation: true });
+    res.status(204).end();
   } catch (error) { next(error); }
 });
 router.get("/admin/ad-campaigns/:id/report", requireUser, requireAdmin, async (req, res, next) => {

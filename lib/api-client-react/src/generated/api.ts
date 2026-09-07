@@ -2557,6 +2557,73 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getUpdateAdminServiceReviewMutationOptions(options));
     }
 
+export const getDeleteAdminServiceReviewUrl = (kind: 'project' | 'registration',
+    id: string,) => {
+
+
+
+
+  return `/api/admin/reviews/${kind}/${id}`
+}
+
+export const deleteAdminServiceReview = async (kind: 'project' | 'registration',
+    id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminServiceReviewUrl(kind,id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminServiceReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminServiceReview>>, TError,{kind: 'project' | 'registration';id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminServiceReview>>, TError,{kind: 'project' | 'registration';id: string}, TContext> => {
+
+const mutationKey = ['deleteAdminServiceReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminServiceReview>>, {kind: 'project' | 'registration';id: string}> = (props) => {
+          const {kind,id} = props ?? {};
+
+          return  deleteAdminServiceReview(kind,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminServiceReviewMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminServiceReview>>>
+
+    export type DeleteAdminServiceReviewMutationError = ErrorType<unknown>
+
+    export const useDeleteAdminServiceReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminServiceReview>>, TError,{kind: 'project' | 'registration';id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminServiceReview>>,
+        TError,
+        {kind: 'project' | 'registration';id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminServiceReviewMutationOptions(options));
+    }
+
 export const getListMyNotificationsUrl = () => {
 
 
@@ -4455,6 +4522,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpdateAdminAdCampaignMutationOptions(options));
+    }
+
+export const getDeleteAdminAdCampaignUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/ad-campaigns/${id}`
+}
+
+export const deleteAdminAdCampaign = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminAdCampaignUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminAdCampaignMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminAdCampaign>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminAdCampaign>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteAdminAdCampaign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminAdCampaign>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAdminAdCampaign(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminAdCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminAdCampaign>>>
+
+    export type DeleteAdminAdCampaignMutationError = ErrorType<unknown>
+
+    export const useDeleteAdminAdCampaign = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminAdCampaign>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminAdCampaign>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminAdCampaignMutationOptions(options));
     }
 
 export const getGetAdminAdCampaignReportUrl = (id: string,) => {

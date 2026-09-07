@@ -319,6 +319,15 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminServiceReviewUpdate" } } } }
       responses:
         "200": { description: Review action applied, content: { application/json: { schema: { $ref: "#/components/schemas/MyServiceReview" } } } }
+    delete:
+      operationId: deleteAdminServiceReview
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters:
+        - { name: kind, in: path, required: true, schema: { type: string, enum: [project, registration] } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Submission and its public advertisement deleted }
   /me/notifications:
     get:
       operationId: listMyNotifications
@@ -536,6 +545,13 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAdCampaignUpdate" } } } }
       responses:
         "200": { description: Updated ad campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+    delete:
+      operationId: deleteAdminAdCampaign
+      tags: [admin]
+      security: [ { clerkAuth: [] } ]
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        "204": { description: Ad campaign deleted }
   /admin/ad-campaigns/{id}/report:
     get:
       operationId: getAdminAdCampaignReport

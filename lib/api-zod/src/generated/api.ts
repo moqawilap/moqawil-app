@@ -1611,6 +1611,14 @@ export const UpdateAdminServiceReviewResponse = zod.object({
 })
 
 
+export const DeleteAdminServiceReviewParams = zod.object({
+  "kind": zod.enum(['project', 'registration']),
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminServiceReviewResponse = zod.void()
+
+
 export const ListMyNotificationsResponseItem = zod.object({
   "id": zod.string(),
   "type": zod.string(),
@@ -3555,6 +3563,13 @@ export const UpdateAdminAdCampaignResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
+
+
+export const DeleteAdminAdCampaignParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminAdCampaignResponse = zod.void()
 
 
 export const GetAdminAdCampaignReportParams = zod.object({
