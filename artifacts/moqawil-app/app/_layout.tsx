@@ -97,7 +97,6 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!isSignedIn && !isAuthRoute) router.replace('/sign-in');
     if (isSignedIn && isAuthRoute) router.replace('/');
   }, [isAuthRoute, isLoaded, isSignedIn]);
 
@@ -123,7 +122,7 @@ function RootLayoutNav() {
         <Stack.Screen name="requests" options={{ presentation: 'modal' }} />
         <Stack.Screen name="workshop-requests" options={{ presentation: 'modal' }} />
       </Stack>
-      {(!introFinished || !isLoaded || !preferencesLoaded || (!isSignedIn && !isAuthRoute) || (isSignedIn && isAuthRoute)) ? <LoadingLogo /> : null}
+      {(!introFinished || !isLoaded || !preferencesLoaded || (isSignedIn && isAuthRoute)) ? <LoadingLogo /> : null}
     </View>
   );
 }
