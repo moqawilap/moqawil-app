@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth, useUser } from '@clerk/expo';
 import { router } from 'expo-router';
 import React from 'react';
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
@@ -47,11 +47,11 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'الحساب' : 'Profile'} subtitle={isArabic ? 'إعداداتك وتفضيلاتك' : 'Your settings and preferences'} />
-          <View style={[styles.profileCard, { backgroundColor: colors.navy }]}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{profileName.charAt(0).toUpperCase()}</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={isArabic ? 'تعديل الحساب' : 'Edit account'} disabled={!isSignedIn} onPress={() => router.push('/account-settings' as never)} style={({ pressed }) => [styles.profileCard, { backgroundColor: colors.navy }, pressed && styles.pressed]}>
+            <View style={styles.avatar}>{user?.imageUrl ? <Image source={{ uri: user.imageUrl }} style={styles.avatarImage} /> : <Text style={styles.avatarText}>{profileName.charAt(0).toUpperCase()}</Text>}</View>
             <View style={styles.profileText}><Text style={styles.profileName}>{profileName}</Text><Text style={styles.profileSub}>{isAdmin ? 'Administrator account' : isArabic ? 'استكشف خدمات عمان بثقة' : 'Explore Oman with confidence'}</Text></View>
             <Feather name="edit-2" size={17} color="rgba(255,255,255,0.7)" />
-          </View>
+          </Pressable>
           <View style={styles.languageHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'اللغة' : 'Language'}</Text><Text style={[styles.sectionHint, { color: colors.mutedForeground }]}>{isArabic ? 'اختر لغة التطبيق' : 'Choose your app language'}</Text></View>
           <View style={[styles.languageRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {(['en', 'ar'] as const).map((item) => <Pressable key={item} onPress={() => setLocale(item)} style={[styles.languageOption, locale === item && { backgroundColor: colors.primarySoft }]}><Text style={[styles.languageCode, { color: locale === item ? colors.primary : colors.mutedForeground }]}>{item === 'en' ? 'EN' : 'عربي'}</Text><Text style={[styles.languageLabel, { color: locale === item ? colors.foreground : colors.mutedForeground }]}>{item === 'en' ? 'English' : 'العربية'}</Text>{locale === item ? <Feather name="check-circle" size={16} color={colors.primary} /> : null}</Pressable>)}
@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20 },
   profileCard: { borderRadius: 22, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 13 },
   avatar: { width: 50, height: 50, borderRadius: 17, backgroundColor: '#21D8B7', alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 17 },
   avatarText: { color: '#06213B', fontSize: 21, fontWeight: '800' },
   profileText: { flex: 1, gap: 4 },
   profileName: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },

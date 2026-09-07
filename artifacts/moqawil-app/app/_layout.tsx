@@ -113,6 +113,7 @@ function RootLayoutNav() {
         <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
         <Stack.Screen name="subscription" options={{ presentation: 'modal' }} />
         <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="account-settings" options={{ presentation: 'modal' }} />
         <Stack.Screen name="contractor-profile" options={{ presentation: 'modal' }} />
         <Stack.Screen name="contractor-project" options={{ presentation: 'modal' }} />
         <Stack.Screen name="service-registration" options={{ presentation: 'modal' }} />
