@@ -25,6 +25,14 @@ export interface ContractorProjectCreate {
   city: string;
   /**
      * @minItems 1
+     * @maxItems 61
+     * @items.minLength 2
+     * @items.maxLength 100
+     */
+  serviceWilayats: string[];
+  servesAllGovernorates: boolean;
+  /**
+     * @minItems 1
      * @maxItems 15
      * @items.maxLength 8000000
      */

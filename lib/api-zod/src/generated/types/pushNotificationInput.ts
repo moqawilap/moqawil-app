@@ -18,7 +18,7 @@ export interface PushNotificationInput {
      */
   body: string;
   /**
-     * @maxLength 2000
+     * @maxLength 2000000
      * @nullable
      */
   imageUrl?: string | null;

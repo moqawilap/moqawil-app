@@ -14,6 +14,8 @@ export interface ContractorProjectRegistration {
   description: string;
   category: ContractorProjectRegistrationCategory;
   city: string;
+  serviceWilayats: string[];
+  servesAllGovernorates: boolean;
   mediaUrls: string[];
   /** @nullable */
   subscriptionPlanCode: string | null;

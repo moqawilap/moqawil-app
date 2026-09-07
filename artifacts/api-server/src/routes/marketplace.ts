@@ -1151,6 +1151,11 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
       ? await db.query.subscriptionPlans.findFirst({ where: and(eq(subscriptionPlans.code, input.subscriptionPlanCode), eq(subscriptionPlans.category, "service"), eq(subscriptionPlans.isActive, true)) })
       : null;
     const mediaUrls = Array.isArray(input.mediaUrls) ? input.mediaUrls : [];
+    const serviceWilayats = Array.isArray(input.serviceWilayats) ? input.serviceWilayats : [];
+    const validServiceWilayats = serviceWilayats.length >= 1
+      && serviceWilayats.length <= 61
+      && new Set(serviceWilayats).size === serviceWilayats.length
+      && serviceWilayats.every((value: unknown) => typeof value === "string" && value.trim().length >= 2 && value.length <= 100);
     const validMedia = mediaUrls.length >= 1
       && mediaUrls.length <= 15
       && mediaUrls.every((value: unknown) => typeof value === "string"
@@ -1167,6 +1172,8 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
       || typeof input.city !== "string"
       || input.city.trim().length < 2
       || input.city.length > 100
+      || !validServiceWilayats
+      || typeof input.servesAllGovernorates !== "boolean"
       || !selectedPlan
       || typeof input.commercialRegistrationPdf !== "string"
       || !/^data:application\/pdf(?:;[^,]*)?;base64,/.test(input.commercialRegistrationPdf)
@@ -1212,6 +1219,8 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
       description: input.description.trim(),
       category: "contractors",
       city: input.city.trim(),
+      serviceWilayats,
+      servesAllGovernorates: input.servesAllGovernorates,
       imageUrls: mediaUrls,
       subscriptionPlanCode: selectedPlan.code,
       couponCode,
@@ -1226,6 +1235,8 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
       description: project.description!,
       category: "contractors",
       city: project.city!,
+      serviceWilayats: project.serviceWilayats,
+      servesAllGovernorates: project.servesAllGovernorates,
       mediaUrls: project.imageUrls,
       subscriptionPlanCode: project.subscriptionPlanCode,
       status: "pending_review",
@@ -1338,7 +1349,7 @@ router.get("/me/reviews", requireUser, async (req, res, next) => {
     res.json([
       ...contractorProjects.map(({ project }) => ({
         id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
-        city: project.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
+        city: project.city, serviceWilayats: project.serviceWilayats, servesAllGovernorates: project.servesAllGovernorates, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
         subscriptionPlanCode: project.subscriptionPlanCode, status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
       })),
       ...registrations.map((registration) => ({
@@ -1605,7 +1616,7 @@ router.get("/admin/reviews", requireUser, requireAdmin, async (req, res, next) =
     const allItems = [
       ...projectRows.map(({ project, ownerName, ownerEmail }) => ({
         id: project.id, kind: "project", category: "contractors", title: project.title, specialty: null,
-        city: project.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
+        city: project.city, serviceWilayats: project.serviceWilayats, servesAllGovernorates: project.servesAllGovernorates, deliveryAvailable: false, description: project.description ?? "", mediaUrls: project.imageUrls,
         subscriptionPlanCode: project.subscriptionPlanCode, status: project.reviewStatus, reviewNote: project.reviewNote, createdAt: project.createdAt.toISOString(),
         ownerName, ownerEmail,
       })),
@@ -1748,7 +1759,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
     }
     await createInAppNotification(existing.ownerId, action === "approve" ? "Project approved" : action === "reject" ? "Project cancelled" : "Project changes requested", note || (action === "approve" ? "Your contractor project was approved." : "Your contractor project was not approved."), { projectId: id, reviewStatus: nextStatus });
     await logAudit(admin.id, `project_review_${action}`, "project", id, { note });
-    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, serviceWilayats: [], servesAllGovernorates: false, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
+    res.json({ id: updated.id, kind: "project", category: "contractors", title: updated.title, specialty: null, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: false, description: updated.description ?? "", mediaUrls: updated.imageUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.reviewStatus, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
   } catch (error) { next(error); }
 });
 router.get("/admin/contractors", requireUser, requireAdmin, async (_req, res, next) => {

@@ -99,6 +99,8 @@ export const projects = pgTable("projects", {
   description: text("description"),
   category: varchar("category", { length: 100 }),
   city: varchar("city", { length: 100 }),
+  serviceWilayats: jsonb("service_wilayats").$type<string[]>().notNull().default([]),
+  servesAllGovernorates: boolean("serves_all_governorates").notNull().default(false),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
   subscriptionPlanCode: varchar("subscription_plan_code", { length: 64 }),

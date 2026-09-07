@@ -625,6 +625,14 @@ export interface ContractorProjectCreate {
   city: string;
   /**
      * @minItems 1
+     * @maxItems 61
+     * @items.minLength 2
+     * @items.maxLength 100
+     */
+  serviceWilayats: string[];
+  servesAllGovernorates: boolean;
+  /**
+     * @minItems 1
      * @maxItems 15
      * @items.maxLength 8000000
      */
@@ -660,6 +668,8 @@ export interface ContractorProjectRegistration {
   description: string;
   category: ContractorProjectRegistrationCategory;
   city: string;
+  serviceWilayats: string[];
+  servesAllGovernorates: boolean;
   mediaUrls: string[];
   /** @nullable */
   subscriptionPlanCode: string | null;
@@ -1547,7 +1557,7 @@ export interface PushNotificationInput {
      */
   body: string;
   /**
-     * @maxLength 2000
+     * @maxLength 2000000
      * @nullable
      */
   imageUrl?: string | null;

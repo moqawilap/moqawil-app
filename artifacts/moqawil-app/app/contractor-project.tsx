@@ -63,13 +63,9 @@ export default function ContractorProjectScreen() {
   const selectedProjectGovernorates = omanGovernorates.filter((item) => projectGovernorates.includes(item.name));
   const projectWilayatOptions = selectedProjectGovernorates.flatMap((item) => item.wilayats);
   const setSelectedProjectWilayats = (next: string[]) => {
-    const city = next.join(', ');
-    if (city.length > 100) {
-      Alert.alert(isArabic ? 'اختيارات كثيرة' : 'Too many selections', isArabic ? 'قلّل عدد الولايات المختارة أو اختر «كل السلطنة».' : 'Select fewer wilayats or choose “All Oman”.');
-      return;
-    }
     setProjectWilayats(next);
-    update('city', city);
+    const firstGovernorate = omanGovernorates.find((governorate) => governorate.wilayats.some((wilayat) => wilayat.name === next[0]));
+    update('city', firstGovernorate?.name ?? '');
   };
   const toggleProjectGovernorate = (name: string) => {
     const selected = projectGovernorates.includes(name);
@@ -159,7 +155,7 @@ export default function ContractorProjectScreen() {
   }
 
   const totalBytes = media.reduce((total, item) => total + item.size, 0);
-  const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && form.description.trim().length >= 20 && media.length >= 1 && !!commercialRegistrationPdf && subscriptionPlanCode.length > 0 && termsAccepted;
+  const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && (allOman || projectWilayats.length > 0) && form.description.trim().length >= 20 && media.length >= 1 && !!commercialRegistrationPdf && subscriptionPlanCode.length > 0 && termsAccepted;
   const terms = isArabic ? [
     'يجب أن يكون مقدم الإعلان مقاولًا وأن تكون بيانات المنشأة صحيحة.',
     'يجب أن يكون المشروع من تنفيذ المقاول، مع امتلاك حق نشر الصور والفيديوهات وموافقة صاحب المشروع عند الحاجة.',
@@ -221,7 +217,7 @@ export default function ContractorProjectScreen() {
                   const next = !allOman;
                   setAllOman(next);
                   setProjectLocationLevel('governorates');
-                  update('city', next ? 'All Oman' : projectWilayats.join(', '));
+                  update('city', next ? 'All Oman' : (selectedProjectGovernorates[0]?.name ?? ''));
                 }}
                 style={[styles.locationScopeRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
               >
@@ -242,7 +238,7 @@ export default function ContractorProjectScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="project-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط تسجيل ونشر الإعلان' : 'I agree to the advertisement registration and publishing terms'}</Text></Pressable>
           </View>
-          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
+          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), serviceWilayats: allOman ? omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => wilayat.name)) : projectWilayats, servesAllGovernorates: allOman, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
         </View>
       </ScrollView>
     </View>

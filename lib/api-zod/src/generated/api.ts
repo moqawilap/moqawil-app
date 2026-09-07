@@ -1298,6 +1298,11 @@ export const createMyContractorProjectBodyDescriptionMax = 5000;
 export const createMyContractorProjectBodyCityMin = 2;
 export const createMyContractorProjectBodyCityMax = 100;
 
+export const createMyContractorProjectBodyServiceWilayatsItemMin = 2;
+export const createMyContractorProjectBodyServiceWilayatsItemMax = 100;
+
+export const createMyContractorProjectBodyServiceWilayatsMax = 61;
+
 export const createMyContractorProjectBodyMediaUrlsItemMax = 8000000;
 
 export const createMyContractorProjectBodyMediaUrlsMax = 15;
@@ -1312,6 +1317,8 @@ export const CreateMyContractorProjectBody = zod.object({
   "title": zod.string().min(createMyContractorProjectBodyTitleMin).max(createMyContractorProjectBodyTitleMax),
   "description": zod.string().min(createMyContractorProjectBodyDescriptionMin).max(createMyContractorProjectBodyDescriptionMax),
   "city": zod.string().min(createMyContractorProjectBodyCityMin).max(createMyContractorProjectBodyCityMax),
+  "serviceWilayats": zod.array(zod.string().min(createMyContractorProjectBodyServiceWilayatsItemMin).max(createMyContractorProjectBodyServiceWilayatsItemMax)).min(1).max(createMyContractorProjectBodyServiceWilayatsMax),
+  "servesAllGovernorates": zod.boolean(),
   "mediaUrls": zod.array(zod.string().max(createMyContractorProjectBodyMediaUrlsItemMax)).min(1).max(createMyContractorProjectBodyMediaUrlsMax),
   "commercialRegistrationPdf": zod.string().max(createMyContractorProjectBodyCommercialRegistrationPdfMax),
   "subscriptionPlanCode": zod.enum(['service-monthly', 'service-annual']),
@@ -1325,6 +1332,8 @@ export const CreateMyContractorProjectResponse = zod.object({
   "description": zod.string(),
   "category": zod.enum(['contractors']),
   "city": zod.string(),
+  "serviceWilayats": zod.array(zod.string()),
+  "servesAllGovernorates": zod.boolean(),
   "mediaUrls": zod.array(zod.string()),
   "subscriptionPlanCode": zod.string().nullable(),
   "status": zod.enum(['pending_review']),
