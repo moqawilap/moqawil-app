@@ -10,8 +10,7 @@ import { designServices } from '@/data/designServices';
 import { omanGovernorates } from '@/data/omanLocations';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { AdBanner } from '@/components/AdBanner';
-import { getListAdsQueryKey, getListListingsQueryKey, useListAds, useListContractors, useListListings } from '@workspace/api-client-react';
+import { getListListingsQueryKey, useListContractors, useListListings } from '@workspace/api-client-react';
 
 type SortOption = 'relevance' | 'rating_desc' | 'price_asc' | 'price_desc' | 'oldest' | 'newest';
 
@@ -38,7 +37,7 @@ export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders, engagementClientId } = useApp();
+  const { isArabic, location, savedIds, toggleSaved, activeService, setActiveService, managedProviders } = useApp();
   const remoteListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
   const availableListings = useMemo(() => mergeMarketplaceListings(remoteListings.data), [remoteListings.data]);
   const [query, setQuery] = useState('');
@@ -61,8 +60,6 @@ export default function ExploreScreen() {
   const selectedService = activeService ?? 'contractors';
   const effectiveGovernorate = locationFilterTouched ? selectedGovernorate || undefined : location.city;
   const effectiveWilayat = locationFilterTouched ? selectedWilayat || undefined : location.source === 'manual' ? location.area : undefined;
-  const adQuery = { city: effectiveGovernorate, wilayat: effectiveWilayat, service: selectedService, limit: 1 };
-  const ads = useListAds(adQuery, { query: { queryKey: getListAdsQueryKey(adQuery) } });
   const selectedServiceInfo = serviceItems.find((service) => service.id === selectedService) ?? serviceItems[0];
   const visibleMode = selectedService === 'real-estate' ? 'Properties' : mode;
   const directoryCategory = selectedService === 'design' ? 'consultants' : selectedService;
@@ -156,7 +153,6 @@ export default function ExploreScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'اكتشف الخدمات' : 'Explore services'} subtitle={`${isArabic ? 'حول' : 'Around'} ${location.city}`} />
-      {ads.data?.[0] && engagementClientId ? <AdBanner campaign={ads.data[0]} /> : null}
            {directory.isError ? <Text style={[styles.apiHint, { color: colors.mutedForeground }]}>{isArabic ? 'الخدمة غير متاحة مؤقتًا — نعرض الدليل المحفوظ.' : 'The live directory is unavailable — showing the saved directory.'}</Text> : null}
           <View style={[styles.searchInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="search" size={18} color={colors.mutedForeground} />
