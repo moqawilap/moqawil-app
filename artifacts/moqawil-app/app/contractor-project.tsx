@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { SubscriptionPlanSelector, type ServiceSubscriptionPlanCode } from '@/components/SubscriptionPlanSelector';
@@ -56,15 +56,30 @@ export default function ContractorProjectScreen() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [commercialRegistrationPdf, setCommercialRegistrationPdf] = useState('');
   const [commercialRegistrationName, setCommercialRegistrationName] = useState('');
-  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
-  const [projectGovernorate, setProjectGovernorate] = useState('');
-  const [projectWilayat, setProjectWilayat] = useState('');
+  const [projectGovernorates, setProjectGovernorates] = useState<string[]>([]);
+  const [projectWilayats, setProjectWilayats] = useState<string[]>([]);
+  const [projectLocationLevel, setProjectLocationLevel] = useState<'governorates' | 'wilayats'>('governorates');
   const [allOman, setAllOman] = useState(false);
-  const selectedGovernorate = omanGovernorates.find((item) => item.name === projectGovernorate);
-  const selectedWilayat = selectedGovernorate?.wilayats.find((item) => item.name === projectWilayat);
-  const projectLocationLabel = projectGovernorate && projectWilayat
-    ? `${isArabic ? selectedGovernorate?.nameAr : projectGovernorate} — ${isArabic ? selectedWilayat?.nameAr : projectWilayat}`
-    : '';
+  const selectedProjectGovernorates = omanGovernorates.filter((item) => projectGovernorates.includes(item.name));
+  const projectWilayatOptions = selectedProjectGovernorates.flatMap((item) => item.wilayats);
+  const setSelectedProjectWilayats = (next: string[]) => {
+    const city = next.join(', ');
+    if (city.length > 100) {
+      Alert.alert(isArabic ? 'اختيارات كثيرة' : 'Too many selections', isArabic ? 'قلّل عدد الولايات المختارة أو اختر «كل السلطنة».' : 'Select fewer wilayats or choose “All Oman”.');
+      return;
+    }
+    setProjectWilayats(next);
+    update('city', city);
+  };
+  const toggleProjectGovernorate = (name: string) => {
+    const selected = projectGovernorates.includes(name);
+    setProjectGovernorates((current) => selected ? current.filter((item) => item !== name) : [...current, name]);
+    if (selected) {
+      const governorate = omanGovernorates.find((item) => item.name === name);
+      if (governorate) setSelectedProjectWilayats(projectWilayats.filter((item) => !governorate.wilayats.some((wilayat) => wilayat.name === item)));
+    }
+  };
+  const toggleProjectWilayat = (name: string) => setSelectedProjectWilayats(projectWilayats.includes(name) ? projectWilayats.filter((item) => item !== name) : [...projectWilayats, name]);
 
   const createProject = useCreateMyContractorProject({ mutation: {
     onSuccess: () => {
@@ -173,10 +188,30 @@ export default function ContractorProjectScreen() {
            <View>
              <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع المشروع' : 'Project location'}</Text>
               {!allOman ? (
-                <Pressable testID="project-location-picker" accessibilityRole="button" onPress={() => setLocationPickerVisible(true)} style={[styles.locationInput, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-                  <Text numberOfLines={1} style={[styles.locationInputText, { color: projectLocationLabel ? colors.foreground : colors.mutedForeground, textAlign: isArabic ? 'right' : 'left' }]}>{projectLocationLabel || (isArabic ? 'اختر المحافظة والولاية' : 'Choose governorate and wilayat')}</Text>
-                  <Feather name="chevron-down" size={18} color={colors.primary} />
-                </Pressable>
+                 <View testID="project-location-picker" style={[styles.locationCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                   <Text style={[styles.locationHint, { color: colors.mutedForeground }]}>{isArabic ? 'يمكنك اختيار أكثر من محافظة وولاية.' : 'You can select multiple governorates and wilayats.'}</Text>
+                   {projectLocationLevel === 'wilayats' ? (
+                     <Pressable testID="project-location-back" onPress={() => setProjectLocationLevel('governorates')} style={[styles.locationPath, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                       <Feather name={isArabic ? 'chevron-right' : 'chevron-left'} size={20} color={colors.primary} />
+                       <Text style={[styles.locationPathText, { color: colors.foreground }]}>{isArabic ? `${projectGovernorates.length} محافظة مختارة` : `${projectGovernorates.length} governorates selected`}</Text>
+                     </Pressable>
+                   ) : null}
+                   <View style={styles.locationGrid}>
+                     {(projectLocationLevel === 'governorates'
+                       ? omanGovernorates.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))
+                       : projectWilayatOptions.map((item) => ({ value: item.name, label: isArabic ? item.nameAr : item.name }))
+                     ).map((item) => {
+                       const selected = projectLocationLevel === 'governorates' ? projectGovernorates.includes(item.value) : projectWilayats.includes(item.value);
+                       return (
+                         <Pressable key={item.value} testID={`project-${projectLocationLevel}-${item.value}`} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => projectLocationLevel === 'governorates' ? toggleProjectGovernorate(item.value) : toggleProjectWilayat(item.value)} style={[styles.locationChoice, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.background }]}>
+                           <Feather name={selected ? 'check-square' : 'square'} size={16} color={selected ? colors.primary : colors.mutedForeground} />
+                           <Text style={[styles.locationChoiceText, { color: colors.foreground }]}>{item.label}</Text>
+                         </Pressable>
+                       );
+                     })}
+                   </View>
+                   {projectLocationLevel === 'governorates' && projectGovernorates.length > 0 ? <ActionButton label={isArabic ? 'اختيار الولايات' : 'Choose wilayats'} onPress={() => setProjectLocationLevel('wilayats')} /> : null}
+                 </View>
               ) : null}
               <Pressable
                 testID="project-all-oman"
@@ -185,8 +220,8 @@ export default function ContractorProjectScreen() {
                 onPress={() => {
                   const next = !allOman;
                   setAllOman(next);
-                  setLocationPickerVisible(false);
-                  update('city', next ? 'All Oman' : (projectGovernorate && projectWilayat ? `${projectGovernorate} - ${projectWilayat}` : ''));
+                  setProjectLocationLevel('governorates');
+                  update('city', next ? 'All Oman' : projectWilayats.join(', '));
                 }}
                 style={[styles.locationScopeRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
               >
@@ -210,39 +245,6 @@ export default function ContractorProjectScreen() {
           <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
         </View>
       </ScrollView>
-      <Modal visible={locationPickerVisible} transparent animationType="slide" onRequestClose={() => setLocationPickerVisible(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setLocationPickerVisible(false)}>
-          <Pressable style={[styles.locationSheet, { backgroundColor: colors.surface }]} onPress={() => undefined}>
-            <View style={styles.locationSheetHeader}>
-              <Text style={[styles.locationSheetTitle, { color: colors.foreground }]}>{isArabic ? 'اختر موقع المشروع' : 'Choose project location'}</Text>
-              <Pressable accessibilityLabel={isArabic ? 'إغلاق' : 'Close'} onPress={() => setLocationPickerVisible(false)}><Feather name="x" size={21} color={colors.foreground} /></Pressable>
-            </View>
-            <View style={[styles.pickerHeadings, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.pickerHeading, { color: colors.primary }]}>{isArabic ? 'المحافظة' : 'Governorate'}</Text>
-              <Text style={[styles.pickerHeading, { color: colors.primary }]}>{isArabic ? 'الولاية' : 'Wilayat'}</Text>
-            </View>
-            <View style={styles.pickerColumns}>
-              <ScrollView style={styles.pickerWheel} showsVerticalScrollIndicator={false} snapToInterval={48} decelerationRate="fast">
-                {omanGovernorates.map((item) => {
-                  const selected = projectGovernorate === item.name;
-                  return <Pressable key={item.name} testID={`project-governorate-${item.name}`} onPress={() => { setProjectGovernorate(item.name); setProjectWilayat(''); update('city', ''); }} style={[styles.pickerItem, selected && { backgroundColor: colors.primarySoft }]}><Text style={[styles.pickerItemText, { color: selected ? colors.primary : colors.foreground }]}>{isArabic ? item.nameAr : item.name}</Text></Pressable>;
-                })}
-              </ScrollView>
-              <View style={[styles.pickerDivider, { backgroundColor: colors.border }]} />
-              <ScrollView style={styles.pickerWheel} showsVerticalScrollIndicator={false} snapToInterval={48} decelerationRate="fast">
-                {(selectedGovernorate?.wilayats ?? []).map((item) => {
-                  const selected = projectWilayat === item.name;
-                  return <Pressable key={item.name} testID={`project-wilayat-${item.name}`} onPress={() => { setProjectWilayat(item.name); update('city', `${projectGovernorate} - ${item.name}`); }} style={[styles.pickerItem, selected && { backgroundColor: colors.primarySoft }]}><Text style={[styles.pickerItemText, { color: selected ? colors.primary : colors.foreground }]}>{isArabic ? item.nameAr : item.name}</Text></Pressable>;
-                })}
-                {!selectedGovernorate ? <View style={styles.pickerEmpty}><Text style={[styles.pickerEmptyText, { color: colors.mutedForeground }]}>{isArabic ? 'اختر المحافظة أولًا' : 'Choose a governorate first'}</Text></View> : null}
-              </ScrollView>
-            </View>
-            <Pressable testID="confirm-project-location" disabled={!projectGovernorate || !projectWilayat} onPress={() => { update('city', `${projectGovernorate} - ${projectWilayat}`); setLocationPickerVisible(false); }} style={[styles.locationConfirm, { backgroundColor: colors.primary, opacity: projectGovernorate && projectWilayat ? 1 : 0.45 }]}>
-              <Text style={[styles.locationConfirmText, { color: colors.primaryForeground }]}>{isArabic ? 'تأكيد الموقع' : 'Confirm location'}</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -260,25 +262,15 @@ const styles = StyleSheet.create({
   ownerText: { color: '#D9E3EC', fontSize: 11 },
   label: { fontSize: 12, fontWeight: '800', marginBottom: 6 },
   input: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, fontSize: 14 },
-  locationInput: { minHeight: 49, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  locationInputText: { flex: 1, fontSize: 14 },
+  locationCard: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 9 },
+  locationHint: { fontSize: 10 },
+  locationPath: { minHeight: 47, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  locationPathText: { flex: 1, fontSize: 12, fontWeight: '800' },
+  locationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  locationChoice: { minHeight: 40, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: '47%', flexGrow: 1, flexBasis: '47%' },
+  locationChoiceText: { flexShrink: 1, fontSize: 11, fontWeight: '700' },
   locationScopeRow: { minHeight: 47, marginTop: 9, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
   locationScopeText: { flex: 1, fontSize: 14, fontWeight: '800' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(5,18,30,0.55)', justifyContent: 'flex-end', padding: 14 },
-  locationSheet: { borderRadius: 24, padding: 17, maxHeight: '72%', gap: 10 },
-  locationSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  locationSheetTitle: { fontSize: 17, fontWeight: '900' },
-  pickerHeadings: { flexDirection: 'row', borderBottomWidth: 1, paddingBottom: 8 },
-  pickerHeading: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '900' },
-  pickerColumns: { height: 250, flexDirection: 'row' },
-  pickerWheel: { flex: 1 },
-  pickerDivider: { width: 1, marginVertical: 8 },
-  pickerItem: { minHeight: 48, borderRadius: 12, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
-  pickerItemText: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  pickerEmpty: { minHeight: 150, padding: 10, alignItems: 'center', justifyContent: 'center' },
-  pickerEmptyText: { fontSize: 11, textAlign: 'center' },
-  locationConfirm: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  locationConfirmText: { fontSize: 14, fontWeight: '900' },
   description: { minHeight: 125, paddingTop: 12, textAlignVertical: 'top' },
   counter: { fontSize: 10, marginTop: 4 },
   mediaHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
