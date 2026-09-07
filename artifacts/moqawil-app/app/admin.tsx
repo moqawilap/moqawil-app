@@ -59,6 +59,11 @@ const confirmAction = (title: string, message: string, action: () => void, cance
   }
   Alert.alert(title, message, [{ text: cancelLabel, style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
 };
+const removeCachedListItem = (client: ReturnType<typeof useQueryClient>, queryKey: readonly unknown[], id: string) => {
+  client.setQueriesData({ queryKey }, (current: unknown) => (
+    Array.isArray(current) ? current.filter((item) => item && typeof item === 'object' && 'id' in item && item.id !== id) : current
+  ));
+};
 const pickAdminImages = async (isArabic: boolean, selectionLimit = 15) => {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
@@ -261,7 +266,11 @@ function ReviewsTab() {
     onError: (error) => Alert.alert(text(isArabic, 'Review failed', 'تعذر تنفيذ المراجعة'), errorMessage(error)),
   } });
   const removeReview = useDeleteAdminServiceReview({ mutation: {
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
+      client.setQueriesData({ queryKey: getListAdminServiceReviewsQueryKey() }, (current: unknown) => {
+        if (!current || typeof current !== 'object' || !('items' in current) || !Array.isArray(current.items)) return current;
+        return { ...current, items: current.items.filter((item) => item.id !== variables.id) };
+      });
       client.invalidateQueries({ queryKey: getListAdminServiceReviewsQueryKey() });
       Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
     },
@@ -367,7 +376,14 @@ function ContractorsTab() {
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() });
   const create = useCreateAdminContractor({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankContractor()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminContractor({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankContractor()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
-  const archive = useDeleteAdminContractor({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)) } });
+  const archive = useDeleteAdminContractor({ mutation: {
+    onSuccess: (_result, variables) => {
+      removeCachedListItem(client, getListAdminContractorsQueryKey(), variables.id);
+      invalidate();
+      Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
+    },
+    onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)),
+  } });
 
   const set = (key: string, value: string) => setForm((v: any) => ({ ...v, [key]: value }));
   const begin = (c?: AdminContractor) => {
@@ -516,7 +532,11 @@ function WorkshopsTab() {
     },
   });
   const remove = useDeleteAdminContractor({ mutation: {
-    onSuccess: () => client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() }),
+    onSuccess: (_result, variables) => {
+      removeCachedListItem(client, getListAdminContractorsQueryKey(), variables.id);
+      client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() });
+      Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
+    },
     onError: (error) => Alert.alert(text(isArabic, 'Delete failed', 'تعذر الحذف'), errorMessage(error)),
   } });
   const [form, setForm] = useState(blankWorkshop());
@@ -670,7 +690,14 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
       onError: (error) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(error)),
     },
   });
-  const archive = useDeleteAdminContractor({ mutation: { onSuccess: invalidate, onError: (error) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(error)) } });
+  const archive = useDeleteAdminContractor({ mutation: {
+    onSuccess: (_result, variables) => {
+      removeCachedListItem(client, getListAdminContractorsQueryKey(), variables.id);
+      invalidate();
+      Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
+    },
+    onError: (error) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(error)),
+  } });
 
   const set = <K extends keyof SpecialistForm>(key: K, value: SpecialistForm[K]) => setForm((current) => ({ ...current, [key]: value }));
   const begin = (item?: AdminContractor) => {
@@ -893,7 +920,14 @@ function ListingsTab() {
   const closeForm = () => { setForm(blankListing()); setEditing(null); setShowForm(false); };
   const create = useCreateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminListing({ mutation: { onSuccess: () => { invalidate(); closeForm(); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
-  const remove = useDeleteAdminListing({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)) } });
+  const remove = useDeleteAdminListing({ mutation: {
+    onSuccess: (_result, variables) => {
+      removeCachedListItem(client, getListAdminListingsQueryKey(), variables.id);
+      invalidate();
+      Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
+    },
+    onError: (e) => Alert.alert(text(isArabic, 'Failed', 'فشل'), errorMessage(e)),
+  } });
   const set = <Key extends keyof ListingForm>(key: Key, value: ListingForm[Key]) => setForm((current) => ({ ...current, [key]: value }));
   const pickListingImage = async () => {
     const images = await pickAdminImages(isArabic, 15 - form.imageUrls.length);
@@ -1137,7 +1171,14 @@ function AdvertisingTab() {
   const invalidate = () => client.invalidateQueries({ queryKey: getListAdminAdCampaignsQueryKey() });
   const create = useCreateAdminAdCampaign({ mutation: { onSuccess: () => { invalidate(); setShowForm(false); setForm(blankAdCampaign()); }, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
   const update = useUpdateAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)) } });
-  const remove = useDeleteAdminAdCampaign({ mutation: { onSuccess: invalidate, onError: (e) => Alert.alert(text(isArabic, 'Delete failed', 'تعذر الحذف'), errorMessage(e)) } });
+  const remove = useDeleteAdminAdCampaign({ mutation: {
+    onSuccess: (_result, variables) => {
+      removeCachedListItem(client, getListAdminAdCampaignsQueryKey(), variables.id);
+      invalidate();
+      Alert.alert(text(isArabic, 'Advertisement deleted', 'تم حذف الإعلان'));
+    },
+    onError: (e) => Alert.alert(text(isArabic, 'Delete failed', 'تعذر الحذف'), errorMessage(e)),
+  } });
 
   const adDailyPriceUsd = settings?.advertising?.dailyPriceUsd ?? 6;
   const adDailyPriceOmr = adDailyPriceUsd * (settings?.advertising?.usdToOmaniRial ?? 0.385);
