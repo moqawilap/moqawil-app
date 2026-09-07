@@ -1172,6 +1172,8 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
       || typeof input.city !== "string"
       || input.city.trim().length < 2
       || input.city.length > 100
+      || typeof input.phone !== "string"
+      || !/^\+968[0-9]{8}$/.test(input.phone)
       || !validServiceWilayats
       || typeof input.servesAllGovernorates !== "boolean"
       || !selectedPlan
@@ -1203,7 +1205,7 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
         wilayat: null,
         bio: null,
         serviceArea: null,
-        phone: null,
+        phone: input.phone,
         avatarUrl: null,
         imageUrls: [],
         lastActiveAt: new Date(),
@@ -1213,6 +1215,7 @@ router.post("/me/projects", requireUser, async (req, res, next) => {
       }).returning();
       await db.update(users).set({ role: "contractor", updatedAt: new Date() }).where(eq(users.id, user.id));
     }
+    await db.update(contractorProfiles).set({ phone: input.phone, updatedAt: new Date(), lastActiveAt: new Date() }).where(eq(contractorProfiles.id, profile.id));
     const [project] = await db.insert(projects).values({
       contractorId: profile.id,
       title: input.title.trim(),

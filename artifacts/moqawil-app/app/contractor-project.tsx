@@ -48,7 +48,7 @@ export default function ContractorProjectScreen() {
   const me = useGetMe({ query: { queryKey: getGetMeQueryKey(), enabled: !!isSignedIn, retry: false } });
   const isContractor = me.data?.role === 'contractor';
   const profile = useGetMyContractorProfile({ query: { queryKey: getGetMyContractorProfileQueryKey(), enabled: !!isSignedIn && isContractor, retry: false } });
-  const [form, setForm] = useState({ title: '', city: '', description: '' });
+  const [form, setForm] = useState({ title: '', city: '', phone: profile.data?.phone ?? '', description: '' });
   const [media, setMedia] = useState<ProjectMedia[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [subscriptionPlanCode, setSubscriptionPlanCode] = useState<ServiceSubscriptionPlanCode | ''>('');
@@ -60,6 +60,9 @@ export default function ContractorProjectScreen() {
   const [projectWilayats, setProjectWilayats] = useState<string[]>([]);
   const [projectLocationLevel, setProjectLocationLevel] = useState<'governorates' | 'wilayats'>('governorates');
   const [allOman, setAllOman] = useState(false);
+  React.useEffect(() => {
+    if (profile.data?.phone && !form.phone) update('phone', profile.data.phone);
+  }, [profile.data?.phone]);
   const selectedProjectGovernorates = omanGovernorates.filter((item) => projectGovernorates.includes(item.name));
   const projectWilayatOptions = selectedProjectGovernorates.flatMap((item) => item.wilayats);
   const setSelectedProjectWilayats = (next: string[]) => {
@@ -155,7 +158,8 @@ export default function ContractorProjectScreen() {
   }
 
   const totalBytes = media.reduce((total, item) => total + item.size, 0);
-  const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && (allOman || projectWilayats.length > 0) && form.description.trim().length >= 20 && media.length >= 1 && !!commercialRegistrationPdf && subscriptionPlanCode.length > 0 && termsAccepted;
+  const normalizedPhone = form.phone.replace(/\D/g, '').replace(/^968/, '');
+  const valid = form.title.trim().length >= 2 && form.city.trim().length >= 2 && (allOman || projectWilayats.length > 0) && normalizedPhone.length === 8 && form.description.trim().length >= 20 && media.length >= 1 && !!commercialRegistrationPdf && subscriptionPlanCode.length > 0 && termsAccepted;
   const terms = isArabic ? [
     'يجب أن يكون مقدم الإعلان مقاولًا وأن تكون بيانات المنشأة صحيحة.',
     'يجب أن يكون المشروع من تنفيذ المقاول، مع امتلاك حق نشر الصور والفيديوهات وموافقة صاحب المشروع عند الحاجة.',
@@ -181,6 +185,7 @@ export default function ContractorProjectScreen() {
              <View style={styles.ownerCopy}><Text style={styles.ownerTitle}>{profile.data?.businessName ?? (isArabic ? 'تسجيل مشروع مقاول' : 'Contractor project')}</Text><Text style={styles.ownerText}>{profile.data ? (isArabic ? 'سيتم تسجيل المشروع تحت ملف المقاول هذا' : 'This project will be registered under this contractor profile') : (isArabic ? 'سيتم إنشاء بيانات المقاول تلقائيًا مع إرسال المشروع' : 'Contractor details will be created automatically when you submit')}</Text></View>
            </View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'اسم المشروع' : 'Project name'}</Text><TextInput testID="project-title" value={form.title} onChangeText={(value) => update('title', value)} textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? 'مثال: إنشاء فيلا سكنية' : 'Example: Residential villa construction'} placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
+           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'رقم الهاتف وواتساب' : 'Phone and WhatsApp number'}</Text><TextInput testID="project-phone" value={form.phone} onChangeText={(value) => update('phone', value)} keyboardType="phone-pad" textAlign={isArabic ? 'right' : 'left'} placeholder="9XXXXXXX" placeholderTextColor={colors.mutedForeground} maxLength={12} style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /><Text style={[styles.counter, { color: colors.mutedForeground }]}>{isArabic ? 'أدخل رقمًا عُمانيًا من 8 أرقام. سيُستخدم للاتصال وواتساب.' : 'Enter an 8-digit Oman number. It will be used for calls and WhatsApp.'}</Text></View>
            <View>
              <Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'موقع المشروع' : 'Project location'}</Text>
               {!allOman ? (
@@ -238,7 +243,7 @@ export default function ContractorProjectScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="project-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط تسجيل ونشر الإعلان' : 'I agree to the advertisement registration and publishing terms'}</Text></Pressable>
           </View>
-          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), serviceWilayats: allOman ? omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => wilayat.name)) : projectWilayats, servesAllGovernorates: allOman, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
+          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات، أدخل رقمًا عُمانيًا صحيحًا من 8 أرقام، وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details, enter a valid 8-digit Oman phone number, and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), phone: `+968${normalizedPhone}`, serviceWilayats: allOman ? omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => wilayat.name)) : projectWilayats, servesAllGovernorates: allOman, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
         </View>
       </ScrollView>
     </View>

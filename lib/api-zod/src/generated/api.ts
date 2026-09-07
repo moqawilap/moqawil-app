@@ -1298,6 +1298,10 @@ export const createMyContractorProjectBodyDescriptionMax = 5000;
 export const createMyContractorProjectBodyCityMin = 2;
 export const createMyContractorProjectBodyCityMax = 100;
 
+export const createMyContractorProjectBodyPhoneMax = 12;
+
+
+export const createMyContractorProjectBodyPhoneRegExp = new RegExp('^\\+968[0-9]{8}$');
 export const createMyContractorProjectBodyServiceWilayatsItemMin = 2;
 export const createMyContractorProjectBodyServiceWilayatsItemMax = 100;
 
@@ -1317,6 +1321,7 @@ export const CreateMyContractorProjectBody = zod.object({
   "title": zod.string().min(createMyContractorProjectBodyTitleMin).max(createMyContractorProjectBodyTitleMax),
   "description": zod.string().min(createMyContractorProjectBodyDescriptionMin).max(createMyContractorProjectBodyDescriptionMax),
   "city": zod.string().min(createMyContractorProjectBodyCityMin).max(createMyContractorProjectBodyCityMax),
+  "phone": zod.string().max(createMyContractorProjectBodyPhoneMax).regex(createMyContractorProjectBodyPhoneRegExp),
   "serviceWilayats": zod.array(zod.string().min(createMyContractorProjectBodyServiceWilayatsItemMin).max(createMyContractorProjectBodyServiceWilayatsItemMax)).min(1).max(createMyContractorProjectBodyServiceWilayatsMax),
   "servesAllGovernorates": zod.boolean(),
   "mediaUrls": zod.array(zod.string().max(createMyContractorProjectBodyMediaUrlsItemMax)).min(1).max(createMyContractorProjectBodyMediaUrlsMax),
