@@ -144,50 +144,9 @@ export const serviceItems: Array<{
   },
 ];
 
-export const providers: Provider[] = [
-  {
-    id: 'dar-al-nour',
-    role: 'maintenance',
-    name: 'Dar Al Nour Services',
-    nameAr: 'دار النور للخدمات',
-    specialty: 'Home maintenance',
-    specialtyAr: 'صيانة منزلية',
-    rating: 4.7,
-    reviews: 112,
-    distance: '5.7 km',
-    city: 'Muscat',
-    wilayat: 'Al Seeb',
-    verified: true,
-    image: images.villa,
-    createdAt: '2026-08-18T08:00:00.000Z',
-    accent: '#7D62BE',
-    description: 'Fast, dependable help for electrical, plumbing, AC, and home care needs.',
-    descriptionAr: 'خدمة سريعة وموثوقة للكهرباء والسباكة والتكييف والعناية بالمنزل.',
-    projects: 148,
-    startingPrice: 'From OMR 15',
-    contractAmount: 'OMR 1,200',
-    phone: '+968 7722 4535',
-  },
-];
+export const providers: Provider[] = [];
 
-export const listings: Listing[] = [
-  {
-    id: 'qurum-apartment',
-    title: 'Sea-view apartment',
-    titleAr: 'شقة بإطلالة بحرية',
-    type: 'For rent',
-    typeAr: 'للإيجار',
-    price: 'OMR 850 / month',
-    location: 'Qurum, Muscat',
-    locationAr: 'القرم، مسقط',
-    beds: 2,
-    baths: 3,
-    area: '126 m²',
-    image: images.interior,
-    createdAt: '2026-08-20T08:00:00.000Z',
-    updatedAt: '2026-08-20T08:00:00.000Z',
-  },
-];
+export const listings: Listing[] = [];
 
 export function mergeMarketplaceListings(remote?: MarketplaceListing[]) {
   const remoteListings = (remote ?? []).map(marketplaceListingToLocal);
