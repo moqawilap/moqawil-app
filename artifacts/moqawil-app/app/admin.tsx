@@ -4,7 +4,7 @@ import { useAuth, useUser } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/MoqawilUI';
 import { useColors } from '@/hooks/useColors';
@@ -52,13 +52,9 @@ const statusText = (isArabic: boolean, status: string) => ({
   paused: text(isArabic, 'Paused', 'متوقفة'),
   completed: text(isArabic, 'Completed', 'مكتملة'),
 }[status] ?? status);
-const confirmAction = (title: string, message: string, action: () => void, cancelLabel = 'Cancel') => {
-  if (Platform.OS === 'web') {
-    action();
-    return;
-  }
-  Alert.alert(title, message, [{ text: cancelLabel, style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
-};
+type ConfirmationRequest = { title: string; message: string; action: () => void; cancelLabel: string } | null;
+const ConfirmActionContext = React.createContext<(title: string, message: string, action: () => void, cancelLabel?: string) => void>(() => undefined);
+const useConfirmAction = () => React.useContext(ConfirmActionContext);
 const removeCachedListItem = (client: ReturnType<typeof useQueryClient>, queryKey: readonly unknown[], id: string) => {
   client.setQueriesData({ queryKey }, (current: unknown) => (
     Array.isArray(current) ? current.filter((item) => item && typeof item === 'object' && 'id' in item && item.id !== id) : current
@@ -192,6 +188,15 @@ export default function AdminScreen() {
   const isAdmin = (user?.publicMetadata as Record<string, unknown> | undefined)?.role === 'admin' || (user?.publicMetadata as Record<string, unknown> | undefined)?.isAdmin === true || user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() === 'moqawil.ap@gmail.com';
 
   const [activeTab, setActiveTab] = useState<'Overview' | 'Reviews' | 'Contractors' | 'Workshops' | 'Designers' | 'Maintenance' | 'Listings' | 'Advertising' | 'Subscriptions' | 'Payments' | 'Homepage' | 'Settings'>('Overview');
+  const [confirmation, setConfirmation] = useState<ConfirmationRequest>(null);
+  const confirmAction = (title: string, message: string, action: () => void, cancelLabel = 'Cancel') => {
+    setConfirmation({ title, message, action, cancelLabel });
+  };
+  const executeConfirmedAction = () => {
+    const action = confirmation?.action;
+    setConfirmation(null);
+    action?.();
+  };
 
   if (!isLoaded) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator color={colors.primary} /></View>;
   if (!isSignedIn || !isAdmin) return (
@@ -206,6 +211,7 @@ export default function AdminScreen() {
   );
 
   return (
+    <ConfirmActionContext.Provider value={confirmAction}>
     <View style={[styles.page, { backgroundColor: colors.background, direction: isArabic ? 'rtl' : 'ltr' }]}>
       <View style={[styles.headerContainer, { paddingTop: insets.top + 16, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={styles.top}>
@@ -237,7 +243,25 @@ export default function AdminScreen() {
         {activeTab === 'Homepage' && <HomepageSettingsTab />}
         {activeTab === 'Settings' && <SettingsTab />}
       </ScrollView>
+      <Modal transparent visible={confirmation !== null} animationType="fade" onRequestClose={() => setConfirmation(null)}>
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="alert-triangle" size={28} color={colors.destructive} />
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>{confirmation?.title}</Text>
+            <Text style={[styles.confirmMessage, { color: colors.mutedForeground }]}>{confirmation?.message}</Text>
+            <View style={styles.confirmActions}>
+              <Pressable testID="cancel-confirmation" onPress={() => setConfirmation(null)} style={[styles.confirmButton, { borderColor: colors.border }]}>
+                <Text style={[styles.confirmButtonText, { color: colors.foreground }]}>{confirmation?.cancelLabel}</Text>
+              </Pressable>
+              <Pressable testID="confirm-deletion" onPress={executeConfirmedAction} style={[styles.confirmButton, { backgroundColor: colors.destructive, borderColor: colors.destructive }]}>
+                <Text style={[styles.confirmButtonText, { color: '#FFFFFF' }]}>{confirmation?.title}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
+    </ConfirmActionContext.Provider>
   );
 }
 
@@ -255,6 +279,7 @@ function ReviewsTab() {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const confirmAction = useConfirmAction();
   const [category, setCategory] = useState<ReviewCategory | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const reviews = useListAdminServiceReviews(category ? { category } : undefined);
@@ -367,6 +392,7 @@ function ContractorsTab() {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const confirmAction = useConfirmAction();
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
 
   const [form, setForm] = useState<any>(blankContractor());
@@ -524,6 +550,7 @@ function WorkshopsTab() {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const confirmAction = useConfirmAction();
   const workshops = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
   const create = useCreateAdminContractor({
     mutation: {
@@ -666,6 +693,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const confirmAction = useConfirmAction();
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
   const [form, setForm] = useState<SpecialistForm>(blankSpecialist());
   const [editing, setEditing] = useState<string | null>(null);
@@ -912,6 +940,7 @@ function ListingsTab() {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const confirmAction = useConfirmAction();
   const listings = useListAdminListings({ query: { queryKey: getListAdminListingsQueryKey() } });
   const [form, setForm] = useState(blankListing());
   const [editing, setEditing] = useState<string | null>(null);
@@ -1063,6 +1092,7 @@ const omanWilayatOptions = omanGovernorates.flatMap((governorate) => governorate
 function PushNotificationPanel() {
   const colors = useColors();
   const { isArabic } = useApp();
+  const confirmAction = useConfirmAction();
   const client = useQueryClient();
   const notifications = useListAdminPushNotifications({ query: { queryKey: getListAdminPushNotificationsQueryKey() } });
   const [form, setForm] = useState({ title: '', body: '', imageUrl: '', targetUrl: '' });
@@ -1161,6 +1191,7 @@ function AdvertisingTab() {
   const colors = useColors();
   const { isArabic } = useApp();
   const client = useQueryClient();
+  const confirmAction = useConfirmAction();
   const { data: settings } = useGetAdminSettings();
   const campaigns = useListAdminAdCampaigns({ query: { queryKey: getListAdminAdCampaignsQueryKey() } });
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
@@ -2148,6 +2179,13 @@ const styles = StyleSheet.create({
   mediaVideoPreview: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
   mediaTypeText: { fontSize: 11, fontWeight: '700' },
   removeMedia: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.8)' },
+  confirmBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  confirmCard: { width: '100%', maxWidth: 420, borderWidth: 1, borderRadius: 18, padding: 22, alignItems: 'center', gap: 12 },
+  confirmTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  confirmMessage: { fontSize: 15, lineHeight: 23, textAlign: 'center' },
+  confirmActions: { width: '100%', flexDirection: 'row', gap: 10, marginTop: 8 },
+  confirmButton: { flex: 1, minHeight: 46, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  confirmButtonText: { fontSize: 15, fontWeight: '800' },
   multiImageButton: { width: 116, height: 90, borderWidth: 1, borderStyle: 'dashed', borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 2 },
   multiImageButtonText: { fontSize: 18, fontWeight: '800' },
   wilayatPicker: { marginBottom: 14, gap: 7 },
