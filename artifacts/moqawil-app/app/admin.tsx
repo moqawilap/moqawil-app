@@ -54,7 +54,7 @@ const statusText = (isArabic: boolean, status: string) => ({
 }[status] ?? status);
 const confirmAction = (title: string, message: string, action: () => void, cancelLabel = 'Cancel') => {
   if (Platform.OS === 'web') {
-    if (globalThis.confirm(`${title}\n\n${message}`)) action();
+    action();
     return;
   }
   Alert.alert(title, message, [{ text: cancelLabel, style: 'cancel' }, { text: title, style: 'destructive', onPress: action }]);
