@@ -129,7 +129,7 @@ export default function ServiceRegistrationScreen() {
   const category = categories.includes(params.category as RegistrationCategory) ? params.category as RegistrationCategory : 'consultants';
   const categoryCopy = copy[category];
   const service = serviceItems.find((item) => item.id === category)!;
-  const [form, setForm] = useState({ title: '', specialty: '', description: '' });
+  const [form, setForm] = useState({ title: '', specialty: '', phone: '', description: '' });
   const [serviceWilayats, setServiceWilayats] = useState<string[]>([]);
   const [serviceGovernorates, setServiceGovernorates] = useState<string[]>([]);
   const [serviceLocationLevel, setServiceLocationLevel] = useState<'governorates' | 'wilayats'>('governorates');
@@ -171,6 +171,7 @@ export default function ServiceRegistrationScreen() {
   const knownAreas = propertyWilayat ? omanWilayatAreas[propertyWilayat] ?? [] : [];
   const finalPropertyArea = propertyArea === '__other__' ? customPropertyArea.trim() : propertyArea;
   const showPropertyCounts = !propertyTypesWithoutRoomCounts.has(propertyType);
+  const normalizedPhone = form.phone.replace(/\D/g, '').replace(/^968/, '');
   const locationLevel = !propertyGovernorate ? 'governorate' : !propertyWilayat ? 'wilayat' : 'area';
   const locationLevelTitle = locationLevel === 'governorate' ? (isArabic ? 'المحافظة' : 'Governorate') : locationLevel === 'wilayat' ? (isArabic ? 'الولاية' : 'Wilayat') : (isArabic ? 'المنطقة' : 'Area');
   const locationOptions = locationLevel === 'governorate'
@@ -286,7 +287,7 @@ export default function ServiceRegistrationScreen() {
     'The administrator reviews the registration before it appears and may request changes, reject it, or remove it.',
   ];
   const validProperty = !isProperty || (propertyGovernorate && propertyWilayat && finalPropertyArea.length >= 2 && propertyType && Number(propertySize) > 0);
-  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && (category === 'maintenance' || !!commercialRegistrationPdf) && subscriptionPlanCode.length > 0 && termsAccepted;
+  const valid = form.title.trim().length >= 2 && (isProperty || form.specialty.trim().length >= 2) && normalizedPhone.length === 8 && (isProperty ? validProperty : serviceWilayats.length > 0) && form.description.trim().length >= 20 && media.length > 0 && (category === 'maintenance' || !!commercialRegistrationPdf) && subscriptionPlanCode.length > 0 && termsAccepted;
   const primaryLocation = allWilayats.find((item) => item.name === serviceWilayats[0]);
 
   return (
@@ -348,6 +349,7 @@ export default function ServiceRegistrationScreen() {
                <Text style={[styles.choiceTitle, { color: colors.foreground }]}>{isArabic ? 'يوفر التوصيل أو الوصول إلى موقع العميل' : 'Delivery or travel to the customer is available'}</Text>
              </Pressable>
            </>}
+           <Field label={isArabic ? 'رقم الهاتف وواتساب للتواصل' : 'Phone and WhatsApp contact'} testID="registration-phone" value={form.phone} onChangeText={(value) => update('phone', value.replace(/\D/g, '').slice(0, 11))} placeholder={isArabic ? 'مثال: 91234567' : 'Example: 91234567'} isArabic={isArabic} colors={colors} />
            <View><Text style={[styles.label, { color: colors.foreground }]}>{isProperty ? (isArabic ? 'وصف العقار' : 'Property description') : (isArabic ? 'نبذة عن الأعمال والخدمات' : 'About the work and services')}</Text><TextInput testID="registration-description" value={form.description} onChangeText={(value) => update('description', value)} multiline textAlign={isArabic ? 'right' : 'left'} placeholder={isArabic ? categoryCopy.descriptionPlaceholderAr : categoryCopy.descriptionPlaceholderEn} placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.description, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]} /></View>
           <View><Text style={[styles.label, { color: colors.foreground }]}>{isArabic ? 'صور وفيديوهات الأعمال' : 'Work photos and videos'}</Text><Text style={[styles.hint, { color: colors.mutedForeground }]}>{isArabic ? `${media.length}/15 · الحد الإجمالي 24 م.ب` : `${media.length}/15 · 24 MB total limit`}</Text></View>
           <View style={styles.mediaGrid}>
@@ -361,7 +363,7 @@ export default function ServiceRegistrationScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-            <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأرفق السجل التجاري PDF (ما عدا الصيانة)، ثم وافق على الشروط.' : 'Complete all fields, attach the commercial registration PDF (except maintenance), and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf: category === 'maintenance' ? null : commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} />
+             <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأدخل رقمًا عُمانيًا صحيحًا من 8 أرقام، وأرفق السجل التجاري PDF (ما عدا الصيانة)، ثم وافق على الشروط.' : 'Complete all fields, enter a valid 8-digit Oman phone number, attach the commercial registration PDF (except maintenance), and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, phone: `+968${normalizedPhone}`, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf: category === 'maintenance' ? null : commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} />
         </View>
       </ScrollView>
       <Modal visible={activeCount !== null} transparent animationType="fade" onRequestClose={() => setActiveCount(null)}>

@@ -15,6 +15,8 @@ export interface ServiceRegistration {
   title: string;
   specialty: string;
   city: string;
+  /** @nullable */
+  phone: string | null;
   serviceWilayats: string[];
   servesAllGovernorates: boolean;
   deliveryAvailable: boolean;

@@ -1277,6 +1277,8 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       || typeof input.city !== "string"
       || input.city.trim().length < 2
       || input.city.length > 100
+      || typeof input.phone !== "string"
+      || !/^\+968[0-9]{8}$/.test(input.phone)
       || !validServiceWilayats(input.serviceWilayats)
       || (isProperty && !validPropertyDetails(input.propertyDetails))
       || typeof input.servesAllGovernorates !== "boolean"
@@ -1308,6 +1310,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       title: input.title.trim(),
       specialty: input.specialty.trim(),
       city: input.city.trim(),
+      phone: input.phone,
       serviceWilayats: input.serviceWilayats.map((item: string) => item.trim()),
       servesAllGovernorates: input.servesAllGovernorates,
       deliveryAvailable: input.deliveryAvailable,
@@ -1326,6 +1329,7 @@ router.post("/me/service-registrations", requireUser, async (req, res, next) => 
       title: registration.title,
       specialty: registration.specialty,
       city: registration.city,
+      phone: registration.phone,
       serviceWilayats: registration.serviceWilayats,
       servesAllGovernorates: registration.servesAllGovernorates,
       deliveryAvailable: registration.deliveryAvailable,
@@ -1671,6 +1675,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
             area: `${details.sizeSquareMeters} m²`,
             imageUrl: existing.mediaUrls[0] ?? null,
             imageUrls: existing.mediaUrls,
+            contactPhone: existing.phone,
             isPublished: true,
           });
           return registration;
@@ -1682,6 +1687,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
           [profile] = await tx.update(contractorProfiles).set({
             isPublished: true,
             archivedAt: null,
+            phone: existing.phone ?? profile.phone,
             lastActiveAt: new Date(),
             updatedAt: new Date(),
           }).where(eq(contractorProfiles.id, profile.id)).returning();
@@ -1692,6 +1698,7 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
             city: existing.city,
             wilayat: existing.serviceWilayats[0] ?? null,
             bio: existing.description,
+            phone: existing.phone,
             avatarUrl: existing.mediaUrls[0] ?? null,
             imageUrls: existing.mediaUrls,
             isPublished: true,

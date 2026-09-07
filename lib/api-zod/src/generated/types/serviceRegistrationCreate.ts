@@ -27,6 +27,11 @@ export interface ServiceRegistrationCreate {
      */
   city: string;
   /**
+     * @maxLength 12
+     * @pattern ^\+968[0-9]{8}$
+     */
+  phone: string;
+  /**
      * @minItems 1
      * @maxItems 61
      * @items.minLength 2

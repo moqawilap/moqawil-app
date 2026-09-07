@@ -1355,6 +1355,10 @@ export const createMyServiceRegistrationBodySpecialtyMax = 200;
 export const createMyServiceRegistrationBodyCityMin = 2;
 export const createMyServiceRegistrationBodyCityMax = 100;
 
+export const createMyServiceRegistrationBodyPhoneMax = 12;
+
+
+export const createMyServiceRegistrationBodyPhoneRegExp = new RegExp('^\\+968[0-9]{8}$');
 export const createMyServiceRegistrationBodyServiceWilayatsItemMin = 2;
 export const createMyServiceRegistrationBodyServiceWilayatsItemMax = 100;
 
@@ -1395,6 +1399,7 @@ export const CreateMyServiceRegistrationBody = zod.object({
   "title": zod.string().min(createMyServiceRegistrationBodyTitleMin).max(createMyServiceRegistrationBodyTitleMax),
   "specialty": zod.string().min(createMyServiceRegistrationBodySpecialtyMin).max(createMyServiceRegistrationBodySpecialtyMax),
   "city": zod.string().min(createMyServiceRegistrationBodyCityMin).max(createMyServiceRegistrationBodyCityMax),
+  "phone": zod.string().max(createMyServiceRegistrationBodyPhoneMax).regex(createMyServiceRegistrationBodyPhoneRegExp),
   "serviceWilayats": zod.array(zod.string().min(createMyServiceRegistrationBodyServiceWilayatsItemMin).max(createMyServiceRegistrationBodyServiceWilayatsItemMax)).min(1).max(createMyServiceRegistrationBodyServiceWilayatsMax),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
@@ -1444,6 +1449,7 @@ export const CreateMyServiceRegistrationResponse = zod.object({
   "title": zod.string(),
   "specialty": zod.string(),
   "city": zod.string(),
+  "phone": zod.string().nullable(),
   "serviceWilayats": zod.array(zod.string()),
   "servesAllGovernorates": zod.boolean(),
   "deliveryAvailable": zod.boolean(),
