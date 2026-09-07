@@ -8,6 +8,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     query: {
       queryKey: getGetAppSettingsQueryKey(),
       staleTime: 30_000,
+      refetchOnMount: 'always',
+      refetchInterval: 30_000,
       retry: 2,
     },
   });

@@ -300,8 +300,8 @@ export function ListingEngagementMetrics({ listingId, saved = false, onSave, com
       </View>
       <View style={[styles.engagementActions, compact && styles.engagementActionsCompact]}>
         <Pressable accessibilityRole="button" accessibilityLabel={liked ? (isArabic ? 'إلغاء الإعجاب' : 'Unlike listing') : (isArabic ? 'أعجبني الإعلان' : 'Like listing')} onPress={() => submit('like', !liked)} style={({ pressed }) => [styles.engagementAction, { backgroundColor: liked ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
-          <Feather name="heart" size={compact ? 13 : 15} color={liked ? '#111111' : colors.mutedForeground} fill={liked ? '#111111' : 'transparent'} />
-          <Text style={[styles.engagementActionText, { color: liked ? '#111111' : colors.mutedForeground }]}>{isArabic ? 'أعجبني' : 'Like'}</Text>
+          <MaterialCommunityIcons name={liked ? 'heart' : 'heart-outline'} size={compact ? 14 : 17} color={liked ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.engagementActionText, { color: liked ? colors.primary : colors.mutedForeground }]}>{isArabic ? 'أعجبني' : 'Like'}</Text>
         </Pressable>
         {onSave ? (
           <Pressable accessibilityRole="button" accessibilityLabel={saved ? (isArabic ? 'إزالة الإعلان من المحفوظات' : 'Remove listing from saved') : (isArabic ? 'حفظ الإعلان' : 'Save listing')} onPress={() => { onSave(); submit('save', !saved); }} style={({ pressed }) => [styles.engagementAction, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
