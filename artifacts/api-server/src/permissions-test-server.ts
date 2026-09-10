@@ -1,6 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { eq, inArray } from "drizzle-orm";
-import { contractorProfiles, db, marketplaceListings, requestRecipients, serviceRequests, subscriptionPlans, subscriptions, users, type User } from "@workspace/db";
+import { contractorProfiles, db, marketplaceListings, notifications, projects, requestRecipients, serviceRequests, services, subscriptionPlans, subscriptions, users, type User } from "@workspace/db";
 import { requireAdmin, requireContractor, type AuthenticatedRequest } from "./middlewares/auth";
 import { createMarketplaceRouter } from "./routes/marketplace";
 import { ensureMarketplaceDefaults } from "./lib/marketplace";
@@ -17,6 +17,12 @@ const secondContractorUser = fixtureUsers.find((user) => user.clerkUserId.includ
 const fixtureByRole = new Map(fixtureUsers.filter((user) => user.id !== secondContractorUser.id).map((user) => [user.role, user] as const));
 const contractorUser = fixtureByRole.get("contractor") as User;
 const customerUser = fixtureByRole.get("customer") as User;
+const adminUser = fixtureByRole.get("admin") as User;
+await db.insert(notifications).values([
+  { userId: customerUser.id, type: "system", title: `Permission Test Customer Notification ${tag}`, body: "Customer-owned notification fixture." },
+  { userId: contractorUser.id, type: "system", title: `Permission Test Contractor Notification ${tag}`, body: "Contractor-owned notification fixture." },
+  { userId: adminUser.id, type: "system", title: `Permission Test Admin Notification ${tag}`, body: "Admin-owned notification fixture." },
+]);
 const [profile] = await db.insert(contractorProfiles).values({
   userId: contractorUser.id,
   businessName: `Permission Test Contractor ${tag}`,
@@ -31,6 +37,11 @@ const [secondProfile] = await db.insert(contractorProfiles).values({
   wilayat: "Bawshar",
   isPublished: true,
 }).returning();
+await db.insert(services).values({
+  contractorId: profile.id,
+  name: `Permission Test Workshop Service ${tag}`,
+  category: "building",
+});
 const plan = await db.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.isActive, true) });
 
 const [assignedRequest, unassignedRequest, concurrentRequest, cancellableRequest] = await db.insert(serviceRequests).values([
@@ -82,6 +93,7 @@ await db.insert(subscriptions).values({
 });
 const [fixtureListing] = await db.insert(marketplaceListings).values({
   id: `permission-listing-${tag}`,
+  ownerUserId: contractorUser.id,
   title: `Permission Test Listing ${tag}`,
   titleArabic: `عقار اختبار ${tag}`,
   price: "100000 OMR",
@@ -90,6 +102,13 @@ const [fixtureListing] = await db.insert(marketplaceListings).values({
   area: "200 m²",
   isPublished: true,
 }).returning();
+await db.insert(projects).values({
+  contractorId: profile.id,
+  title: `Permission Test Project ${tag}`,
+  description: "A published project fixture for ad engagement ownership tests.",
+  isPublished: true,
+  reviewStatus: "approved",
+});
 await db.insert(subscriptions).values({
   contractorId: secondProfile.id,
   planId: plan.id,
@@ -115,6 +134,13 @@ app.use("/api", createMarketplaceRouter({
   requireAdmin,
   requireContractor,
   promoteCustomerToContractor: async () => {},
+  resolveOptionalUser: async (req) => {
+    const role = req.header("x-moqawil-test-role");
+    return role === "contractor" && req.header("x-moqawil-test-contractor") === "second"
+      ? secondContractorUser
+      : fixtureByRole.get(role as User["role"]);
+  },
+  sendAdminContactEmail: async () => {},
 }));
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error(error);

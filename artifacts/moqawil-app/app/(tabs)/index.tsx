@@ -124,7 +124,7 @@ export default function HomeScreen() {
       return (
         <View key={id} style={styles.sectionBlock}>
           <SectionHeading title={localized(section.titleEn, section.titleAr)} subtitle={localized(section.subtitleEn, section.subtitleAr)} action={localized(section.actionEn, section.actionAr) || undefined} onAction={() => router.push('/explore')} />
-          {managedProviders.slice(0, section.limit).map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}
+          {managedProviders.slice(0, section.limit).map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved={savedIds.includes(provider.id)} onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id, { subjectKind: 'provider', subjectName: isArabic ? provider.nameAr : provider.name })} />)}
         </View>
       );
     }
@@ -132,7 +132,7 @@ export default function HomeScreen() {
       return (
         <View key={id} style={styles.sectionBlock}>
           <SectionHeading title={localized(section.titleEn, section.titleAr)} subtitle={localized(section.subtitleEn, section.subtitleAr)} action={localized(section.actionEn, section.actionAr) || undefined} onAction={() => openService('real-estate')} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyRow}>{availableListings.slice(0, section.limit).map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} featured={listing.featured} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { listing: true })} />)}</ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyRow}>{availableListings.slice(0, section.limit).map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} featured={listing.featured} saved={savedIds.includes(listing.id)} onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { subjectKind: 'property', subjectName: isArabic ? listing.titleAr : listing.title })} />)}</ScrollView>
         </View>
       );
     }
@@ -157,7 +157,7 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             {branding?.logoUrl ? <Image source={{ uri: branding.logoUrl }} style={styles.remoteLogo} resizeMode="contain" /> : <BrandMark />}
-            <IconButton icon="bell" onPress={() => router.push('/profile')} accessibilityLabel="Open notifications" />
+            <IconButton icon="bell" onPress={() => router.push('/notifications')} accessibilityLabel={isArabic ? 'فتح الإشعارات' : 'Open notifications'} />
           </View>
           <Pressable accessibilityRole="button" testID="home-location-picker" accessibilityLabel={isArabic ? 'تغيير أو تحديد موقعك' : 'Change or detect your location'} onPress={() => setLocationPickerVisible(true)} style={[styles.locationButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.locationPin, { backgroundColor: colors.primarySoft }]}><Feather name="map-pin" size={15} color={colors.primary} /></View>

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ListingEngagementInputAction } from './listingEngagementInputAction';
+import type { ListingEngagementInputSubjectKind } from './listingEngagementInputSubjectKind';
 
 export interface ListingEngagementInput {
   action: ListingEngagementInputAction;
@@ -15,4 +16,5 @@ export interface ListingEngagementInput {
      */
   clientId: string;
   active?: boolean;
+  subjectKind?: ListingEngagementInputSubjectKind;
 }

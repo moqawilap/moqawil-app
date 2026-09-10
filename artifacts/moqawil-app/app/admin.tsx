@@ -55,6 +55,7 @@ const statusText = (isArabic: boolean, status: string) => ({
 type ConfirmationRequest = { title: string; message: string; action: () => void; cancelLabel: string } | null;
 const ConfirmActionContext = React.createContext<(title: string, message: string, action: () => void, cancelLabel?: string) => void>(() => undefined);
 const useConfirmAction = () => React.useContext(ConfirmActionContext);
+const isWorkshopContractor = (item: AdminContractor) => item.isWorkshop;
 const removeCachedListItem = (client: ReturnType<typeof useQueryClient>, queryKey: readonly unknown[], id: string) => {
   client.setQueriesData({ queryKey }, (current: unknown) => (
     Array.isArray(current) ? current.filter((item) => item && typeof item === 'object' && 'id' in item && item.id !== id) : current
@@ -394,6 +395,7 @@ function ContractorsTab() {
   const client = useQueryClient();
   const confirmAction = useConfirmAction();
   const contractors = useListAdminContractors({ query: { queryKey: getListAdminContractorsQueryKey() } });
+  const contractorList = contractors.data?.filter((item) => !isWorkshopContractor(item) && !item.isDesigner && !item.isMaintenance) ?? [];
 
   const [form, setForm] = useState<any>(blankContractor());
   const [editing, setEditing] = useState<string | null>(null);
@@ -501,7 +503,7 @@ function ContractorsTab() {
             </Pressable>
           </View>
           <View style={styles.formActions}>
-            <Pressable testID="save-server-contractor" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
+            <Pressable testID="save-server-contractor" disabled={create.isPending || update.isPending} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1, opacity: create.isPending || update.isPending ? 0.6 : 1 }]} onPress={save}>
               <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Contractor', 'حفظ المقاول')}</Text>
             </Pressable>
             <Pressable testID="cancel-contractor-form" style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}>
@@ -513,7 +515,7 @@ function ContractorsTab() {
 
       {contractors.isLoading && <ActivityIndicator color={colors.primary} style={styles.loader} />}
       {contractors.isError && <Text style={{ color: colors.destructive }}>{text(isArabic, 'Unable to load contractors.', 'تعذر تحميل المقاولين.')}</Text>}
-      {contractors.data?.map(c => (
+      {contractorList.map(c => (
         <View key={c.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {c.avatarUrl ? <Image source={{ uri: c.avatarUrl }} style={styles.adminCardImage} /> : null}
           <View style={styles.cardHeader}>
@@ -558,6 +560,15 @@ function WorkshopsTab() {
       onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)),
     },
   });
+  const update = useUpdateAdminContractor({
+    mutation: {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getListAdminContractorsQueryKey() });
+        Alert.alert(text(isArabic, 'Workshop updated', 'تم تحديث الورشة'));
+      },
+      onError: (e) => Alert.alert(text(isArabic, 'Validation', 'تحقق'), errorMessage(e)),
+    },
+  });
   const remove = useDeleteAdminContractor({ mutation: {
     onSuccess: (_result, variables) => {
       removeCachedListItem(client, getListAdminContractorsQueryKey(), variables.id);
@@ -568,6 +579,33 @@ function WorkshopsTab() {
   } });
   const [form, setForm] = useState(blankWorkshop());
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const workshopList = workshops.data?.filter(isWorkshopContractor) ?? [];
+  const closeForm = () => {
+    setForm(blankWorkshop());
+    setEditing(null);
+    setShowForm(false);
+  };
+  const begin = (workshop?: AdminContractor) => {
+    if (workshop) {
+      setEditing(workshop.id);
+      setForm({
+        name: workshop.businessName,
+        nameArabic: workshop.businessNameArabic ?? '',
+        specialty: workshop.bio ?? '',
+        city: workshop.city,
+        wilayat: workshop.wilayat ?? '',
+        phone: workshop.phone ?? '',
+        avatarUrl: workshop.avatarUrl ?? '',
+        imageUrls: workshop.imageUrls?.length ? workshop.imageUrls : workshop.avatarUrl ? [workshop.avatarUrl] : [],
+        isPublished: workshop.isPublished,
+      });
+    } else {
+      setEditing(null);
+      setForm(blankWorkshop());
+    }
+    setShowForm(true);
+  };
   const set = (key: keyof ReturnType<typeof blankWorkshop>, value: string | boolean) => setForm((current) => ({ ...current, [key]: value }));
   const save = () => {
     if (form.name.trim().length < 2 || form.city.trim().length < 2) {
@@ -588,7 +626,7 @@ function WorkshopsTab() {
       isVerified: false,
       isWorkshop: true,
     };
-    create.mutate({ data });
+    editing ? update.mutate({ id: editing, data }, { onSuccess: closeForm }) : create.mutate({ data });
   };
   const chooseWorkshopImage = async () => {
     const images = await pickAdminImages(isArabic, 15 - form.imageUrls.length);
@@ -608,14 +646,14 @@ function WorkshopsTab() {
           <Text style={[styles.tabTitle, { color: colors.foreground }]}>{text(isArabic, 'Workshops', 'الورش')}</Text>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{text(isArabic, 'Add workshop names to the public building directory.', 'أضف أسماء الورش إلى دليل البناء العام.')}</Text>
         </View>
-        <Pressable testID="add-workshop" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => setShowForm(true)}>
+        <Pressable testID="add-workshop" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground }]} onPress={() => begin()}>
           <Feather name="plus" size={14} color={colors.background} />
           <Text style={[styles.denseButtonText, { color: colors.background }]}>{text(isArabic, 'Add', 'إضافة')}</Text>
         </Pressable>
       </View>
       {showForm && (
         <View style={[styles.formPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.formTitle, { color: colors.foreground }]}>{text(isArabic, 'New Workshop', 'ورشة جديدة')}</Text>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>{editing ? text(isArabic, 'Edit Workshop', 'تعديل الورشة') : text(isArabic, 'New Workshop', 'ورشة جديدة')}</Text>
           <View style={styles.formGrid}>
             {([['name', 'Workshop name', 'اسم الورشة'], ['nameArabic', 'Arabic name', 'الاسم بالعربية'], ['specialty', 'Specialty', 'التخصص'], ['city', 'City', 'المدينة'], ['wilayat', 'Wilayat', 'الولاية'], ['phone', 'Phone', 'الهاتف']] as const).map(([key, label, labelAr]) => (
               <View key={key} style={styles.formGroup}>
@@ -630,17 +668,17 @@ function WorkshopsTab() {
             <Text style={[styles.toggleText, { color: colors.foreground }]}>{text(isArabic, 'Publish immediately', 'نشر فورًا')}</Text>
           </Pressable>
           <View style={styles.formActions}>
-            <Pressable testID="save-workshop" style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
-              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Workshop', 'حفظ الورشة')}</Text>
+            <Pressable testID="save-workshop" disabled={create.isPending || update.isPending} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1, opacity: create.isPending || update.isPending ? 0.6 : 1 }]} onPress={save}>
+              <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save Workshop', 'حفظ الورشة')}</Text>
             </Pressable>
-            <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}>
+            <Pressable style={[styles.denseButton, { borderColor: colors.border }]} onPress={closeForm}>
               <Text style={[styles.denseButtonText, { color: colors.foreground }]}>{text(isArabic, 'Cancel', 'إلغاء')}</Text>
             </Pressable>
           </View>
         </View>
       )}
       {workshops.isLoading && <ActivityIndicator color={colors.primary} style={styles.loader} />}
-      {workshops.data?.map((workshop) => (
+      {workshopList.map((workshop) => (
         <View key={workshop.id} style={[styles.denseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {workshop.avatarUrl ? <Image source={{ uri: workshop.avatarUrl }} style={styles.adminCardImage} /> : null}
           <View style={styles.cardHeader}>
@@ -651,6 +689,8 @@ function WorkshopsTab() {
           </View>
           <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>{workshop.city}{workshop.wilayat ? ` • ${workshop.wilayat}` : ''}</Text>
           <View style={styles.cardActions}>
+            <Pressable testID={`edit-workshop-${workshop.id}`} onPress={() => begin(workshop)} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.primary }]}>{text(isArabic, 'Edit', 'تعديل')}</Text></Pressable>
+            <Pressable testID={`toggle-workshop-${workshop.id}`} disabled={update.isPending} onPress={() => update.mutate({ id: workshop.id, data: { isPublished: !workshop.isPublished } })} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.foreground }]}>{workshop.isPublished ? text(isArabic, 'Unpublish', 'إلغاء النشر') : text(isArabic, 'Publish', 'نشر')}</Text></Pressable>
             <Pressable testID={`delete-workshop-${workshop.id}`} onPress={() => confirmAction(text(isArabic, 'Delete', 'حذف'), text(isArabic, 'Delete this workshop advertisement? It will no longer appear to anyone.', 'هل تريد حذف إعلان الورشة؟ لن يظهر بعد ذلك لأي مستخدم.'), () => remove.mutate({ id: workshop.id, params: { confirm: true } }), text(isArabic, 'Back', 'رجوع'))} style={styles.actionLink}><Text style={[styles.actionText, { color: colors.destructive }]}>{text(isArabic, 'Delete', 'حذف')}</Text></Pressable>
           </View>
         </View>
@@ -882,7 +922,7 @@ function SpecialistsTab({ kind }: { kind: SpecialistKind }) {
             </Pressable>
           </View>
           <View style={styles.formActions}>
-            <Pressable testID={`save-${kind}`} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1 }]} onPress={save}>
+            <Pressable testID={`save-${kind}`} disabled={create.isPending || update.isPending} style={[styles.denseButtonPrimary, { backgroundColor: colors.foreground, flex: 1, opacity: create.isPending || update.isPending ? 0.6 : 1 }]} onPress={save}>
               <Text style={[styles.denseButtonText, { color: colors.background }]}>{create.isPending || update.isPending ? text(isArabic, 'Saving...', 'جارٍ الحفظ...') : text(isArabic, 'Save', 'حفظ')}</Text>
             </Pressable>
             <Pressable testID={`cancel-${kind}-form`} style={[styles.denseButton, { borderColor: colors.border }]} onPress={() => setShowForm(false)}>

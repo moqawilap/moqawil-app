@@ -1,5 +1,5 @@
 import { Router, type IRouter, type RequestHandler } from "express";
-import { clerkClient } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -7,21 +7,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
-  adCampaignEvents, adCampaigns, auditEvents, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, pushBroadcastDeliveries, pushBroadcasts, pushDevices, quotes, rankingWeightsSchema, requestRecipients, reviews, serviceRegistrations,
+  adCampaignEvents, adCampaigns, adEngagementEventReceipts, auditEvents, contactEventReceipts, contractorProfiles, db, listingEngagement, listingEngagementActions, marketplaceListings, marketplaceRatings, marketplaceSettings, notifications, payments, projects, pushBroadcastDeliveries, pushBroadcasts, pushDevices, quotes, rankingWeightsSchema, requestRecipients, reviews, serviceRegistrations,
   serviceRequests, services, subscriptionPlans, subscriptions, users,
-  type AdAudience, type AdMediaItem,
+  type AdAudience, type AdMediaItem, type User,
 } from "@workspace/db";
 import { canStartContractorOnboarding } from "../middlewares/authPolicy";
 import { requireAdmin as productionRequireAdmin, requireContractor as productionRequireContractor, requireUser as productionRequireUser, type AuthenticatedRequest } from "../middlewares/auth";
 import { emailAdminContact, emailAdminServiceRequest } from "../lib/email";
 import { addMonths, calculateRanking, DEFAULT_SETTINGS, getHomepageSettings, getSettings, isDirectoryEligible, isHomepageSettings, recordDevelopmentPayment, refreshSubscriptionStatus } from "../lib/marketplace";
 import { isAdvertisingSettings, isAppearance, isBranding, isCoupons, type CouponSetting } from "../lib/appSettings";
+import { logger } from "../lib/logger";
 
 type MarketplaceAuthHandlers = {
   requireUser: RequestHandler;
   requireAdmin: RequestHandler;
   requireContractor: RequestHandler;
   promoteCustomerToContractor?: (clerkUserId: string) => Promise<void>;
+  resolveOptionalUser?: (req: Parameters<RequestHandler>[0]) => Promise<User | undefined>;
+  sendAdminContactEmail?: typeof emailAdminContact;
 };
 
 export function createMarketplaceRouter(auth: MarketplaceAuthHandlers = {
@@ -30,6 +33,13 @@ export function createMarketplaceRouter(auth: MarketplaceAuthHandlers = {
   requireContractor: productionRequireContractor,
 }): IRouter {
 const { requireUser, requireAdmin, requireContractor } = auth;
+const resolveOptionalUser = auth.resolveOptionalUser ?? (async (req) => {
+  const clerkUserId = getAuth(req).userId;
+  return clerkUserId
+    ? db.query.users.findFirst({ where: and(eq(users.clerkUserId, clerkUserId), eq(users.isActive, true)) })
+    : undefined;
+});
+const sendAdminContactEmail = auth.sendAdminContactEmail ?? emailAdminContact;
 const promoteCustomerToContractor = auth.promoteCustomerToContractor ?? (async (clerkUserId: string) => {
   await clerkClient.users.updateUserMetadata(clerkUserId, { publicMetadata: { role: "contractor", isAdmin: false } });
 });
@@ -176,6 +186,7 @@ async function adminContractorResponse(profile: typeof contractorProfiles.$infer
     db.select({ name: services.name, category: services.category }).from(services).where(and(eq(services.contractorId, profile.id), eq(services.isActive, true))),
   ]);
   const serviceNames = profileServices.map((service) => service.name);
+  const isWorkshop = profileServices.some((service) => service.category === "building");
   const isDesigner = profileServices.some((service) => service.category === "consultants");
   const isMaintenance = profileServices.some((service) => service.category === "maintenance");
   return {
@@ -183,7 +194,7 @@ async function adminContractorResponse(profile: typeof contractorProfiles.$infer
     wilayat: profile.wilayat, serviceArea: profile.serviceArea, phone: profile.phone,
     evaluationNotes: profile.evaluationNotes, adminRating: profile.adminRating,
     agreedContractAmountOmaniRial: decimal(profile.agreedContractAmountOmaniRial),
-    isDesigner, isMaintenance, serviceNames,
+    isWorkshop, isDesigner, isMaintenance, serviceNames,
     accountLinkStatus: owner?.identitySource === "clerk" ? "linked_clerk" : "managed_unlinked",
   };
 }
@@ -449,11 +460,59 @@ function adResponse(campaign: typeof adCampaigns.$inferSelect, owner?: { busines
 
 const listingActions = ["view", "like", "save", "contact"] as const;
 type ListingAction = typeof listingActions[number];
+type AdSubjectKind = "property" | "provider" | "project";
+type AdSubject = { kind: AdSubjectKind; id: string; name: string; ownerUserId: string | null };
 function validListingId(value: unknown): value is string {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
 }
+function validUuid(value: unknown): value is string {
+  return typeof value === "string"
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
 function validActorKey(value: unknown): value is string {
   return typeof value === "string" && value.length >= 8 && value.length <= 128;
+}
+function validSubjectKind(value: unknown): value is AdSubjectKind {
+  return value === "property" || value === "provider" || value === "project";
+}
+async function resolveLiveAdSubject(subjectId: string, requestedKind?: AdSubjectKind): Promise<AdSubject | null> {
+  if (!requestedKind || requestedKind === "property") {
+    const listing = await db.query.marketplaceListings.findFirst({
+      where: and(eq(marketplaceListings.id, subjectId), eq(marketplaceListings.isPublished, true)),
+    });
+    if (listing) return { kind: "property", id: listing.id, name: listing.title, ownerUserId: listing.ownerUserId };
+  }
+  if (!requestedKind || requestedKind === "provider") {
+    const profile = await db.query.contractorProfiles.findFirst({
+      where: and(eq(contractorProfiles.id, subjectId), eq(contractorProfiles.isPublished, true), isNull(contractorProfiles.archivedAt)),
+    });
+    if (profile) return { kind: "provider", id: profile.id, name: profile.businessName, ownerUserId: profile.userId };
+  }
+  if (!requestedKind || requestedKind === "project") {
+    const [row] = await db.select({ project: projects, ownerUserId: contractorProfiles.userId })
+      .from(projects)
+      .innerJoin(contractorProfiles, eq(projects.contractorId, contractorProfiles.id))
+      .where(and(eq(projects.id, subjectId), eq(projects.isPublished, true), eq(projects.reviewStatus, "approved"), isNull(contractorProfiles.archivedAt)))
+      .limit(1);
+    if (row) return { kind: "project", id: row.project.id, name: row.project.title, ownerUserId: row.ownerUserId };
+  }
+  return null;
+}
+function engagementMetadata(subject: AdSubject, action: "like" | "save" | "call" | "whatsapp") {
+  return {
+    eventType: "ad_engagement",
+    action,
+    subjectId: subject.id,
+    subjectKind: subject.kind,
+    subjectName: subject.name,
+  };
+}
+function engagementNotificationText(subject: AdSubject, action: "like" | "save" | "call" | "whatsapp") {
+  const labels = { like: "liked", save: "saved", call: "called about", whatsapp: "contacted you on WhatsApp about" } as const;
+  return {
+    title: "New ad engagement",
+    body: `Someone ${labels[action]} ${subject.name}.`,
+  };
 }
 async function listingResponse(listing: typeof marketplaceListings.$inferSelect) {
   const [summary] = await db.select({
@@ -544,7 +603,9 @@ router.get("/listings/engagement", async (req, res, next) => {
       res.status(400).json({ error: "clientId must be between 8 and 128 characters" });
       return;
     }
-    const rows = await Promise.all(ids.map((id) => getListingEngagement(id, actorKey as string | undefined)));
+    const actor = await resolveOptionalUser(req);
+    const resolvedActorKey = actor ? `user:${actor.id}` : actorKey as string | undefined;
+    const rows = await Promise.all(ids.map((id) => getListingEngagement(id, resolvedActorKey)));
     res.json(Object.fromEntries(rows.map((row) => [row.listingId, row])));
   } catch (error) { next(error); }
 });
@@ -582,7 +643,9 @@ router.get("/listings/:listingId/engagement", async (req, res, next) => {
       res.status(400).json({ error: "clientId must be between 8 and 128 characters" });
       return;
     }
-    res.json(await getListingEngagement(req.params.listingId, actorKey as string | undefined));
+    const actor = await resolveOptionalUser(req);
+    const resolvedActorKey = actor ? `user:${actor.id}` : actorKey as string | undefined;
+    res.json(await getListingEngagement(req.params.listingId, resolvedActorKey));
   } catch (error) { next(error); }
 });
 
@@ -591,7 +654,7 @@ router.post("/listings/:listingId/engagement", async (req, res, next) => {
     const listingId = req.params.listingId;
     const input = req.body ?? {};
     const action = input.action as ListingAction;
-    if (!validListingId(listingId) || !listingActions.includes(action) || !validActorKey(input.clientId)) {
+    if (!validListingId(listingId) || !listingActions.includes(action) || !validActorKey(input.clientId) || (input.subjectKind !== undefined && !validSubjectKind(input.subjectKind))) {
       res.status(400).json({ error: "listingId, clientId, and a valid engagement action are required" });
       return;
     }
@@ -600,12 +663,19 @@ router.post("/listings/:listingId/engagement", async (req, res, next) => {
       return;
     }
 
+    const subject = await resolveLiveAdSubject(listingId, input.subjectKind);
+    if (!subject) {
+      res.status(404).json({ error: "Published ad subject not found" });
+      return;
+    }
+    const actor = await resolveOptionalUser(req);
+    const actorKey = actor ? `user:${actor.id}` : input.clientId;
     await db.transaction(async (tx) => {
       await tx.insert(listingEngagement).values({ listingId }).onConflictDoNothing();
       if ((action === "like" || action === "save") && input.active === false) {
         const removed = await tx.delete(listingEngagementActions).where(and(
           eq(listingEngagementActions.listingId, listingId),
-          eq(listingEngagementActions.actorKey, input.clientId),
+          eq(listingEngagementActions.actorKey, actorKey),
           eq(listingEngagementActions.action, action),
         )).returning({ id: listingEngagementActions.id });
         if (removed.length) {
@@ -615,14 +685,37 @@ router.post("/listings/:listingId/engagement", async (req, res, next) => {
         return;
       }
 
-      const inserted = await tx.insert(listingEngagementActions).values({ listingId, actorKey: input.clientId, action }).onConflictDoNothing().returning({ id: listingEngagementActions.id });
+      const inserted = await tx.insert(listingEngagementActions).values({ listingId, actorKey, action }).onConflictDoNothing().returning({ id: listingEngagementActions.id });
       if (inserted.length) {
         const field = action === "view" ? "viewCount" : action === "like" ? "likeCount" : action === "save" ? "saveCount" : "contactCount";
         const column = listingEngagement[field];
         await tx.update(listingEngagement).set({ [field]: sql`${column} + 1`, updatedAt: new Date() }).where(eq(listingEngagement.listingId, listingId));
+        if (action === "like" || action === "save") {
+          await tx.insert(adEngagementEventReceipts).values({
+            eventId: inserted[0]!.id,
+            actorUserId: actor?.id ?? null,
+            subjectKind: subject.kind,
+            subjectId: subject.id,
+            action,
+            active: true,
+          });
+        }
+        if ((action === "like" || action === "save") && subject.ownerUserId && subject.ownerUserId !== actor?.id) {
+          const text = engagementNotificationText(subject, action);
+          await tx.insert(notifications).values({
+            userId: subject.ownerUserId,
+            type: "system",
+            channel: "in_app",
+            deliveryStatus: "delivered",
+            title: text.title,
+            body: text.body,
+            deliveryMetadata: engagementMetadata(subject, action),
+            deliveredAt: new Date(),
+          });
+        }
       }
     });
-    res.json(await getListingEngagement(listingId, input.clientId));
+    res.json(await getListingEngagement(listingId, actorKey));
   } catch (error) { next(error); }
 });
 
@@ -632,17 +725,27 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
     const input = req.body ?? {};
     const categories = ["property", "workshop", "design", "maintenance", "contractor"] as const;
     const channels = ["call", "whatsapp"] as const;
+    const requestedKind = validSubjectKind(input.subjectKind)
+      ? input.subjectKind
+      : input.category === "property"
+        ? "property"
+        : "provider";
     if (
-      !categories.includes(input.category)
+      (input.category !== undefined && !categories.includes(input.category))
+      || (input.subjectKind !== undefined && !validSubjectKind(input.subjectKind))
       || !channels.includes(input.channel)
       || !validListingId(input.subjectId)
-      || typeof input.subjectName !== "string"
-      || input.subjectName.trim().length < 1
-      || input.subjectName.length > 200
+      || (input.eventId !== undefined && !validActorKey(input.eventId))
     ) {
-      res.status(400).json({ error: "Valid category, channel, subjectId, and subjectName are required" });
+      res.status(400).json({ error: "Valid subjectKind, category, channel, subjectId, and eventId are required" });
       return;
     }
+    const subject = await resolveLiveAdSubject(input.subjectId, requestedKind);
+    if (!subject) {
+      res.status(404).json({ error: "Published ad subject not found" });
+      return;
+    }
+    const category = (input.category ?? (subject.kind === "property" ? "property" : "contractor")) as typeof categories[number];
 
     const categoryLabels = {
       property: "عقار",
@@ -657,38 +760,70 @@ router.post("/contact-events", requireUser, async (req, res, next) => {
       email: "بريد إلكتروني",
     } as const;
     const admins = await db.select({ id: users.id, email: users.email }).from(users).where(and(eq(users.role, "admin"), eq(users.isActive, true)));
-    if (admins.length) {
-      await db.insert(notifications).values(admins.map((admin) => ({
-        userId: admin.id,
-        type: "system" as const,
-        channel: "in_app" as const,
-        deliveryStatus: "delivered" as const,
-        title: "تواصل جديد عبر تطبيق مقاول",
-        body: `${channelLabels[input.channel as keyof typeof channelLabels]} بخصوص ${categoryLabels[input.category as keyof typeof categoryLabels]}: ${input.subjectName.trim()}`,
-        deliveryMetadata: {
-          contactCategory: input.category,
-          contactChannel: input.channel,
-          subjectId: input.subjectId,
-          subjectName: input.subjectName.trim(),
-          customerId: user.id,
-        },
-        deliveredAt: new Date(),
-      })));
+    const accepted = await db.transaction(async (tx) => {
+      if (input.eventId) {
+        const receipt = await tx.insert(contactEventReceipts).values({
+          eventId: input.eventId,
+          actorUserId: user.id,
+          subjectKind: subject.kind,
+          subjectId: subject.id,
+          channel: input.channel,
+        }).onConflictDoNothing().returning({ id: contactEventReceipts.id });
+        if (!receipt.length) return false;
+      }
+      if (admins.length) {
+        await tx.insert(notifications).values(admins.map((admin) => ({
+          userId: admin.id,
+          type: "system" as const,
+          channel: "in_app" as const,
+          deliveryStatus: "delivered" as const,
+          title: "تواصل جديد عبر تطبيق مقاول",
+          body: `${channelLabels[input.channel as keyof typeof channelLabels]} بخصوص ${categoryLabels[category]}: ${subject.name}`,
+          deliveryMetadata: {
+            contactCategory: category,
+            contactChannel: input.channel,
+            subjectId: subject.id,
+            subjectKind: subject.kind,
+            subjectName: subject.name,
+            customerId: user.id,
+          },
+          deliveredAt: new Date(),
+        })));
+      }
+      if (subject.ownerUserId && subject.ownerUserId !== user.id) {
+        const text = engagementNotificationText(subject, input.channel);
+        await tx.insert(notifications).values({
+          userId: subject.ownerUserId,
+          type: "system",
+          channel: "in_app",
+          deliveryStatus: "delivered",
+          title: text.title,
+          body: text.body,
+          deliveryMetadata: engagementMetadata(subject, input.channel),
+          deliveredAt: new Date(),
+        });
+      }
+      return true;
+    });
+    if (!accepted) {
+      res.status(204).end();
+      return;
     }
-    await emailAdminContact({
+    await sendAdminContactEmail({
       customerName: user.displayName ?? "",
       customerEmail: user.email,
       adminEmails: admins.map((admin) => admin.email),
       channel: input.channel,
-      category: input.category,
-      subjectName: input.subjectName.trim(),
+      category,
+      subjectName: subject.name,
       occurredAt: new Date(),
     }).catch((error) => {
-      console.error("Unable to send contact email", error);
+      logger.error({ err: error }, "Unable to send contact email");
     });
-    await logAudit(user.id, "contact_attempt", input.category, input.subjectId, {
+    await logAudit(user.id, "contact_attempt", subject.kind, subject.id, {
       channel: input.channel,
-      subjectName: input.subjectName.trim(),
+      subjectName: subject.name,
+      eventId: input.eventId ?? null,
     });
     res.status(204).end();
   } catch (error) { next(error); }
@@ -1388,19 +1523,23 @@ router.patch("/me/reviews/:kind/:id", requireUser, async (req, res, next) => {
       if (typeof input.specialty !== "string" || input.specialty.trim().length < 2 || input.specialty.length > 200 || (input.serviceWilayats !== undefined && !validServiceWilayats(input.serviceWilayats))) { res.status(400).json({ error: "Specialty and valid service wilayats are required" }); return; }
       const existing = await db.query.serviceRegistrations.findFirst({ where: and(eq(serviceRegistrations.id, id), eq(serviceRegistrations.userId, user.id)) });
       if (!existing) { res.status(404).json({ error: "Registration not found" }); return; }
-      const [updated] = await db.update(serviceRegistrations).set({
-        title: input.title.trim(),
-        specialty: input.specialty.trim(),
-        city: input.city.trim(),
-        serviceWilayats: input.serviceWilayats?.map((item: string) => item.trim()) ?? existing.serviceWilayats,
-        servesAllGovernorates: typeof input.servesAllGovernorates === "boolean" ? input.servesAllGovernorates : existing.servesAllGovernorates,
-        deliveryAvailable: typeof input.deliveryAvailable === "boolean" ? input.deliveryAvailable : existing.deliveryAvailable,
-        description: input.description.trim(),
-        mediaUrls,
-        status: "pending_review",
-        reviewNote: null,
-        updatedAt: new Date(),
-      }).where(eq(serviceRegistrations.id, id)).returning();
+      const updated = await db.transaction(async (tx) => {
+        const [registration] = await tx.update(serviceRegistrations).set({
+          title: input.title.trim(),
+          specialty: input.specialty.trim(),
+          city: input.city.trim(),
+          serviceWilayats: input.serviceWilayats?.map((item: string) => item.trim()) ?? existing.serviceWilayats,
+          servesAllGovernorates: typeof input.servesAllGovernorates === "boolean" ? input.servesAllGovernorates : existing.servesAllGovernorates,
+          deliveryAvailable: typeof input.deliveryAvailable === "boolean" ? input.deliveryAvailable : existing.deliveryAvailable,
+          description: input.description.trim(),
+          mediaUrls,
+          status: "pending_review",
+          reviewNote: null,
+          updatedAt: new Date(),
+        }).where(eq(serviceRegistrations.id, id)).returning();
+        await tx.update(marketplaceListings).set({ isPublished: false, updatedAt: new Date() }).where(eq(marketplaceListings.sourceRegistrationId, id));
+        return registration;
+      });
       res.json({ id: updated.id, kind: "registration", category: updated.category, title: updated.title, specialty: updated.specialty, city: updated.city, serviceWilayats: updated.serviceWilayats, servesAllGovernorates: updated.servesAllGovernorates, deliveryAvailable: updated.deliveryAvailable, description: updated.description, mediaUrls: updated.mediaUrls, subscriptionPlanCode: updated.subscriptionPlanCode, status: updated.status, reviewNote: updated.reviewNote, createdAt: updated.createdAt.toISOString() });
       return;
     }
@@ -1475,7 +1614,9 @@ router.get("/me/service-requests", requireUser, async (req, res, next) => {
 router.get("/me/service-requests/:id/quotes", requireUser, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
-    const request = await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, String(req.params.id)), eq(serviceRequests.customerId, user.id)) });
+    const requestId = String(req.params.id);
+    if (!validUuid(requestId)) { res.status(400).json({ error: "Invalid service request identifier" }); return; }
+    const request = await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, requestId), eq(serviceRequests.customerId, user.id)) });
     if (!request) { res.status(404).json({ error: "Service request not found" }); return; }
     const rows = await db.select({ quote: quotes, businessName: contractorProfiles.businessName, businessNameArabic: contractorProfiles.businessNameArabic, city: contractorProfiles.city, wilayat: contractorProfiles.wilayat, isVerified: contractorProfiles.isVerified })
       .from(quotes).innerJoin(contractorProfiles, eq(contractorProfiles.id, quotes.contractorId)).where(eq(quotes.requestId, request.id)).orderBy(asc(quotes.amountOmaniRial), desc(quotes.createdAt));
@@ -1486,7 +1627,9 @@ router.get("/me/service-requests/:id/quotes", requireUser, async (req, res, next
 router.post("/me/service-requests/:id/cancel", requireUser, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
-    const request = await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, String(req.params.id)), eq(serviceRequests.customerId, user.id)) });
+    const requestId = String(req.params.id);
+    if (!validUuid(requestId)) { res.status(400).json({ error: "Invalid service request identifier" }); return; }
+    const request = await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, requestId), eq(serviceRequests.customerId, user.id)) });
     if (!request) { res.status(404).json({ error: "Service request not found" }); return; }
     if (request.status === "awarded") { res.status(409).json({ error: "Awarded requests cannot be cancelled" }); return; }
     if (request.status !== "open" && request.status !== "quoted") { res.status(409).json({ error: "Request cannot be cancelled" }); return; }
@@ -1538,10 +1681,12 @@ router.get("/me/workshop-requests", requireUser, requireContractor, async (req, 
 router.post("/me/workshop-requests/:id/quote", requireUser, requireContractor, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
+    const requestId = String(req.params.id);
+    if (!validUuid(requestId)) { res.status(400).json({ error: "Invalid service request identifier" }); return; }
     const profile = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, user.id) });
     const input = req.body ?? {};
     if (!profile || !Number.isFinite(input.amountOmaniRial) || input.amountOmaniRial < 0 || !Number.isInteger(input.estimatedDays) || input.estimatedDays < 1 || input.estimatedDays > 365 || typeof input.details !== "string" || input.details.trim().length < 4 || input.details.length > 3000) { res.status(400).json({ error: "Invalid quote fields" }); return; }
-    const request = await db.query.serviceRequests.findFirst({ where: eq(serviceRequests.id, String(req.params.id)) });
+    const request = await db.query.serviceRequests.findFirst({ where: eq(serviceRequests.id, requestId) });
     const recipient = request && await db.query.requestRecipients.findFirst({ where: and(eq(requestRecipients.requestId, request.id), eq(requestRecipients.contractorId, profile.id)) });
     if (!request || !recipient || recipient.status === "quoted" || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Request is unavailable" }); return; }
     const quote = await db.transaction(async (tx) => {
@@ -1563,7 +1708,9 @@ router.post("/me/workshop-requests/:id/quote", requireUser, requireContractor, a
 router.post("/me/quotes/:id/accept", requireUser, async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).marketplaceUser;
-    const quote = await db.query.quotes.findFirst({ where: eq(quotes.id, String(req.params.id)) });
+    const quoteId = String(req.params.id);
+    if (!validUuid(quoteId)) { res.status(400).json({ error: "Invalid quote identifier" }); return; }
+    const quote = await db.query.quotes.findFirst({ where: eq(quotes.id, quoteId) });
     const request = quote && await db.query.serviceRequests.findFirst({ where: and(eq(serviceRequests.id, quote.requestId), eq(serviceRequests.customerId, user.id)) });
     if (!quote || quote.status !== "submitted" || !request || request.status === "cancelled" || request.status === "awarded") { res.status(404).json({ error: "Quote is unavailable" }); return; }
     const contractor = await db.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.id, quote.contractorId) });
@@ -1589,7 +1736,14 @@ router.get("/me/notifications", requireUser, async (req, res, next) => {
   try { const user = (req as AuthenticatedRequest).marketplaceUser; res.json(await db.select().from(notifications).where(eq(notifications.userId, user.id)).orderBy(desc(notifications.createdAt))); } catch (error) { next(error); }
 });
 router.post("/me/notifications/:id/read", requireUser, async (req, res, next) => {
-  try { const user = (req as AuthenticatedRequest).marketplaceUser; const notificationId = String(req.params.id); await db.update(notifications).set({ readAt: new Date(), updatedAt: new Date() }).where(and(eq(notifications.id, notificationId), eq(notifications.userId, user.id))); res.status(204).end(); } catch (error) { next(error); }
+  try {
+    const user = (req as AuthenticatedRequest).marketplaceUser;
+    const notificationId = String(req.params.id);
+    if (!validUuid(notificationId)) { res.status(400).json({ error: "Invalid notification identifier" }); return; }
+    const [updated] = await db.update(notifications).set({ readAt: new Date(), updatedAt: new Date() }).where(and(eq(notifications.id, notificationId), eq(notifications.userId, user.id))).returning({ id: notifications.id });
+    if (!updated) { res.status(404).json({ error: "Notification not found" }); return; }
+    res.status(204).end();
+  } catch (error) { next(error); }
 });
 
 router.get("/admin/overview", requireUser, requireAdmin, async (_req, res, next) => {
@@ -1657,13 +1811,34 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
     if (kind === "registration") {
       const existing = await db.query.serviceRegistrations.findFirst({ where: eq(serviceRegistrations.id, id) });
       if (!existing) { res.status(404).json({ error: "Registration not found" }); return; }
+      if (action === "approve" && existing.category === "real-estate" && existing.propertyDetails) {
+        const [mappedListing, priorApproval] = await Promise.all([
+          db.query.marketplaceListings.findFirst({ where: eq(marketplaceListings.sourceRegistrationId, existing.id) }),
+          db.query.auditEvents.findFirst({
+            where: and(
+              eq(auditEvents.entityType, "service_registration"),
+              eq(auditEvents.entityId, existing.id),
+              eq(auditEvents.action, "service_review_approve"),
+            ),
+          }),
+        ]);
+        if (!mappedListing && (priorApproval || existing.status === "approved")) {
+          res.status(409).json({ error: "Legacy property ownership requires explicit reconciliation before re-approval" });
+          return;
+        }
+      }
       const updated = await db.transaction(async (tx) => {
         const [registration] = await tx.update(serviceRegistrations).set({ status: nextStatus, reviewNote: note || null, updatedAt: new Date() }).where(eq(serviceRegistrations.id, id)).returning();
-        if (action !== "approve") return registration;
+        if (action !== "approve") {
+          await tx.update(marketplaceListings).set({ isPublished: false, updatedAt: new Date() }).where(eq(marketplaceListings.sourceRegistrationId, id));
+          return registration;
+        }
         if (existing.category === "real-estate" && existing.propertyDetails) {
           const details = existing.propertyDetails;
           await tx.insert(marketplaceListings).values({
             id: crypto.randomUUID(),
+            ownerUserId: existing.userId,
+            sourceRegistrationId: existing.id,
             title: existing.title,
             titleArabic: existing.title,
             type: details.listingType,
@@ -1677,6 +1852,25 @@ router.patch("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req, 
             imageUrls: existing.mediaUrls,
             contactPhone: existing.phone,
             isPublished: true,
+          }).onConflictDoUpdate({
+            target: marketplaceListings.sourceRegistrationId,
+            set: {
+              ownerUserId: existing.userId,
+              title: existing.title,
+              titleArabic: existing.title,
+              type: details.listingType,
+              price: details.listingType === "sale" ? "Contact for price" : "Contact for rent",
+              location: `${details.area}, ${details.wilayat}, ${details.governorate}`,
+              locationArabic: `${details.area}، ${details.wilayat}، ${details.governorate}`,
+              bedrooms: details.bedrooms,
+              bathrooms: details.bathrooms,
+              area: `${details.sizeSquareMeters} m²`,
+              imageUrl: existing.mediaUrls[0] ?? null,
+              imageUrls: existing.mediaUrls,
+              contactPhone: existing.phone,
+              isPublished: true,
+              updatedAt: new Date(),
+            },
           });
           return registration;
         }
@@ -1787,13 +1981,8 @@ router.delete("/admin/reviews/:kind/:id", requireUser, requireAdmin, async (req,
       }
       const registration = await tx.query.serviceRegistrations.findFirst({ where: eq(serviceRegistrations.id, id) });
       if (!registration) return null;
-      if (registration.status === "approved" && registration.category === "real-estate" && registration.propertyDetails) {
-        const details = registration.propertyDetails;
-        await tx.delete(marketplaceListings).where(and(
-          eq(marketplaceListings.title, registration.title),
-          eq(marketplaceListings.location, `${details.area}, ${details.wilayat}, ${details.governorate}`),
-        ));
-      } else if (registration.status === "approved") {
+      await tx.delete(marketplaceListings).where(eq(marketplaceListings.sourceRegistrationId, registration.id));
+      if (registration.status === "approved" && registration.category !== "real-estate") {
         const profile = await tx.query.contractorProfiles.findFirst({ where: eq(contractorProfiles.userId, registration.userId) });
         if (profile) {
           const serviceCategory = registration.category === "design" ? "consultants" : registration.category;
@@ -1939,10 +2128,10 @@ router.get("/admin/payments", requireUser, requireAdmin, async (_req, res, next)
 router.patch("/admin/contractors/:id", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const input = req.body ?? {};
-    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "imageUrls", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isDesigner", "isMaintenance", "serviceNames"];
-    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls)) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
+    const allowed = ["businessName", "businessNameArabic", "city", "wilayat", "bio", "bioArabic", "serviceArea", "phone", "avatarUrl", "imageUrls", "evaluationNotes", "adminRating", "agreedContractAmountOmaniRial", "isVerified", "isPublished", "isWorkshop", "isDesigner", "isMaintenance", "serviceNames"];
+    if (!Object.keys(input).some((key) => allowed.includes(key)) || (input.businessName !== undefined && (typeof input.businessName !== "string" || input.businessName.trim().length < 2 || input.businessName.length > 200)) || (input.city !== undefined && (typeof input.city !== "string" || input.city.trim().length < 2 || input.city.length > 100)) || !validOptionalText(input.businessNameArabic, 200) || !validOptionalText(input.bio, 5000) || !validOptionalText(input.bioArabic, 5000) || !validOptionalText(input.wilayat, 100) || !validOptionalText(input.serviceArea, 255) || !validOptionalText(input.phone, 32) || !validOptionalText(input.avatarUrl, 2000000) || (input.imageUrls !== undefined && !validAdminImageUrls(input.imageUrls)) || !validOptionalText(input.evaluationNotes, 5000) || (input.adminRating !== undefined && input.adminRating !== null && (!Number.isInteger(input.adminRating) || input.adminRating < 1 || input.adminRating > 5)) || (input.agreedContractAmountOmaniRial !== undefined && input.agreedContractAmountOmaniRial !== null && (!Number.isFinite(input.agreedContractAmountOmaniRial) || input.agreedContractAmountOmaniRial < 0)) || (input.isVerified !== undefined && typeof input.isVerified !== "boolean") || (input.isPublished !== undefined && typeof input.isPublished !== "boolean") || (input.isWorkshop !== undefined && typeof input.isWorkshop !== "boolean") || (input.isDesigner !== undefined && typeof input.isDesigner !== "boolean") || (input.isMaintenance !== undefined && typeof input.isMaintenance !== "boolean") || (input.serviceNames !== undefined && !validServiceNames(input.serviceNames, true)) || (input.isDesigner === true && !validServiceNames(input.serviceNames)) || (input.isMaintenance === true && !validServiceNames(input.serviceNames))) { res.status(400).json({ error: "Invalid contractor update" }); return; }
     const changes: Partial<typeof contractorProfiles.$inferInsert> = { updatedAt: new Date() };
-    const profileFields = allowed.filter((key) => key !== "isDesigner" && key !== "isMaintenance" && key !== "serviceNames");
+    const profileFields = allowed.filter((key) => key !== "isWorkshop" && key !== "isDesigner" && key !== "isMaintenance" && key !== "serviceNames");
     for (const key of profileFields) if (input[key] !== undefined) (changes as Record<string, unknown>)[key] = key === "businessName" || key === "city" ? input[key].trim() : key === "agreedContractAmountOmaniRial" && input[key] !== null ? input[key].toFixed(3) : input[key];
     if (input.imageUrls !== undefined) changes.avatarUrl = input.imageUrls[0] ?? null;
     const [profile] = await db.update(contractorProfiles).set(changes).where(eq(contractorProfiles.id, String(req.params.id))).returning();
@@ -1958,6 +2147,26 @@ router.patch("/admin/contractors/:id", requireUser, requireAdmin, async (req, re
           category: serviceCategory,
           description: profile.bioArabic,
         })));
+      }
+    }
+    if (input.isWorkshop !== undefined) {
+      const existingWorkshopService = await db.query.services.findFirst({ where: and(eq(services.contractorId, profile.id), eq(services.category, "building")) });
+      if (input.isWorkshop === false) {
+        await db.delete(services).where(and(eq(services.contractorId, profile.id), eq(services.category, "building")));
+      } else if (existingWorkshopService) {
+        await db.update(services).set({
+          isActive: true,
+          ...(typeof input.bio === "string" && input.bio.trim() ? { name: input.bio.trim().slice(0, 160) } : {}),
+          ...(input.bioArabic !== undefined ? { description: typeof input.bioArabic === "string" ? input.bioArabic : null } : {}),
+          updatedAt: new Date(),
+        }).where(eq(services.id, existingWorkshopService.id));
+      } else {
+        await db.insert(services).values({
+          contractorId: profile.id,
+          name: (typeof input.bio === "string" && input.bio.trim() ? input.bio.trim() : profile.bio?.trim() || "Building workshop").slice(0, 160),
+          category: "building",
+          description: input.bioArabic !== undefined ? input.bioArabic : profile.bioArabic,
+        });
       }
     }
     await logAudit((req as AuthenticatedRequest).marketplaceUser.id, "contractor_updated", "contractor", profile.id, { fields: Object.keys(input).filter((key) => allowed.includes(key)) });

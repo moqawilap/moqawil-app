@@ -5,5 +5,6 @@
  * Moqawil Oman contractor marketplace API
  * OpenAPI spec version: 0.1.0
  */
+import type { AdEngagementMetadata } from './adEngagementMetadata';
 
-export type NotificationDeliveryMetadata = { [key: string]: unknown };
+export type NotificationDeliveryMetadata = AdEngagementMetadata | { [key: string]: unknown };

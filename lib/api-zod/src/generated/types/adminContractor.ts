@@ -25,8 +25,9 @@ export type AdminContractor = Contractor & ({
   adminRating?: number | null;
   /** @nullable */
   agreedContractAmountOmaniRial?: number | null;
+  isWorkshop: boolean;
   isDesigner: boolean;
-  isMaintenance?: boolean;
+  isMaintenance: boolean;
   serviceNames: string[];
   accountLinkStatus: AdminContractorAccountLinkStatus;
 });

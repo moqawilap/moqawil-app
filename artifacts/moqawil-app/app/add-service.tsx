@@ -31,7 +31,7 @@ export default function AddServiceScreen() {
         <View style={styles.content}>
           <ScreenHeader
             title={isArabic ? 'أضف خدمة' : 'Add a service'}
-            subtitle={isArabic ? 'اختر فئة واحدة للمتابعة لاحقًا' : 'Choose one category to continue later'}
+            subtitle={isArabic ? 'اختر فئة واحدة للمتابعة وإضافة التفاصيل' : 'Choose one category to continue and add details'}
           />
           <View style={[styles.introCard, { backgroundColor: colors.navy }]}>
             <View style={[styles.introIcon, { backgroundColor: colors.primarySoft }]}>
@@ -77,7 +77,7 @@ export default function AddServiceScreen() {
           {selectedService ? (
             <View style={[styles.selectedHint, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
               <Feather name="check-circle" size={17} color={colors.primary} />
-              <Text style={[styles.selectedHintText, { color: colors.foreground }]}>{isArabic ? 'تم اختيار الفئة. سيتم تجهيز الخطوة التالية لاحقًا.' : 'Category selected. The next step will be added later.'}</Text>
+               <Text style={[styles.selectedHintText, { color: colors.foreground }]}>{isArabic ? 'تم اختيار الفئة وفتح نموذج التفاصيل.' : 'Category selected and the details form opened.'}</Text>
             </View>
           ) : null}
         </View>

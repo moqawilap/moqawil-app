@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,7 +24,7 @@ type AppContextValue = {
   refreshLocation: (options?: { silent?: boolean }) => Promise<void>;
   selectLocation: (location: { city: string; area: string }) => void;
   savedIds: string[];
-  toggleSaved: (id: string, options?: { listing?: boolean }) => void;
+  toggleSaved: (id: string, options?: { subjectKind?: 'property' | 'provider' | 'project'; subjectName?: string }) => void;
   isSaved: (id: string) => boolean;
   engagementClientId: string | null;
   activeService: string | null;
@@ -49,11 +50,16 @@ function createEngagementClientId() {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { userId } = useAuth();
+  const savedAccountKey = userId ? `user:${userId}` : 'guest';
+  const initialSavedAccountKey = useRef(savedAccountKey).current;
   const [locale, setLocaleState] = useState<Locale>('en');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [location, setLocation] = useState<LocationState>(defaultLocation);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedIdsByAccount, setSavedIdsByAccount] = useState<Record<string, string[]>>({});
+  const [legacySavedIds, setLegacySavedIds] = useState<string[]>([]);
+  const [legacySavedIdsOwner, setLegacySavedIdsOwner] = useState(initialSavedAccountKey);
   const [engagementClientId, setEngagementClientId] = useState<string | null>(null);
   const [activeService, setActiveService] = useState<string | null>(null);
   const [managedProviders, setManagedProviders] = useState<Provider[]>(seedProviders);
@@ -63,10 +69,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
         if (value) {
-          const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; managedProviders?: Provider[]; engagementClientId?: string };
+          const parsed = JSON.parse(value) as { locale?: Locale; location?: LocationState; savedIds?: string[]; savedIdsByAccount?: Record<string, string[]>; savedIdsLegacyOwner?: string; managedProviders?: Provider[]; engagementClientId?: string };
           if (parsed.locale) setLocaleState(parsed.locale);
           if (parsed.location) setLocation(parsed.location);
-          if (parsed.savedIds) setSavedIds(parsed.savedIds);
+          const legacy = parsed.savedIds ?? [];
+          setLegacySavedIds(legacy);
+          const migratedOwner = parsed.savedIdsLegacyOwner ?? initialSavedAccountKey;
+          setLegacySavedIdsOwner(migratedOwner);
+          setSavedIdsByAccount({
+            ...(legacy.length ? { [migratedOwner]: legacy } : {}),
+            ...(parsed.savedIdsByAccount ?? {}),
+          });
           if (parsed.managedProviders) setManagedProviders(parsed.managedProviders);
           setEngagementClientId(parsed.engagementClientId ?? createEngagementClientId());
         } else {
@@ -75,24 +88,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => setEngagementClientId(createEngagementClientId()))
       .finally(() => setPreferencesLoaded(true));
-  }, []);
+  }, [initialSavedAccountKey]);
 
   useEffect(() => {
      if (engagementClientId) {
-       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ locale, location, savedIds, managedProviders, engagementClientId })).catch(() => undefined);
+       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+         locale,
+         location,
+         savedIds: legacySavedIds,
+         savedIdsByAccount,
+         savedIdsLegacyOwner: legacySavedIdsOwner,
+         managedProviders,
+         engagementClientId,
+       })).catch(() => undefined);
      }
-   }, [locale, location, savedIds, managedProviders, engagementClientId]);
+    }, [locale, location, legacySavedIds, legacySavedIdsOwner, savedIdsByAccount, managedProviders, engagementClientId]);
+
+  const savedIds = savedIdsByAccount[savedAccountKey] ?? [];
 
   const setLocale = (nextLocale: Locale) => {
     setLocaleState(nextLocale);
     Haptics.selectionAsync().catch(() => undefined);
   };
 
-  const toggleSaved = (id: string, options?: { listing?: boolean }) => {
+  const toggleSaved = (id: string, options?: { subjectKind?: 'property' | 'provider' | 'project'; subjectName?: string }) => {
     const willSave = !savedIds.includes(id);
-    setSavedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-    if (engagementClientId && (options?.listing || listings.some((listing) => listing.id === id))) {
-      recordListingEngagement(id, { action: 'save', clientId: engagementClientId, active: willSave }).catch(() => undefined);
+    setSavedIdsByAccount((current) => {
+      const accountSaved = current[savedAccountKey] ?? [];
+      return {
+        ...current,
+        [savedAccountKey]: accountSaved.includes(id) ? accountSaved.filter((item) => item !== id) : [...accountSaved, id],
+      };
+    });
+    const listing = listings.find((item) => item.id === id);
+    const subjectKind = options?.subjectKind ?? (listing ? 'property' : 'provider');
+    if (engagementClientId) {
+      const send = async () => {
+        let lastError: unknown;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            await recordListingEngagement(id, {
+              action: 'save',
+              clientId: engagementClientId,
+              active: willSave,
+              subjectKind,
+            });
+            return;
+          } catch (error) {
+            lastError = error;
+            if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+          }
+        }
+        throw lastError;
+      };
+      send().catch(() => {
+        Alert.alert(
+          locale === 'ar' ? 'تعذر تحديث الحفظ' : 'Could not update saved item',
+          locale === 'ar' ? 'تم حفظ اختيارك على هذا الجهاز، لكن تعذر إبلاغ صاحب الإعلان.' : 'Your choice was saved on this device, but the advertiser could not be notified.',
+        );
+      });
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
   };
@@ -201,7 +255,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const removeProvider = (id: string) => {
     setManagedProviders((current) => current.filter((provider) => provider.id !== id));
-    setSavedIds((current) => current.filter((savedId) => savedId !== id));
+    setSavedIdsByAccount((current) => ({
+      ...current,
+      [savedAccountKey]: (current[savedAccountKey] ?? []).filter((savedId) => savedId !== id),
+    }));
   };
 
   const value = useMemo<AppContextValue>(
@@ -225,7 +282,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateProvider,
       removeProvider,
     }),
-     [locale, location, locationLoading, savedIds, engagementClientId, activeService, managedProviders, preferencesLoaded],
+     [locale, location, locationLoading, savedIds, savedAccountKey, engagementClientId, activeService, managedProviders, preferencesLoaded],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

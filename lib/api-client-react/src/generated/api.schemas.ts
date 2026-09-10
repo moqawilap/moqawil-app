@@ -80,8 +80,9 @@ export type AdminContractor = Contractor & ({
   adminRating?: number | null;
   /** @nullable */
   agreedContractAmountOmaniRial?: number | null;
+  isWorkshop: boolean;
   isDesigner: boolean;
-  isMaintenance?: boolean;
+  isMaintenance: boolean;
   serviceNames: string[];
   accountLinkStatus: AdminContractorAccountLinkStatus;
 });
@@ -233,6 +234,40 @@ export interface Payment {
   createdAt: string;
 }
 
+export type AdEngagementMetadataEventType = typeof AdEngagementMetadataEventType[keyof typeof AdEngagementMetadataEventType];
+
+
+export const AdEngagementMetadataEventType = {
+  ad_engagement: 'ad_engagement',
+} as const;
+
+export type AdEngagementMetadataAction = typeof AdEngagementMetadataAction[keyof typeof AdEngagementMetadataAction];
+
+
+export const AdEngagementMetadataAction = {
+  like: 'like',
+  save: 'save',
+  call: 'call',
+  whatsapp: 'whatsapp',
+} as const;
+
+export type AdEngagementMetadataSubjectKind = typeof AdEngagementMetadataSubjectKind[keyof typeof AdEngagementMetadataSubjectKind];
+
+
+export const AdEngagementMetadataSubjectKind = {
+  property: 'property',
+  provider: 'provider',
+  project: 'project',
+} as const;
+
+export interface AdEngagementMetadata {
+  eventType: AdEngagementMetadataEventType;
+  action: AdEngagementMetadataAction;
+  subjectId: string;
+  subjectKind: AdEngagementMetadataSubjectKind;
+  subjectName: string;
+}
+
 export type NotificationChannel = typeof NotificationChannel[keyof typeof NotificationChannel];
 
 
@@ -252,7 +287,7 @@ export const NotificationDeliveryStatus = {
   failed: 'failed',
 } as const;
 
-export type NotificationDeliveryMetadata = { [key: string]: unknown };
+export type NotificationDeliveryMetadata = AdEngagementMetadata | { [key: string]: unknown };
 
 export interface Notification {
   id: string;
@@ -487,6 +522,7 @@ export interface AdminContractorUpdate {
   agreedContractAmountOmaniRial?: number | null;
   isVerified?: boolean;
   isPublished?: boolean;
+  isWorkshop?: boolean;
   isDesigner?: boolean;
   isMaintenance?: boolean;
   /**
@@ -1496,6 +1532,15 @@ export const ListingEngagementInputAction = {
   contact: 'contact',
 } as const;
 
+export type ListingEngagementInputSubjectKind = typeof ListingEngagementInputSubjectKind[keyof typeof ListingEngagementInputSubjectKind];
+
+
+export const ListingEngagementInputSubjectKind = {
+  property: 'property',
+  provider: 'provider',
+  project: 'project',
+} as const;
+
 export interface ListingEngagementInput {
   action: ListingEngagementInputAction;
   /**
@@ -1504,6 +1549,7 @@ export interface ListingEngagementInput {
      */
   clientId: string;
   active?: boolean;
+  subjectKind?: ListingEngagementInputSubjectKind;
 }
 
 export type ContactEventInputCategory = typeof ContactEventInputCategory[keyof typeof ContactEventInputCategory];
@@ -1525,14 +1571,29 @@ export const ContactEventInputChannel = {
   whatsapp: 'whatsapp',
 } as const;
 
+export type ContactEventInputSubjectKind = typeof ContactEventInputSubjectKind[keyof typeof ContactEventInputSubjectKind];
+
+
+export const ContactEventInputSubjectKind = {
+  property: 'property',
+  provider: 'provider',
+  project: 'project',
+} as const;
+
 export interface ContactEventInput {
   category: ContactEventInputCategory;
   channel: ContactEventInputChannel;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  eventId?: string;
   /**
      * @minLength 1
      * @maxLength 100
      */
   subjectId: string;
+  subjectKind?: ContactEventInputSubjectKind;
   /**
      * @minLength 1
      * @maxLength 200

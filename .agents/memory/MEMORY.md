@@ -10,3 +10,5 @@
 - [Property location hierarchy](property-location-hierarchy.md) — property ads use one exact governorate–wilayat–area path, never the multi-wilayat service coverage selector.
 - [Resend test sender restrictions](resend-test-sender-restrictions.md) — onboarding sender can deliver only to the connected Resend account owner until an official domain is verified.
 - [Safe admin configuration](safe-admin-configuration.md) — admin customization uses typed, validated settings and fixed UI building blocks, never arbitrary code or page structures.
+- [Legacy property ownership](legacy-property-ownership.md) — old published properties have no reliable registration link; never infer notification recipients from copied listing fields.
+- [Expo web confirmations](expo-web-confirmations.md) — React Native Alert button callbacks cannot be relied on in web previews; critical actions need a web-compatible path.

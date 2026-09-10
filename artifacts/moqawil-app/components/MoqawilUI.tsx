@@ -1,8 +1,11 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '@clerk/expo';
 import React from 'react';
 import {
   Image,
   ImageSourcePropType,
+  Alert,
+  GestureResponderEvent,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -204,7 +207,7 @@ export function ProviderCard({
           </View>
         </View>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved' : 'Save provider'} onPress={onSave} hitSlop={8} style={({ pressed }) => [styles.providerSave, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved' : 'Save provider'} onPress={(event) => { event.stopPropagation(); onSave(); }} hitSlop={8} style={({ pressed }) => [styles.providerSave, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
         <Feather name="heart" size={16} color={saved ? '#111111' : colors.mutedForeground} fill={saved ? '#111111' : 'transparent'} />
       </Pressable>
     </Pressable>
@@ -266,26 +269,49 @@ function EngagementStat({ icon, value, label, compact = false }: { icon: keyof t
 export function ListingEngagementMetrics({ listingId, saved = false, onSave, compact = false, trackView = false }: { listingId: string; saved?: boolean; onSave?: () => void; compact?: boolean; trackView?: boolean }) {
   const colors = useColors();
   const { isArabic, engagementClientId } = useApp();
+  const { userId } = useAuth();
   const queryClient = useQueryClient();
+  const engagementAccountKey = userId ? `user:${userId}` : `device:${engagementClientId ?? 'loading'}`;
+  const currentEngagementAccount = React.useRef(engagementAccountKey);
+  currentEngagementAccount.current = engagementAccountKey;
   const params = engagementClientId ? { clientId: engagementClientId } : undefined;
-  const query = useGetListingEngagement(listingId, params, { query: { queryKey: getGetListingEngagementQueryKey(listingId, params), enabled: Boolean(engagementClientId) } });
+  const queryKey = [...getGetListingEngagementQueryKey(listingId, params), engagementAccountKey];
+  const query = useGetListingEngagement(listingId, params, { query: { queryKey, enabled: Boolean(engagementClientId) } });
+  React.useEffect(() => {
+    queryClient.removeQueries({
+      predicate: (candidate) => typeof candidate.queryKey[0] === 'string'
+        && candidate.queryKey[0].includes('/engagement')
+        && candidate.queryKey[candidate.queryKey.length - 1] !== engagementAccountKey,
+    });
+  }, [engagementAccountKey, queryClient]);
   const record = useRecordListingEngagement({
     mutation: {
+      retry: 2,
       onSuccess: (next) => {
-        queryClient.setQueryData(getGetListingEngagementQueryKey(listingId, params), next);
+        if (currentEngagementAccount.current !== engagementAccountKey) {
+          queryClient.removeQueries({ queryKey, exact: true });
+          return;
+        }
+        queryClient.setQueryData(queryKey, next);
         queryClient.invalidateQueries({ queryKey: ['/api/listings/engagement'] });
       },
+      onError: () => Alert.alert(
+        isArabic ? 'تعذر تحديث التفاعل' : 'Could not update engagement',
+        isArabic ? 'تحقق من الاتصال ثم حاول مرة أخرى.' : 'Check your connection and try again.',
+      ),
     },
   });
-  const viewed = React.useRef(false);
+  const viewedIdentity = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (!trackView || !engagementClientId || viewed.current) return;
-    viewed.current = true;
-    record.mutate({ listingId, data: { action: 'view', clientId: engagementClientId } });
-  }, [engagementClientId, listingId, trackView]);
+    const identity = `${engagementAccountKey}:${listingId}`;
+    if (!trackView || !engagementClientId || viewedIdentity.current === identity) return;
+    viewedIdentity.current = identity;
+    record.mutate({ listingId, data: { action: 'view', clientId: engagementClientId, subjectKind: 'property' } });
+  }, [engagementAccountKey, engagementClientId, listingId, trackView]);
 
   const data = query.data;
-  const submit = (action: 'like' | 'save', active: boolean) => {
+  const submit = (event: GestureResponderEvent, action: 'like' | 'save', active: boolean) => {
+    event.stopPropagation();
     if (!engagementClientId || record.isPending) return;
     record.mutate({ listingId, data: { action, clientId: engagementClientId, active } });
   };
@@ -299,12 +325,12 @@ export function ListingEngagementMetrics({ listingId, saved = false, onSave, com
         <EngagementStat icon="phone" value={data?.contacts ?? 0} label={isArabic ? 'تواصل' : 'Contacts'} compact={compact} />
       </View>
       <View style={[styles.engagementActions, compact && styles.engagementActionsCompact]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={liked ? (isArabic ? 'إلغاء الإعجاب' : 'Unlike listing') : (isArabic ? 'أعجبني الإعلان' : 'Like listing')} onPress={() => submit('like', !liked)} style={({ pressed }) => [styles.engagementAction, { backgroundColor: liked ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={liked ? (isArabic ? 'إلغاء الإعجاب' : 'Unlike listing') : (isArabic ? 'أعجبني الإعلان' : 'Like listing')} disabled={!engagementClientId || record.isPending} onPress={(event) => submit(event, 'like', !liked)} style={({ pressed }) => [styles.engagementAction, { backgroundColor: liked ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
           <MaterialCommunityIcons name={liked ? 'heart' : 'heart-outline'} size={compact ? 14 : 17} color={liked ? colors.primary : colors.mutedForeground} />
           <Text style={[styles.engagementActionText, { color: liked ? colors.primary : colors.mutedForeground }]}>{isArabic ? 'أعجبني' : 'Like'}</Text>
         </Pressable>
         {onSave ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={saved ? (isArabic ? 'إزالة الإعلان من المحفوظات' : 'Remove listing from saved') : (isArabic ? 'حفظ الإعلان' : 'Save listing')} onPress={() => { onSave(); submit('save', !saved); }} style={({ pressed }) => [styles.engagementAction, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={saved ? (isArabic ? 'إزالة الإعلان من المحفوظات' : 'Remove listing from saved') : (isArabic ? 'حفظ الإعلان' : 'Save listing')} onPress={(event) => { event.stopPropagation(); onSave(); }} style={({ pressed }) => [styles.engagementAction, { backgroundColor: saved ? colors.primarySoft : colors.surfaceMuted }, pressed && styles.pressed]}>
             <Feather name="bookmark" size={compact ? 13 : 15} color={saved ? colors.primary : colors.mutedForeground} fill={saved ? colors.primary : 'transparent'} />
             <Text style={[styles.engagementActionText, { color: saved ? colors.primary : colors.mutedForeground }]}>{isArabic ? 'حفظ' : 'Save'}</Text>
           </Pressable>
@@ -334,6 +360,7 @@ export function ActionButton({
   secondary = false,
   style,
   testID,
+  disabled = false,
 }: {
   label: string;
   icon?: keyof typeof Feather.glyphMap;
@@ -341,13 +368,15 @@ export function ActionButton({
   secondary?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  disabled?: boolean;
 }) {
   const colors = useColors();
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [
       styles.actionButton,
       { backgroundColor: secondary ? colors.surface : colors.primary, borderColor: secondary ? colors.border : colors.primary },
       pressed && styles.pressed,
+      disabled && styles.disabled,
       style,
     ]}>
       {icon ? <Feather name={icon} size={16} color={secondary ? colors.foreground : colors.primaryForeground} /> : null}
@@ -393,6 +422,7 @@ export const styles = StyleSheet.create({
   iconButton: { width: 44, height: 44, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   fixedBackButton: { position: 'absolute', zIndex: 30, width: 44, height: 44, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center', elevation: 8 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
+  disabled: { opacity: 0.55 },
   cardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   searchBar: { height: 56, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, gap: 11, shadowColor: '#08284A', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   searchIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

@@ -7,15 +7,22 @@
  */
 import type { ContactEventInputCategory } from './contactEventInputCategory';
 import type { ContactEventInputChannel } from './contactEventInputChannel';
+import type { ContactEventInputSubjectKind } from './contactEventInputSubjectKind';
 
 export interface ContactEventInput {
   category: ContactEventInputCategory;
   channel: ContactEventInputChannel;
   /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  eventId?: string;
+  /**
      * @minLength 1
      * @maxLength 100
      */
   subjectId: string;
+  subjectKind?: ContactEventInputSubjectKind;
   /**
      * @minLength 1
      * @maxLength 200

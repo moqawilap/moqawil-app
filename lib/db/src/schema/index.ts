@@ -324,6 +324,8 @@ export const listingEngagementActions = pgTable("listing_engagement_actions", {
 
 export const marketplaceListings = pgTable("marketplace_listings", {
   id: varchar("id", { length: 100 }).primaryKey(),
+  ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
+  sourceRegistrationId: uuid("source_registration_id").references(() => serviceRegistrations.id, { onDelete: "set null" }),
   title: varchar("title", { length: 200 }).notNull(),
   titleArabic: varchar("title_arabic", { length: 200 }).notNull(),
   type: marketplaceListingTypeEnum("type").notNull().default("sale"),
@@ -341,6 +343,35 @@ export const marketplaceListings = pgTable("marketplace_listings", {
   ...timestamps,
 }, (table) => [
   index("marketplace_listings_published_idx").on(table.isPublished, table.createdAt),
+  index("marketplace_listings_owner_idx").on(table.ownerUserId),
+  uniqueIndex("marketplace_listings_source_registration_idx").on(table.sourceRegistrationId),
+]);
+
+export const contactEventReceipts = pgTable("contact_event_receipts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: varchar("event_id", { length: 128 }).notNull(),
+  actorUserId: uuid("actor_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subjectKind: varchar("subject_kind", { length: 20 }).notNull(),
+  subjectId: varchar("subject_id", { length: 100 }).notNull(),
+  channel: varchar("channel", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("contact_event_receipts_actor_event_idx").on(table.actorUserId, table.eventId),
+  index("contact_event_receipts_subject_idx").on(table.subjectKind, table.subjectId, table.createdAt),
+]);
+
+// Durable activation history; current like/save state remains in listingEngagementActions.
+export const adEngagementEventReceipts = pgTable("ad_engagement_event_receipts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: varchar("event_id", { length: 128 }).notNull().unique(),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  subjectKind: varchar("subject_kind", { length: 20 }).notNull(),
+  subjectId: varchar("subject_id", { length: 100 }).notNull(),
+  action: varchar("action", { length: 20 }).notNull(),
+  active: boolean("active").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("ad_engagement_event_receipts_subject_idx").on(table.subjectKind, table.subjectId, table.createdAt),
 ]);
 
 export const marketplaceRatings = pgTable("marketplace_ratings", {

@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getGetMySubscriptionQueryKey, getListMyPaymentsQueryKey, useCancelMySubscription, useGetMySubscription, useListMyPayments, useStartDevelopmentPayment } from '@workspace/api-client-react';
+import { getGetMySubscriptionQueryKey, getListMyPaymentsQueryKey, useCancelMySubscription, useGetMySubscription, useListMyPayments } from '@workspace/api-client-react';
 
 const dateText = (date?: string | null) => date ? new Date(date).toLocaleDateString() : '—';
 const billingLabel = (months: number, isArabic: boolean) => months === 12 ? (isArabic ? 'سنة' : 'year') : `${months} ${isArabic ? 'شهرًا' : months === 1 ? 'month' : 'months'}`;
@@ -16,7 +16,6 @@ export default function SubscriptionScreen() {
   const colors = useColors(); const insets = useSafeAreaInsets(); const { isArabic } = useApp(); const { isSignedIn } = useAuth();
   const subscription = useGetMySubscription({ query: { queryKey: getGetMySubscriptionQueryKey(), enabled: !!isSignedIn } }); const client = useQueryClient();
   const payments = useListMyPayments({ query: { queryKey: getListMyPaymentsQueryKey(), enabled: !!isSignedIn } });
-  const payment = useStartDevelopmentPayment({ mutation: { onSuccess: () => { client.invalidateQueries({ queryKey: getGetMySubscriptionQueryKey() }); client.invalidateQueries({ queryKey: getListMyPaymentsQueryKey() }); } } });
   const cancel = useCancelMySubscription({ mutation: { onSuccess: () => { client.invalidateQueries({ queryKey: getGetMySubscriptionQueryKey() }); client.invalidateQueries({ queryKey: getListMyPaymentsQueryKey() }); } } });
   const item = subscription.data;
   const trialDays = item ? Math.max(0, Math.ceil((new Date(item.trialEndsAt).getTime() - Date.now()) / 86400000)) : 0;
@@ -39,8 +38,7 @@ export default function SubscriptionScreen() {
     <Text style={[styles.status, { color: colors.foreground }]}>{isArabic ? 'سجل المدفوعات' : 'Payment history'}</Text>
     {payments.isLoading ? <ActivityIndicator testID="payments-loading" color={colors.primary} /> : null}
     {payments.data?.length ? payments.data.map((record) => <View testID={`payment-record-${record.id}`} key={record.id} style={[styles.payment, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>{record.amountOmaniRial} OMR · {record.status}</Text><Text style={[styles.note, { color: colors.mutedForeground }]}>{record.provider}{record.providerReference ? ` · ${record.providerReference}` : ''} · {dateText(record.createdAt)}</Text></View>) : <Text testID="payments-empty" style={[styles.note, { color: colors.mutedForeground }]}>{isArabic ? 'لا توجد مدفوعات مسجلة.' : 'No payments recorded.'}</Text>}
-    <Text style={[styles.note, { color: colors.mutedForeground }]}>Payments are handled securely outside this app. No real payment is collected here.</Text>
-    {__DEV__ ? <View testID="development-payment"><ActionButton label={payment.isPending ? 'Processing…' : 'Development-only: simulate successful payment'} icon="tool" onPress={() => payment.mutate({ data: { outcome: 'succeed' } })} /></View> : null}
+    <Text style={[styles.note, { color: colors.mutedForeground }]}>{isArabic ? 'تتم معالجة المدفوعات بأمان خارج هذا التطبيق، ولا يتم تحصيل دفعة حقيقية هنا.' : 'Payments are handled securely outside this app. No real payment is collected here.'}</Text>
     {item && item.status !== 'cancelled' ? <View testID="manage-subscription"><ActionButton label={cancel.isPending ? 'Cancelling…' : (isArabic ? 'إلغاء الاشتراك' : 'Cancel subscription')} secondary onPress={confirmCancellation} style={{ marginTop: 10 }} /></View> : null}
     </React.Fragment> : null}</View></ScrollView></View>;
 }

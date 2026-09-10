@@ -75,6 +75,7 @@ export interface AdminContractorUpdate {
   agreedContractAmountOmaniRial?: number | null;
   isVerified?: boolean;
   isPublished?: boolean;
+  isWorkshop?: boolean;
   isDesigner?: boolean;
   isMaintenance?: boolean;
   /**

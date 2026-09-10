@@ -266,7 +266,8 @@ export const recordListingEngagementBodyClientIdMax = 128;
 export const RecordListingEngagementBody = zod.object({
   "action": zod.enum(['view', 'like', 'save', 'contact']),
   "clientId": zod.string().min(recordListingEngagementBodyClientIdMin).max(recordListingEngagementBodyClientIdMax),
-  "active": zod.boolean().optional()
+  "active": zod.boolean().optional(),
+  "subjectKind": zod.enum(['property', 'provider', 'project']).optional()
 })
 
 export const recordListingEngagementResponseLikesMin = 0;
@@ -287,6 +288,9 @@ export const RecordListingEngagementResponse = zod.object({
 })
 
 
+export const recordContactEventBodyEventIdMin = 8;
+export const recordContactEventBodyEventIdMax = 128;
+
 export const recordContactEventBodySubjectIdMax = 100;
 
 export const recordContactEventBodySubjectNameMax = 200;
@@ -296,7 +300,9 @@ export const recordContactEventBodySubjectNameMax = 200;
 export const RecordContactEventBody = zod.object({
   "category": zod.enum(['property', 'workshop', 'design', 'maintenance', 'contractor']),
   "channel": zod.enum(['call', 'whatsapp']),
+  "eventId": zod.string().min(recordContactEventBodyEventIdMin).max(recordContactEventBodyEventIdMax).optional(),
   "subjectId": zod.string().min(1).max(recordContactEventBodySubjectIdMax),
+  "subjectKind": zod.enum(['property', 'provider', 'project']).optional(),
   "subjectName": zod.string().min(1).max(recordContactEventBodySubjectNameMax)
 })
 
@@ -1630,7 +1636,13 @@ export const ListMyNotificationsResponseItem = zod.object({
   "type": zod.string(),
   "channel": zod.enum(['in_app', 'email', 'push']),
   "deliveryStatus": zod.enum(['pending', 'sent', 'delivered', 'failed']),
-  "deliveryMetadata": zod.record(zod.string(), zod.unknown()),
+  "deliveryMetadata": zod.union([zod.object({
+  "eventType": zod.enum(['ad_engagement']),
+  "action": zod.enum(['like', 'save', 'call', 'whatsapp']),
+  "subjectId": zod.string(),
+  "subjectKind": zod.enum(['property', 'provider', 'project']),
+  "subjectName": zod.string()
+}),zod.record(zod.string(), zod.unknown())]),
   "title": zod.string(),
   "body": zod.string(),
   "readAt": zod.coerce.date().nullish(),
@@ -1854,8 +1866,9 @@ export const ListAdminContractorsResponseItem = zod.object({
   "evaluationNotes": zod.string().nullish(),
   "adminRating": zod.number().nullish(),
   "agreedContractAmountOmaniRial": zod.number().nullish(),
+  "isWorkshop": zod.boolean(),
   "isDesigner": zod.boolean(),
-  "isMaintenance": zod.boolean().optional(),
+  "isMaintenance": zod.boolean(),
   "serviceNames": zod.array(zod.string()),
   "accountLinkStatus": zod.enum(['linked_clerk', 'managed_unlinked'])
 }))
@@ -1953,8 +1966,9 @@ export const CreateAdminContractorResponse = zod.object({
   "evaluationNotes": zod.string().nullish(),
   "adminRating": zod.number().nullish(),
   "agreedContractAmountOmaniRial": zod.number().nullish(),
+  "isWorkshop": zod.boolean(),
   "isDesigner": zod.boolean(),
-  "isMaintenance": zod.boolean().optional(),
+  "isMaintenance": zod.boolean(),
   "serviceNames": zod.array(zod.string()),
   "accountLinkStatus": zod.enum(['linked_clerk', 'managed_unlinked'])
 }))
@@ -2276,6 +2290,7 @@ export const UpdateAdminContractorBody = zod.object({
   "agreedContractAmountOmaniRial": zod.number().min(updateAdminContractorBodyAgreedContractAmountOmaniRialMin).nullish(),
   "isVerified": zod.boolean().optional(),
   "isPublished": zod.boolean().optional(),
+  "isWorkshop": zod.boolean().optional(),
   "isDesigner": zod.boolean().optional(),
   "isMaintenance": zod.boolean().optional(),
   "serviceNames": zod.array(zod.string().min(updateAdminContractorBodyServiceNamesItemMin).max(updateAdminContractorBodyServiceNamesItemMax)).max(updateAdminContractorBodyServiceNamesMax).optional()
@@ -2313,8 +2328,9 @@ export const UpdateAdminContractorResponse = zod.object({
   "evaluationNotes": zod.string().nullish(),
   "adminRating": zod.number().nullish(),
   "agreedContractAmountOmaniRial": zod.number().nullish(),
+  "isWorkshop": zod.boolean(),
   "isDesigner": zod.boolean(),
-  "isMaintenance": zod.boolean().optional(),
+  "isMaintenance": zod.boolean(),
   "serviceNames": zod.array(zod.string()),
   "accountLinkStatus": zod.enum(['linked_clerk', 'managed_unlinked'])
 }))

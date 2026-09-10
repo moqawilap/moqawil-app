@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader, ServiceIcon } from '@/components/MoqawilUI';
 import { SubscriptionPlanSelector, type SubscriptionPlanCode } from '@/components/SubscriptionPlanSelector';
@@ -207,11 +207,14 @@ export default function ServiceRegistrationScreen() {
   const toggleWilayat = (name: string) => setServiceWilayats((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
 
   const createRegistration = useCreateMyServiceRegistration({ mutation: {
-    onSuccess: () => Alert.alert(
-      isArabic ? 'تم إرسال التسجيل' : 'Registration submitted',
-      isArabic ? 'تم حفظ طلبك وسيظهر بعد مراجعة الإدارة.' : 'Your registration was saved and will appear after administrator review.',
-      [{ text: isArabic ? 'حسنًا' : 'OK', onPress: () => router.back() }],
-    ),
+    onSuccess: () => {
+      Alert.alert(
+        isArabic ? 'تم إرسال التسجيل' : 'Registration submitted',
+        isArabic ? 'تم حفظ طلبك وسيظهر بعد مراجعة الإدارة.' : 'Your registration was saved and will appear after administrator review.',
+        Platform.OS === 'web' ? undefined : [{ text: isArabic ? 'حسنًا' : 'OK', onPress: () => router.back() }],
+      );
+      if (Platform.OS === 'web') router.back();
+    },
     onError: () => Alert.alert(isArabic ? 'تعذر إرسال التسجيل' : 'Could not submit registration', isArabic ? 'تحقق من البيانات والوسائط وحاول مرة أخرى.' : 'Check the details and media, then try again.'),
   } });
 
@@ -363,7 +366,7 @@ export default function ServiceRegistrationScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="registration-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط التسجيل والنشر' : 'I agree to the registration and publishing terms'}</Text></Pressable>
           </View>
-             <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأدخل رقمًا عُمانيًا صحيحًا من 8 أرقام، وأرفق السجل التجاري PDF (ما عدا الصيانة)، ثم وافق على الشروط.' : 'Complete all fields, enter a valid 8-digit Oman phone number, attach the commercial registration PDF (except maintenance), and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, phone: `+968${normalizedPhone}`, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf: category === 'maintenance' ? null : commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} />
+              <ActionButton label={createRegistration.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال للمراجعة' : 'Submit for review')} onPress={() => { if (createRegistration.isPending) return; if (!valid || (!isProperty && !primaryLocation)) { Alert.alert(isArabic ? 'أكمل البيانات' : 'Complete the details', isArabic ? 'أكمل جميع الاختيارات والحقول، وأدخل رقمًا عُمانيًا صحيحًا من 8 أرقام، وأرفق السجل التجاري PDF (ما عدا الصيانة)، ثم وافق على الشروط.' : 'Complete all fields, enter a valid 8-digit Oman phone number, attach the commercial registration PDF (except maintenance), and accept the terms.'); return; } createRegistration.mutate({ data: { category, title: form.title.trim(), specialty: isProperty ? propertyType : form.specialty.trim(), city: isProperty ? propertyGovernorate : primaryLocation!.governorate, phone: `+968${normalizedPhone}`, serviceWilayats: isProperty ? [propertyWilayat] : serviceWilayats, servesAllGovernorates: isProperty ? false : servesAllGovernorates, deliveryAvailable: isProperty ? false : deliveryAvailable, propertyDetails: isProperty ? { governorate: propertyGovernorate, wilayat: propertyWilayat, area: finalPropertyArea, listingType, propertyType, sizeSquareMeters: Number(propertySize), ...propertyCounts } : null, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf: category === 'maintenance' ? null : commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as SubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} />
         </View>
       </ScrollView>
       <Modal visible={activeCount !== null} transparent animationType="fade" onRequestClose={() => setActiveCount(null)}>

@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, BrandMark, FixedBackButton, IconButton, ListingEngagementMetrics, PropertyCard, Rating, StarRatingInput } from '@/components/MoqawilUI';
 import { listings, marketplaceListingToLocal, mergeMarketplaceListings } from '@/data/mockData';
@@ -23,15 +24,17 @@ export default function ListingDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isSignedIn } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isArabic, isSaved, toggleSaved, engagementClientId } = useApp();
   const localListing = listings.find((item) => item.id === id);
   const liveListing = useGetListing(id ?? '', { query: { queryKey: getGetListingQueryKey(id ?? ''), enabled: Boolean(id && !localListing) } });
   const allListings = useListListings({ query: { queryKey: getListListingsQueryKey() } });
   const persistedRating = useGetListingRating(id ?? '', { query: { queryKey: getGetListingRatingQueryKey(id ?? ''), enabled: Boolean(id) } });
-  const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : (localListing ?? listings[0]);
-  const gallery = listing.imageUrls?.length ? listing.imageUrls : [listing.image];
+  const listing = liveListing.data ? marketplaceListingToLocal(liveListing.data) : localListing;
+  const gallery = listing?.imageUrls?.length ? listing.imageUrls : listing ? [listing.image] : [];
   const relatedListings = React.useMemo(() => {
+    if (!listing) return [];
     const currentLocation = listing.location.toLowerCase();
     return mergeMarketplaceListings(allListings.data)
       .filter((item) => item.id !== listing.id)
@@ -43,19 +46,45 @@ export default function ListingDetail() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 4)
       .map(({ item }) => item);
-  }, [allListings.data, listing.id, listing.location, listing.type]);
+  }, [allListings.data, listing]);
   const contact = useRecordListingEngagement();
-  const contactEvent = useRecordContactEvent();
+  const contactEvent = useRecordContactEvent({ mutation: { retry: 2, onError: () => Alert.alert(isArabic ? 'تعذر تسجيل التواصل' : 'Could not record contact', isArabic ? 'تم فتح وسيلة التواصل، لكن تعذر إشعار صاحب الإعلان.' : 'The contact app was opened, but the advertiser could not be notified.') } });
   const [selectedRating, setSelectedRating] = React.useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
   const rate = useRateListing({ mutation: { onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: getGetListingQueryKey(listing.id) });
-    queryClient.invalidateQueries({ queryKey: getGetListingRatingQueryKey(listing.id) });
+    if (listing) queryClient.invalidateQueries({ queryKey: getGetListingQueryKey(listing.id) });
+    if (listing) queryClient.invalidateQueries({ queryKey: getGetListingRatingQueryKey(listing.id) });
     queryClient.invalidateQueries({ queryKey: getListListingsQueryKey() });
   } } });
+  if (!listing) {
+    return <View style={[styles.container, styles.unavailable, { backgroundColor: colors.background }]}>{liveListing.isLoading ? <><ActivityIndicator color={colors.primary} /><Text style={{ color: colors.mutedForeground }}>{isArabic ? 'جارٍ تحميل الإعلان…' : 'Loading listing…'}</Text></> : liveListing.isError ? <><Feather name="alert-circle" size={28} color={colors.primary} /><Text style={[styles.unavailableTitle, { color: colors.foreground }]}>{isArabic ? 'تعذر تحميل الإعلان' : 'Could not load listing'}</Text><Text style={[styles.unavailableText, { color: colors.mutedForeground }]}>{isArabic ? 'تحقق من الاتصال ثم حاول مرة أخرى.' : 'Check your connection and try again.'}</Text><ActionButton testID="listing-retry" label={isArabic ? 'إعادة المحاولة' : 'Retry'} icon="refresh-cw" onPress={() => void liveListing.refetch()} /><ActionButton label={isArabic ? 'رجوع' : 'Go back'} secondary onPress={() => router.back()} /></> : <><Text style={[styles.unavailableTitle, { color: colors.foreground }]}>{isArabic ? 'الإعلان غير متوفر.' : 'Listing unavailable.'}</Text><ActionButton label={isArabic ? 'رجوع' : 'Go back'} secondary onPress={() => router.back()} /></>}</View>;
+  }
+  const promptSignIn = (message: string) => {
+    const title = isArabic ? 'سجّل الدخول للمتابعة' : 'Sign in to continue';
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`${title}\n\n${message}`)) router.push('/sign-in');
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: isArabic ? 'إلغاء' : 'Cancel', style: 'cancel' },
+      { text: isArabic ? 'تسجيل الدخول' : 'Sign in', onPress: () => router.push('/sign-in') },
+    ]);
+  };
   const submitRating = (value: number) => {
-    setSelectedRating(value);
-    rate.mutate({ listingId: listing.id, data: { rating: value } });
+    if (!isSignedIn) {
+      promptSignIn(isArabic ? 'يلزم تسجيل الدخول لتقييم هذا العقار.' : 'Sign in before rating this property.');
+      return;
+    }
+    rate.mutate(
+      { listingId: listing.id, data: { rating: value } },
+      {
+        onSuccess: () => setSelectedRating(value),
+        onError: () => Alert.alert(
+          isArabic ? 'تعذر إرسال التقييم' : 'Could not submit rating',
+          isArabic ? 'لم يتم حفظ تقييمك. تحقق من الاتصال ثم حاول مرة أخرى.' : 'Your rating was not saved. Check your connection and try again.',
+        ),
+      },
+    );
   };
   const recordContact = (channel: 'call' | 'whatsapp') => {
     if (engagementClientId) {
@@ -64,22 +93,38 @@ export default function ListingDetail() {
     contactEvent.mutate({ data: {
       category: 'property',
       channel,
+      eventId: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}-${listing.id}`,
       subjectId: listing.id,
+      subjectKind: 'property',
       subjectName: isArabic ? listing.titleAr : listing.title,
     } });
   };
+  const requireContactSignIn = () => {
+    if (isSignedIn) return false;
+    promptSignIn(isArabic ? 'يلزم تسجيل الدخول للاتصال بصاحب الإعلان أو مراسلته.' : 'Sign in before calling or messaging the advertiser.');
+    return true;
+  };
+  const openContactUrl = async (url: string, channel: 'call' | 'whatsapp') => {
+    try {
+      await Linking.openURL(url);
+      recordContact(channel);
+    } catch {
+      Alert.alert(
+        isArabic ? 'تعذر فتح وسيلة التواصل' : 'Could not open contact app',
+        isArabic ? 'تحقق من توفر تطبيق مناسب على جهازك ثم حاول مرة أخرى.' : 'Check that a suitable app is available on your device, then try again.',
+      );
+    }
+  };
   const openContact = () => {
-    const phone = listing.phone ?? '+96877224535';
-    recordContact('call');
-    void Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+    if (!listing.phone?.trim() || requireContactSignIn()) return;
+    void openContactUrl(`tel:${listing.phone.replace(/\s/g, '')}`, 'call');
   };
   const openWhatsApp = () => {
-    const phone = listing.phone ?? '+96877224535';
+    if (!listing.phone?.trim() || requireContactSignIn()) return;
     const message = getContactMessage('property', isArabic ? listing.titleAr : listing.title, isArabic, getListingUrl(listing.id));
-    const url = getWhatsAppUrl(phone, message);
+    const url = getWhatsAppUrl(listing.phone, message);
     if (!url) return;
-    recordContact('whatsapp');
-    void Linking.openURL(url);
+    void openContactUrl(url, 'whatsapp');
   };
 
   return (
@@ -89,7 +134,7 @@ export default function ListingDetail() {
         <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
           <View style={{ width: 44 }} />
           <BrandMark compact />
-          <IconButton icon="bookmark" active={isSaved(listing.id)} onPress={() => toggleSaved(listing.id, { listing: true })} accessibilityLabel={isArabic ? 'حفظ الإعلان' : 'Save property'} />
+          <IconButton icon="bookmark" active={isSaved(listing.id)} onPress={() => toggleSaved(listing.id, { subjectKind: 'property', subjectName: isArabic ? listing.titleAr : listing.title })} accessibilityLabel={isArabic ? 'حفظ الإعلان' : 'Save property'} />
         </View>
         <View style={styles.heroWrap}>
            <Image source={gallery[selectedImageIndex] ?? gallery[0]} style={styles.heroImage} />
@@ -127,7 +172,7 @@ export default function ListingDetail() {
               <View key={label} style={styles.spec}><Text style={[styles.specValue, { color: colors.foreground }]}>{value}</Text><Text style={[styles.specLabel, { color: colors.mutedForeground }]}>{label}</Text></View>
             ))}
           </View>
-          <ListingEngagementMetrics listingId={listing.id} saved={isSaved(listing.id)} onSave={() => toggleSaved(listing.id, { listing: true })} trackView />
+          <ListingEngagementMetrics listingId={listing.id} saved={isSaved(listing.id)} onSave={() => toggleSaved(listing.id, { subjectKind: 'property', subjectName: isArabic ? listing.titleAr : listing.title })} trackView />
            <Text style={[styles.sectionLabel, { color: colors.foreground }]}>{isArabic ? 'تفاصيل الإعلان' : 'Listing details'}</Text>
            <Text style={[styles.description, { color: colors.mutedForeground }]}>{isArabic ? 'اطّلع على تفاصيل العقار، وتواصل مع المعلن مباشرة لترتيب موعد للمعاينة.' : 'Review the property details and contact the advertiser directly to arrange a viewing.'}</Text>
           <View style={[styles.tip, { backgroundColor: colors.primarySoft }]}>
@@ -145,7 +190,7 @@ export default function ListingDetail() {
                    listing={{ ...related, title: isArabic ? related.titleAr : related.title, location: isArabic ? related.locationAr : related.location, type: isArabic ? related.typeAr : related.type }}
                    saved={isSaved(related.id)}
                    onPress={() => router.push({ pathname: '/listing/[id]', params: { id: related.id } })}
-                   onSave={() => toggleSaved(related.id, { listing: true })}
+                    onSave={() => toggleSaved(related.id, { subjectKind: 'property', subjectName: isArabic ? related.titleAr : related.title })}
                  />
                </View>)}
              </ScrollView>
@@ -153,8 +198,8 @@ export default function ListingDetail() {
         </View>
       </ScrollView>
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background, borderTopColor: colors.border }]}>
-        <ActionButton label={isArabic ? 'اتصل بالمعلن' : 'Contact agent'} icon="phone" onPress={openContact} style={{ flex: 1 }} />
-        <ActionButton label={isArabic ? 'واتساب' : 'WhatsApp'} icon="message-circle" onPress={openWhatsApp} secondary style={{ flex: 1 }} />
+         <ActionButton label={listing.phone?.trim() ? (isArabic ? 'اتصل بالمعلن' : 'Contact agent') : (isArabic ? 'رقم الهاتف غير متوفر' : 'Phone unavailable')} icon={listing.phone?.trim() ? 'phone' : 'phone-off'} onPress={openContact} disabled={!listing.phone?.trim()} style={{ flex: 1 }} />
+         <ActionButton label={listing.phone?.trim() ? (isArabic ? 'واتساب' : 'WhatsApp') : (isArabic ? 'واتساب غير متوفر' : 'WhatsApp unavailable')} icon="message-circle" onPress={openWhatsApp} disabled={!listing.phone?.trim()} secondary style={{ flex: 1 }} />
       </View>
     </View>
   );
@@ -162,6 +207,9 @@ export default function ListingDetail() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  unavailable: { alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
+  unavailableTitle: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  unavailableText: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
   topBar: { height: 88, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroWrap: { height: 270, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },

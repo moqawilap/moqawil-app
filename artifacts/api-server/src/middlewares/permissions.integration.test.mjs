@@ -55,6 +55,46 @@ test("signed-out requests never reach protected handlers", async () => {
   }
 });
 
+test("request, quote, and notification routes reject malformed UUIDs before querying", async () => {
+  const quoteBody = JSON.stringify({ amountOmaniRial: 50, estimatedDays: 2, details: "Valid quote body." });
+  for (const [role, method, path, body] of [
+    ["customer", "GET", "/me/service-requests/not-a-uuid/quotes"],
+    ["customer", "POST", "/me/service-requests/not-a-uuid/cancel"],
+    ["contractor", "POST", "/me/workshop-requests/not-a-uuid/quote", quoteBody],
+    ["customer", "POST", "/me/quotes/not-a-uuid/accept"],
+  ]) {
+    const result = await request(role, path, { method, ...(body ? { body } : {}) });
+    assert.equal(result.response.status, 400);
+  }
+  for (const role of ["customer", "contractor", "admin"]) {
+    const result = await request(role, "/me/notifications/not-a-uuid/read", { method: "POST" });
+    assert.equal(result.response.status, 400);
+    assert.deepEqual(result.body, { error: "Invalid notification identifier" });
+  }
+});
+
+test("notification reads are owner-only, return 404 when absent, and remain idempotent", async () => {
+  const byRole = {};
+  for (const role of ["customer", "contractor", "admin"]) {
+    const inbox = await request(role, "/me/notifications");
+    const owned = inbox.body.find((item) => item.title.startsWith(`Permission Test ${role[0].toUpperCase()}${role.slice(1)} Notification`));
+    assert.ok(owned);
+    byRole[role] = owned.id;
+  }
+
+  const nonOwner = await request("customer", `/me/notifications/${byRole.contractor}/read`, { method: "POST" });
+  assert.equal(nonOwner.response.status, 404);
+  assert.deepEqual(nonOwner.body, { error: "Notification not found" });
+  for (const role of ["customer", "contractor", "admin"]) {
+    const missing = await request(role, `/me/notifications/${crypto.randomUUID()}/read`, { method: "POST" });
+    assert.equal(missing.response.status, 404);
+    const first = await request(role, `/me/notifications/${byRole[role]}/read`, { method: "POST" });
+    const repeated = await request(role, `/me/notifications/${byRole[role]}/read`, { method: "POST" });
+    assert.equal(first.response.status, 204);
+    assert.equal(repeated.response.status, 204);
+  }
+});
+
 test("customers can rate providers and properties from one to five stars", async () => {
   const directory = await request("customer", "/contractors?limit=50");
   const contractor = directory.body.items.find((item) => /^Permission Test Contractor /.test(item.businessName));
@@ -72,6 +112,138 @@ test("customers can rate providers and properties from one to five stars", async
 
   const invalid = await request("customer", `/listings/${listing.id}/rating`, { method: "POST", body: JSON.stringify({ rating: 6 }) });
   assert.equal(invalid.response.status, 400);
+});
+
+test("new property and provider activations notify their exact owners but views and repeats do not", async () => {
+  const listings = await request(undefined, "/listings");
+  const listing = listings.body.find((item) => /^Permission Test Listing /.test(item.title));
+  const directory = await request(undefined, "/contractors?limit=50");
+  const provider = directory.body.items.find((item) => /^Permission Test Contractor /.test(item.businessName));
+  assert.ok(listing);
+  assert.ok(provider);
+
+  const before = await request("contractor", "/me/notifications");
+  const clientId = `permission-engagement-${Date.now()}`;
+  const likeBody = JSON.stringify({ action: "like", active: true, clientId, subjectKind: "property" });
+  assert.equal((await request("customer", `/listings/${listing.id}/engagement`, { method: "POST", body: likeBody })).response.status, 200);
+  assert.equal((await request("customer", `/listings/${listing.id}/engagement`, { method: "POST", body: likeBody })).response.status, 200);
+  assert.equal((await request(undefined, `/listings/${listing.id}/engagement`, {
+    method: "POST",
+    body: JSON.stringify({ action: "view", clientId: `${clientId}-view`, subjectKind: "property" }),
+  })).response.status, 200);
+  assert.equal((await request("customer", `/listings/${provider.id}/engagement`, {
+    method: "POST",
+    body: JSON.stringify({ action: "save", active: true, clientId, subjectKind: "provider" }),
+  })).response.status, 200);
+
+  const after = await request("contractor", "/me/notifications");
+  const added = after.body.slice(0, after.body.length - before.body.length)
+    .filter((item) => item.deliveryMetadata?.eventType === "ad_engagement");
+  assert.equal(added.filter((item) => item.deliveryMetadata.action === "like" && item.deliveryMetadata.subjectId === listing.id).length, 1);
+  assert.equal(added.filter((item) => item.deliveryMetadata.action === "save" && item.deliveryMetadata.subjectId === provider.id).length, 1);
+  assert.equal(added.some((item) => item.deliveryMetadata.action === "view"), false);
+});
+
+test("engagement GETs use the same signed-in actor as POST and isolate account state", async () => {
+  const listings = await request(undefined, "/listings");
+  const listing = listings.body.find((item) => /^Permission Test Listing /.test(item.title));
+  assert.ok(listing);
+  const clientId = `account-state-${Date.now()}`;
+  const activate = await request("customer", `/listings/${listing.id}/engagement`, {
+    method: "POST",
+    body: JSON.stringify({ action: "like", active: true, clientId, subjectKind: "property" }),
+  });
+  assert.equal(activate.response.status, 200);
+  assert.equal(activate.body.liked, true);
+
+  const single = await request("customer", `/listings/${listing.id}/engagement?clientId=${clientId}`);
+  assert.equal(single.response.status, 200);
+  assert.equal(single.body.liked, true);
+  const bulk = await request("customer", `/listings/engagement?ids=${listing.id}&clientId=${clientId}`);
+  assert.equal(bulk.response.status, 200);
+  assert.equal(bulk.body[listing.id].liked, true);
+
+  const signedOut = await request(undefined, `/listings/${listing.id}/engagement?clientId=${clientId}`);
+  assert.equal(signedOut.body.liked, false);
+  const otherAccount = await request("contractor", `/listings/${listing.id}/engagement?clientId=${clientId}`, {
+    headers: { "x-moqawil-test-contractor": "second" },
+  });
+  assert.equal(otherAccount.body.liked, false);
+
+  const deactivate = await request("customer", `/listings/${listing.id}/engagement`, {
+    method: "POST",
+    body: JSON.stringify({ action: "like", active: false, clientId, subjectKind: "property" }),
+  });
+  assert.equal(deactivate.body.liked, false);
+  const refetched = await request("customer", `/listings/${listing.id}/engagement?clientId=${clientId}`);
+  assert.equal(refetched.body.liked, false);
+});
+
+test("call and WhatsApp events derive the live subject and retry idempotently without emailing", async () => {
+  const listings = await request(undefined, "/listings");
+  const listing = listings.body.find((item) => /^Permission Test Listing /.test(item.title));
+  const directory = await request(undefined, "/contractors?limit=50");
+  const provider = directory.body.items.find((item) => /^Permission Test Contractor /.test(item.businessName));
+  assert.ok(provider);
+  const providerDetail = await request(undefined, `/contractors/${provider.id}`);
+  const project = providerDetail.body.projects.find((item) => /^Permission Test Project /.test(item.title));
+  assert.ok(listing);
+  assert.ok(project);
+  const before = await request("contractor", "/me/notifications");
+  const eventId = `permission-contact-${Date.now()}`;
+  const body = JSON.stringify({
+    eventId,
+    subjectId: listing.id,
+    subjectKind: "property",
+    category: "property",
+    channel: "whatsapp",
+    subjectName: "untrusted client title",
+  });
+  assert.equal((await request("customer", "/contact-events", { method: "POST", body })).response.status, 204);
+  assert.equal((await request("customer", "/contact-events", { method: "POST", body })).response.status, 204);
+  assert.equal((await request("customer", "/contact-events", {
+    method: "POST",
+    body: JSON.stringify({
+      eventId: `${eventId}-call`,
+      subjectId: project.id,
+      subjectKind: "project",
+      category: "contractor",
+      channel: "call",
+      subjectName: "another untrusted client title",
+    }),
+  })).response.status, 204);
+
+  const after = await request("contractor", "/me/notifications");
+  const added = after.body.slice(0, after.body.length - before.body.length)
+    .filter((item) => item.deliveryMetadata?.eventType === "ad_engagement");
+  assert.equal(added.length, 2);
+  assert.deepEqual(added.find((item) => item.deliveryMetadata.action === "whatsapp").deliveryMetadata, {
+    eventType: "ad_engagement",
+    action: "whatsapp",
+    subjectId: listing.id,
+    subjectKind: "property",
+    subjectName: listing.title,
+  });
+  assert.deepEqual(added.find((item) => item.deliveryMetadata.action === "call").deliveryMetadata, {
+    eventType: "ad_engagement",
+    action: "call",
+    subjectId: project.id,
+    subjectKind: "project",
+    subjectName: project.title,
+  });
+});
+
+test("signed-in owners do not notify themselves for their own ad engagement", async () => {
+  const listings = await request(undefined, "/listings");
+  const listing = listings.body.find((item) => /^Permission Test Listing /.test(item.title));
+  const before = await request("contractor", "/me/notifications");
+  const result = await request("contractor", `/listings/${listing.id}/engagement`, {
+    method: "POST",
+    body: JSON.stringify({ action: "like", active: true, clientId: `owner-client-${Date.now()}`, subjectKind: "property" }),
+  });
+  assert.equal(result.response.status, 200);
+  const after = await request("contractor", "/me/notifications");
+  assert.equal(after.body.length, before.body.length);
 });
 
 test("customer cannot access contractor lifecycle data", async () => {
@@ -211,8 +383,49 @@ test("admin can access admin data", async () => {
   assert.equal(typeof result.body.contractors, "number");
 });
 
+test("admin contractor workshop discriminator comes only from building services and survives edits", async () => {
+  const initial = await request("admin", "/admin/contractors");
+  const workshop = initial.body.find((item) => /^Permission Test Contractor /.test(item.businessName));
+  assert.ok(workshop);
+  assert.equal(workshop.isWorkshop, true);
+
+  const edited = await request("admin", `/admin/contractors/${workshop.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      businessName: workshop.businessName,
+      bio: "Updated workshop specialty",
+      bioArabic: "تخصص ورشة محدث",
+      isWorkshop: true,
+    }),
+  });
+  assert.equal(edited.response.status, 200);
+  assert.equal(edited.body.isWorkshop, true);
+  assert.equal(edited.body.serviceNames.includes("Updated workshop specialty"), true);
+  const publicDetail = await request(undefined, `/contractors/${workshop.id}`);
+  const updatedService = publicDetail.body.services.find((item) => item.category === "building");
+  assert.equal(updatedService.name, "Updated workshop specialty");
+  assert.equal(updatedService.description, "تخصص ورشة محدث");
+
+  const removed = await request("admin", `/admin/contractors/${workshop.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ isWorkshop: false }),
+  });
+  assert.equal(removed.response.status, 200);
+  assert.equal(removed.body.isWorkshop, false);
+
+  const restored = await request("admin", `/admin/contractors/${workshop.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ isWorkshop: true }),
+  });
+  assert.equal(restored.response.status, 200);
+  assert.equal(restored.body.isWorkshop, true);
+});
+
 test("customer can create only its first contractor profile", async () => {
-  const body = JSON.stringify({ businessName: "Permission Test Onboarding", city: "Muscat", wilayat: "Muscat" });
+  const plans = await request(undefined, "/subscription-plans");
+  const servicePlan = plans.body.find((item) => item.category === "service");
+  assert.ok(servicePlan);
+  const body = JSON.stringify({ businessName: "Permission Test Onboarding", city: "Muscat", wilayat: "Muscat", subscriptionPlanCode: servicePlan.code });
   const first = await request("customer", "/me/contractor-profile", { method: "PUT", body });
   assert.equal(first.response.status, 200);
   assert.equal(first.body.contractor.businessName, "Permission Test Onboarding");
@@ -224,6 +437,9 @@ test("customer can create only its first contractor profile", async () => {
 });
 
 test("approved services appear in every selected wilayat and nowhere else", async () => {
+  const plans = await request(undefined, "/subscription-plans");
+  const servicePlan = plans.body.find((item) => item.category === "service");
+  assert.ok(servicePlan);
   const submitted = await request("customer", "/me/service-registrations", {
     method: "POST",
     body: JSON.stringify({
@@ -231,11 +447,14 @@ test("approved services appear in every selected wilayat and nowhere else", asyn
       title: "Permission Test Multi-Wilayat Workshop",
       specialty: "Multi-Wilayat Construction",
       city: "Ad Dakhiliyah",
+      phone: "+96891234567",
       serviceWilayats: ["Bahla", "Nizwa", "Muscat"],
       servesAllGovernorates: false,
       deliveryAvailable: true,
       description: "Provides construction services across three selected Oman wilayats.",
       mediaUrls: ["https://example.invalid/permission-test-workshop.jpg"],
+      subscriptionPlanCode: servicePlan.code,
+      commercialRegistrationPdf: "data:application/pdf;base64,dGVzdA==",
       termsAccepted: true,
     }),
   });

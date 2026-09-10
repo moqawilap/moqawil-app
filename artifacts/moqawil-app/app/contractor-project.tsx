@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, FixedBackButton, ScreenHeader } from '@/components/MoqawilUI';
 import { SubscriptionPlanSelector, type ServiceSubscriptionPlanCode } from '@/components/SubscriptionPlanSelector';
@@ -85,8 +85,9 @@ export default function ContractorProjectScreen() {
       Alert.alert(
         isArabic ? 'تم إرسال المشروع' : 'Project submitted',
         isArabic ? 'تم حفظ إعلان مشروعك وسيظهر بعد مراجعة الإدارة.' : 'Your project ad was saved and will appear after administrator review.',
-        [{ text: isArabic ? 'حسنًا' : 'OK', onPress: () => router.back() }],
+        Platform.OS === 'web' ? undefined : [{ text: isArabic ? 'حسنًا' : 'OK', onPress: () => router.back() }],
       );
+      if (Platform.OS === 'web') router.back();
     },
     onError: () => Alert.alert(isArabic ? 'تعذر إرسال المشروع' : 'Could not submit project', isArabic ? 'تحقق من البيانات والوسائط ثم حاول مرة أخرى.' : 'Check the details and media, then try again.'),
   } });
@@ -243,7 +244,7 @@ export default function ContractorProjectScreen() {
             {terms.map((term, index) => <View key={term} style={styles.termRow}><Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text><Text style={[styles.termText, { color: colors.mutedForeground }]}>{term}</Text></View>)}
             <Pressable testID="project-terms" accessibilityRole="checkbox" accessibilityState={{ checked: termsAccepted }} onPress={() => setTermsAccepted((current) => !current)} style={[styles.acceptRow, { borderTopColor: colors.border }]}><Feather name={termsAccepted ? 'check-square' : 'square'} size={20} color={colors.primary} /><Text style={[styles.acceptText, { color: colors.foreground }]}>{isArabic ? 'أوافق على شروط تسجيل ونشر الإعلان' : 'I agree to the advertisement registration and publishing terms'}</Text></Pressable>
           </View>
-          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات، أدخل رقمًا عُمانيًا صحيحًا من 8 أرقام، وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details, enter a valid 8-digit Oman phone number, and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), phone: `+968${normalizedPhone}`, serviceWilayats: allOman ? omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => wilayat.name)) : projectWilayats, servesAllGovernorates: allOman, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
+          <View testID="submit-contractor-project"><ActionButton label={createProject.isPending ? (isArabic ? 'جارٍ الإرسال…' : 'Submitting…') : (isArabic ? 'إرسال المشروع للمراجعة' : 'Submit project for review')} onPress={() => { if (createProject.isPending) return; if (!valid) { Alert.alert(isArabic ? 'أكمل بيانات المشروع' : 'Complete the project details', isArabic ? 'أكمل البيانات، أدخل رقمًا عُمانيًا صحيحًا من 8 أرقام، وأرفق السجل التجاري بصيغة PDF.' : 'Complete the details, enter a valid 8-digit Oman phone number, and attach the commercial registration PDF.'); return; } createProject.mutate({ data: { title: form.title.trim(), city: form.city.trim(), phone: `+968${normalizedPhone}`, serviceWilayats: allOman ? omanGovernorates.flatMap((governorate) => governorate.wilayats.map((wilayat) => wilayat.name)) : projectWilayats, servesAllGovernorates: allOman, description: form.description.trim(), mediaUrls: media.map((item) => item.dataUrl), commercialRegistrationPdf, subscriptionPlanCode: subscriptionPlanCode as ServiceSubscriptionPlanCode, couponCode: couponCode || null, termsAccepted: true } }); }} /></View>
         </View>
       </ScrollView>
     </View>

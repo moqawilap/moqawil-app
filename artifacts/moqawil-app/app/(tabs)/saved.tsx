@@ -19,19 +19,24 @@ export default function SavedScreen() {
   const savedProviders = managedProviders.filter((provider) => savedIds.includes(provider.id));
   const savedListings = mergeMarketplaceListings(remoteListings.data).filter((listing) => savedIds.includes(listing.id));
   const hasSaved = savedProviders.length > 0 || savedListings.length > 0;
+  const hasVisibleSaved = mode === 'All'
+    ? hasSaved
+    : mode === 'Providers'
+      ? savedProviders.length > 0
+      : savedListings.length > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <ScreenHeader title={isArabic ? 'المحفوظات' : 'Saved'} subtitle={isArabic ? 'خياراتك المفضلة في مكان واحد' : 'Your shortlist, all in one place'} />
-          <SegmentedControl value={mode} onChange={setMode} options={['All', 'Providers', 'Properties']} />
-          {!hasSaved ? <EmptyState icon="heart" title={isArabic ? 'لا توجد محفوظات بعد' : 'Nothing saved yet'} description={isArabic ? 'احفظ مزودي الخدمة والعقارات للعودة إليها بسهولة.' : 'Save providers and properties to build your shortlist.'} /> : null}
+           <SegmentedControl value={mode} onChange={setMode} options={['All', 'Providers', 'Properties']} labels={{ All: isArabic ? 'الكل' : 'All', Providers: isArabic ? 'المزودون' : 'Providers', Properties: isArabic ? 'العقارات' : 'Properties' }} />
+           {!hasVisibleSaved ? <EmptyState icon="heart" title={isArabic ? 'لا توجد محفوظات هنا' : 'Nothing saved here'} description={isArabic ? 'احفظ مزودي الخدمة والعقارات للعودة إليها بسهولة.' : 'Save providers and properties to build your shortlist.'} /> : null}
           {mode !== 'Properties' && savedProviders.length > 0 ? (
-            <View style={styles.section}><View style={styles.sectionHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Providers <Text style={[styles.count, { color: colors.mutedForeground }]}>({savedProviders.length})</Text></Text><Feather name="arrow-up-right" size={16} color={colors.primary} /></View>{savedProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id)} />)}</View>
+            <View style={styles.section}><View style={styles.sectionHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'مقدمو الخدمة' : 'Providers'} <Text style={[styles.count, { color: colors.mutedForeground }]}>({savedProviders.length})</Text></Text><Feather name="arrow-up-right" size={16} color={colors.primary} /></View>{savedProviders.map((provider) => <ProviderCard key={provider.id} image={provider.image} name={isArabic ? provider.nameAr : provider.name} specialty={isArabic ? provider.specialtyAr : provider.specialty} rating={provider.rating} reviews={provider.reviews} distance={provider.distance} verified={provider.verified} saved onPress={() => router.push({ pathname: '/provider/[id]', params: { id: provider.id } })} onSave={() => toggleSaved(provider.id, { subjectKind: 'provider', subjectName: isArabic ? provider.nameAr : provider.name })} />)}</View>
           ) : null}
           {mode !== 'Providers' && savedListings.length > 0 ? (
-            <View style={styles.section}><View style={styles.sectionHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Properties <Text style={[styles.count, { color: colors.mutedForeground }]}>({savedListings.length})</Text></Text><Feather name="arrow-up-right" size={16} color={colors.primary} /></View><View style={styles.propertyGrid}>{savedListings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { listing: true })} />)}</View></View>
+            <View style={styles.section}><View style={styles.sectionHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{isArabic ? 'العقارات' : 'Properties'} <Text style={[styles.count, { color: colors.mutedForeground }]}>({savedListings.length})</Text></Text><Feather name="arrow-up-right" size={16} color={colors.primary} /></View><View style={styles.propertyGrid}>{savedListings.map((listing) => <PropertyCard key={listing.id} listing={{ ...listing, title: isArabic ? listing.titleAr : listing.title, location: isArabic ? listing.locationAr : listing.location, type: isArabic ? listing.typeAr : listing.type }} saved onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })} onSave={() => toggleSaved(listing.id, { subjectKind: 'property', subjectName: isArabic ? listing.titleAr : listing.title })} />)}</View></View>
           ) : null}
         </View>
       </ScrollView>
