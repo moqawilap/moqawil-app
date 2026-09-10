@@ -1,0 +1,48 @@
+مقاول — مسودة صفحة Google Play
+تاريخ التجهيز: 2026-09-10
+تحتاج موافقة المالك والتحقق من مطابقة نسخة أندرويد النهائية.
+
+AR TITLE
+مقاول عُمان
+
+AR SHORT DESCRIPTION
+اكتشف خدمات البناء والصيانة والعقارات في عُمان وتواصل مع أصحابها.
+
+AR FULL DESCRIPTION
+مقاول عُمان يساعدك على اكتشاف مقدمي خدمات البناء والتصميم والصيانة والورش، وتصفح الإعلانات العقارية في سلطنة عُمان.
+
+ابحث حسب نوع الخدمة والموقع، واطلع على تفاصيل الإعلانات، واحفظ ما يهمك للرجوع إليه لاحقًا. تواصل مع أصحاب الإعلانات عبر أزرار الاتصال وواتساب عند توفر بيانات التواصل.
+
+يمكن لمقدمي الخدمات إرسال خدماتهم ومشاريعهم للمراجعة ومتابعة حالة الطلبات من حسابهم. كما يستطيع أصحاب الإعلانات المرتبطة بحساباتهم متابعة إشعارات الإعجاب والحفظ والضغط على أزرار التواصل.
+
+يدعم التطبيق العربية والإنجليزية. قد تتطلب بعض الميزات تسجيل الدخول، وتخضع الإعلانات للمراجعة. التطبيق يساعد على اكتشاف الخدمات والتواصل، ولا يضمن تنفيذ الاتفاقات بين المستخدمين.
+
+EN TITLE
+Moqawil Oman
+
+EN SHORT DESCRIPTION
+Explore building services, maintenance and property listings across Oman.
+
+EN FULL DESCRIPTION
+Moqawil Oman helps you discover construction, design, maintenance and workshop services, alongside property listings in Oman.
+
+Browse by service type and location, explore listing details and save items for later. Use call and WhatsApp actions to contact advertisers where contact details are available.
+
+Service providers can submit services and projects for review and follow their submission status. Owners of listings linked to their accounts can view notifications for likes, saves and contact-button presses.
+
+Arabic and English are supported. Some features require an account, and listings are subject to review. Moqawil helps users discover services and connect; it does not guarantee agreements between users.
+
+PRODUCTION WEBSITE (verified metadata, HTTP 200 at preparation time)
+https://moqawil-oman-marketplace.replit.app
+
+PRIVACY POLICY URL
+Not implemented/verified. Do not submit a fabricated URL.
+
+ACCOUNT DELETION URL
+Not implemented/verified. Must be backed by a working request process.
+
+SUPPORT EMAIL / PUBLISHER NAME / ANDROID PACKAGE
+Owner confirmation required.
+
+APK / AAB
+Not built. Not included.

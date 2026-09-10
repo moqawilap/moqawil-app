@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مقاول — حزمة تجهيز نشر أندرويد</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7;color:#163047;font-family:Arial,"DejaVu Sans",sans-serif;line-height:1.8}main{max-width:960px;margin:auto;background:white;padding:42px}h1{font-size:30px;margin:0}h2{font-size:21px;border-bottom:2px solid #e6edf1;padding-bottom:8px;margin-top:32px}h3{font-size:17px}p,li{font-size:15px}a{color:#126aa2;overflow-wrap:anywhere}small{color:#596a79}.badge{display:inline-block;background:#e8eef4;padding:4px 12px;border-radius:16px}.warning{background:#fff6df;border-right:5px solid #d6a331;padding:14px 20px}.ok{background:#edf7f0;padding:14px 20px}table{border-collapse:collapse;width:100%;font-size:14px}td,th{text-align:right;vertical-align:top;padding:12px;border:1px solid #dce4ea}th{background:#edf2f6}blockquote{background:#f5f7f9;margin:12px 0;padding:18px;border-right:3px solid #668ca8}.ltr{direction:ltr;text-align:left}code{direction:ltr;unicode-bidi:embed;background:#eef2f5;padding:2px 5px}footer{border-top:1px solid #dce4ea;margin-top:30px;padding-top:14px}@media print{body{background:white}main{padding:12mm;max-width:none}h2,h3{break-after:avoid}table,tr,blockquote,.warning,.ok{break-inside:avoid}a{color:#163047}p,li{font-size:11pt}}
+@page{size:A4;margin:12mm}@media print{main{padding:0}table{break-inside:auto}tr{break-inside:avoid}h2{margin-top:20px}}
+</style>
+</head>
+<body><main>
+<p class="badge">مقاول · تجهيز Google Play · ١٠ سبتمبر ٢٠٢٦</p>
+<h1>دليل وملفات تجهيز نشر التطبيق</h1>
+<p>حزمة تجهيز للنشر، وليست ملف تثبيت أو شهادة جاهزية أو ضمان قبول من Google Play.</p>
+<div class="warning"><strong>حالة ملف أندرويد:</strong> لم يتم بناء أو توقيع ملف APK أو AAB في هذه الجلسة. لا تحتوي الحزمة على أي منهما. لا توجد أداة بناء أندرويد موقّع متاحة لنا في هذه الجلسة، ولا يجوز تغيير امتداد ملف ZIP إلى APK.</div>
+
+<h2>١. الرابط المنشور وبيانات المشروع</h2>
+<table>
+<tr><th>البند</th><th>القيمة والحالة</th></tr>
+<tr><td>رابط التطبيق المنشور</td><td><a href="https://moqawil-oman-marketplace.replit.app">https://moqawil-oman-marketplace.replit.app</a><br>تم الحصول عليه من خدمة النشر، وكانت الاستجابة HTTP 200 أثناء التجهيز. لا يثبت ذلك أن أحدث تعديلات التطوير منشورة أو أن جميع الوظائف اجتازت اختبار الإنتاج.</td></tr>
+<tr><td>الاسم الحالي في المشروع</td><td>Moqawil Oman Marketplace</td></tr>
+<tr><td>الإصدار الحالي</td><td>1.0.0 — من إعدادات المشروع، وليس إصدار ملف مبني.</td></tr>
+<tr><td>اسم الحزمة Android package</td><td>غير محدد في app.json. يجب اختيار اسم ثابت وفريد والتحقق من عدم وجود تطبيق سابق بنفس المشروع قبل تعيينه. لا تغيّر اسم حزمة تطبيق سبق نشره.</td></tr>
+<tr><td>رقم البناء versionCode</td><td>غير محدد في المشروع. يلزم إدارته وزيادته لكل رفع جديد وفق حالة التطبيق في Play Console.</td></tr>
+<tr><td>سياسة الخصوصية / طلب حذف الحساب</td><td>لم نعثر على صفحات عامة منفذة في مسارات المشروع. لا توجد روابط جاهزة لهذين الغرضين في هذه الحزمة.</td></tr>
+<tr><td>بريد الدعم واسم الناشر</td><td>يحتاجان تأكيد المالك قبل إدخالهما في المتجر؛ لا تعتمد تلقائيًا بريدًا تجريبيًا أو قيمة افتراضية من الكود.</td></tr>
+</table>
+
+<h2>٢. الفرق بين APK وAAB</h2>
+<ul>
+<li><strong>APK:</strong> ملف لتثبيت التطبيق مباشرة على جهاز أندرويد وتجربته خارج المتجر. يجب أن يكون مبنيًا وموقّعًا فعليًا.</li>
+<li><strong>AAB:</strong> حزمة النشر التي يتوقعها Google Play للتطبيقات الجديدة. ليست ملفًا يُثبّت مباشرة بالضغط عليه؛ يحوّلها Google Play إلى ملفات مناسبة للأجهزة.</li>
+<li>معاينة Expo Go أو رابط الموقع ليست بديلًا عن إصدار أندرويد مستقل.</li>
+<li>وفق وثائق Replit الحالية يوجد مسار موثّق لبناء AAB ورفعه يدويًا إلى Play Console، لكن أداة تشغيل هذا البناء غير متاحة لنا في هذه الجلسة. لا يوجد رابط تنزيل بناء يمكن إعطاؤه قبل نجاحه.</li>
+</ul>
+
+<h2>٣. الملفات الموجودة في الحزمة</h2>
+<ul>
+<li><strong>moqawil-publishing-guide.html:</strong> هذا الدليل، مستقل ويمكن فتحه دون اتصال؛ الروابط تحتاج اتصالًا.</li>
+<li><strong>moqawil-publishing-guide.pdf:</strong> نسخة قابلة للطباعة من الدليل.</li>
+<li><strong>google-play-icon-512.png:</strong> نسخة 512×512 من شعار المشروع الحالي، دون تغيير رسم الشعار.</li>
+<li><strong>google-play-feature-1024x500.png:</strong> رسم ترويجي أولي بالحجم المطلوب؛ راجعه قبل اعتماده.</li>
+<li><strong>store-listing-ar-en.txt:</strong> مسودتا وصف المتجر بالعربية والإنجليزية.</li>
+</ul>
+<p><strong>غير موجودة:</strong> APK/AAB، مفاتيح توقيع أو كلمات مرور، صور شاشة من نسخة أندرويد مستقلة، سياسة خصوصية نهائية، آلية حذف حساب مكتملة.</p>
+
+<h2>٤. نصوص المتجر المقترحة</h2>
+<h3>العربية</h3>
+<p><strong>الاسم:</strong> مقاول عُمان</p>
+<p><strong>الوصف القصير:</strong> اكتشف خدمات البناء والصيانة والعقارات في عُمان وتواصل مع أصحابها.</p>
+<blockquote>مقاول عُمان يساعدك على اكتشاف مقدمي خدمات البناء والتصميم والصيانة والورش، وتصفح الإعلانات العقارية في سلطنة عُمان.<br><br>
+ابحث حسب نوع الخدمة والموقع، واطلع على تفاصيل الإعلانات، واحفظ ما يهمك للرجوع إليه لاحقًا. تواصل مع أصحاب الإعلانات عبر أزرار الاتصال وواتساب عند توفر بيانات التواصل.<br><br>
+يمكن لمقدمي الخدمات إرسال خدماتهم ومشاريعهم للمراجعة ومتابعة حالة الطلبات من حسابهم. كما يستطيع أصحاب الإعلانات المرتبطة بحساباتهم متابعة إشعارات الإعجاب والحفظ والضغط على أزرار التواصل.<br><br>
+يدعم التطبيق العربية والإنجليزية. قد تتطلب بعض الميزات تسجيل الدخول، وتخضع الإعلانات للمراجعة. التطبيق يساعد على اكتشاف الخدمات والتواصل، ولا يضمن تنفيذ الاتفاقات بين المستخدمين.</blockquote>
+<h3>English</h3>
+<div class="ltr">
+<p><strong>Title:</strong> Moqawil Oman</p>
+<p><strong>Short description:</strong> Explore building services, maintenance and property listings across Oman.</p>
+<blockquote>Moqawil Oman helps you discover construction, design, maintenance and workshop services, alongside property listings in Oman.<br><br>
+Browse by service type and location, explore listing details and save items for later. Use call and WhatsApp actions to contact advertisers where contact details are available.<br><br>
+Service providers can submit services and projects for review and follow their submission status. Owners of listings linked to their accounts can view notifications for likes, saves and contact-button presses.<br><br>
+Arabic and English are supported. Some features require an account, and listings are subject to review. Moqawil helps users discover services and connect; it does not guarantee agreements between users.</blockquote>
+</div>
+<p>هذه مسودات للمراجعة وليست ادعاء بأن جميع الميزات اختُبرت على أجهزة أندرويد. لا تضف عبارات دفع آمن أو حماية مشتريات أو تحقق شامل من مقدمي الخدمات ما لم تُنفّذ وتُختبر فعليًا.</p>
+
+<h2>٥. قائمة المتطلبات قبل إرسال التطبيق للمراجعة</h2>
+<ol>
+<li><strong>حساب المطوّر:</strong> أنشئ أو استخدم حساب Google Play Console باسم الشخص أو الجهة الصحيحة، وأكمل التحقق الذي يطلبه الحساب.</li>
+<li><strong>هوية التطبيق:</strong> ثبّت اسم الحزمة والإصدار ورقم البناء، وتحقق من اسم حزمة أي إصدار قديم.</li>
+<li><strong>نسخة الإنتاج:</strong> اربط التطبيق بالخادم المنشور وتحقق من إعدادات تسجيل دخول الإنتاج. لا تضع مفاتيح سرية في التطبيق؛ ولا تستخدم عنوان معاينة التطوير كخادم إنتاج.</li>
+<li><strong>التوقيع:</strong> أكمل إعداد التوقيع ضمن مسار البناء المعتمد، واستخدم Play App Signing وفق تعليمات Google. لا ترسل مفتاح التوقيع أو كلمات المرور في المحادثة.</li>
+<li><strong>الخصوصية:</strong> انشر سياسة عامة قابلة للوصول من دون تسجيل دخول، تطابق ما يجمعه التطبيق ومكتباته بالفعل.</li>
+<li><strong>حذف الحساب:</strong> لأن التطبيق يدعم إنشاء حسابات، جهّز مسار طلب حذف داخل التطبيق ورابطًا عامًا لطلب حذف الحساب والبيانات المرتبطة، مع توضيح أي استبقاء مشروع. رابط بلا معالجة فعلية لا يكفي.</li>
+<li><strong>Data safety:</strong> راجع بيانات الحساب والاتصال، الموقع، الصور والفيديو والمستندات، نشاط التفاعل ومعرّفات الأجهزة ورموز الإشعارات ومزودي الخدمات. لا تصرّح «لا نجمع بيانات» دون مراجعة التطبيق وSDKs.</li>
+<li><strong>الإعلانات:</strong> أجب عن وجود إعلانات حسب الحملات الفعلية في التطبيق. لا تُخفِ ذلك في إقرار المتجر.</li>
+<li><strong>محتوى المستخدمين:</strong> راجع متطلبات الإبلاغ والحظر والمراجعة وشروط الاستخدام المناسبة لإعلانات ومحتوى المستخدمين.</li>
+<li><strong>الصور والوصف:</strong> ارفع الأيقونة والرسم الترويجي، والتقط صور شاشة فعلية من نسخة أندرويد النهائية. تحتاج صفحة المتجر إلى صورتين على الأقل؛ راجع قواعد الصور في الرابط الرسمي.</li>
+<li><strong>الوصول للمراجعة:</strong> قدّم تعليمات الدخول وحساب مراجعة مناسبًا داخل Play Console للوظائف المقيدة، دون مشاركة بيانات دخول المالك.</li>
+<li><strong>الاختبار:</strong> ابدأ بمسار الاختبار المناسب. بعض الحسابات الشخصية الجديدة مطالبة باختبار مغلق مع 12 مختبرًا لمدة 14 يومًا متصلة؛ المرجع الحاسم ما يظهر في حسابك والسياسة الحالية.</li>
+<li><strong>المراجعة النهائية:</strong> اختبر تسجيل الدخول والخروج وتبديل الحسابات، الحفظ، التواصل، رفع الوسائط، إشعارات الهاتف، حذف الحساب، الروابط، والصلاحيات على أجهزة أندرويد فعلية.</li>
+<li><strong>الإرسال:</strong> بعد نجاح البناء واكتمال المتطلبات، ارفع AAB إلى Play Console، راجع تقرير الاختبار المسبق، ثم أرسل الإصدار للمراجعة. قرار القبول والوقت بيد Google.</li>
+</ol>
+
+<h2>٦. الروابط التي تحتاجها</h2>
+<table>
+<tr><th>الغرض</th><th>الرابط</th></tr>
+<tr><td>Google Play Console</td><td><a href="https://play.google.com/console">play.google.com/console</a></td></tr>
+<tr><td>إنشاء التطبيق وإعداده</td><td><a href="https://support.google.com/googleplay/android-developer/answer/9859152">دليل Google لإنشاء التطبيق</a></td></tr>
+<tr><td>إرشادات Replit لبناء ورفع أندرويد</td><td><a href="https://docs.replit.com/build/mobile-upload-android">Upload your app to Play Console</a></td></tr>
+<tr><td>خطوات Google Play عبر Replit</td><td><a href="https://docs.replit.com/build/mobile-publish-android">Submit to Google Play</a></td></tr>
+<tr><td>لوحة Expo العامة — وليست رابط بناء لهذا المشروع</td><td><a href="https://expo.dev">expo.dev</a></td></tr>
+<tr><td>مقاسات أيقونة وصور المتجر</td><td><a href="https://support.google.com/googleplay/android-developer/answer/9866151">Preview assets requirements</a></td></tr>
+<tr><td>سلامة البيانات</td><td><a href="https://support.google.com/googleplay/android-developer/answer/10787469">Data safety</a></td></tr>
+<tr><td>حذف الحساب</td><td><a href="https://support.google.com/googleplay/android-developer/answer/13327111">Account deletion requirements</a></td></tr>
+<tr><td>متطلبات اختبار الحسابات الشخصية</td><td><a href="https://support.google.com/googleplay/android-developer/answer/14151465">Testing requirements</a></td></tr>
+<tr><td>توقيع التطبيقات</td><td><a href="https://developer.android.com/studio/publish/app-signing">Android app signing</a></td></tr>
+</table>
+
+<h2>٧. ما يلزم من المالك لإكمال التجهيز</h2>
+<ul>
+<li>اسم الناشر القانوني وبريد الدعم الذي سيظهر للناس.</li>
+<li>تأكيد هل يوجد تطبيق سابق على Google Play، وما اسم حزمته إن وجد.</li>
+<li>تأكيد الحساب الذي سيملك التطبيق وتوفر مسار بناء أندرويد فيه؛ لا حاجة لإرسال كلمات مرور أو مفاتيح في الدردشة.</li>
+<li>اعتماد سياسة الخصوصية وآلية حذف الحساب بعد تنفيذها، وتحديد البيانات الواجب استبقاؤها وسبب ذلك.</li>
+</ul>
+<footer><small>تم إعداد هذا الدليل من حالة المشروع ووثائق Replit وGoogle بتاريخ ١٠ سبتمبر ٢٠٢٦. راجع الروابط الرسمية عند الإرسال، فقد تتغير المتطلبات. لم يتم نشر إصدار جديد أو إرسال التطبيق إلى المتجر أثناء تجهيز هذه الحزمة.</small></footer>
+</main></body></html>
