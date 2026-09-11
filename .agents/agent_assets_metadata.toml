@@ -84,3 +84,31 @@ mtime_ms = 1789137718200
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/e5b0a798-3594-4c9a-a5cb-9e83742f50f4/a70bbbb1-4c97-4957-a032-87e02224d2cc"
 storage_version_token = "1789137768778925"
 content_type = "image/png"
+
+[[outputs]]
+id = "me7YMOA-ZyIrheyg3edXb"
+uri = "file://publishing/tablet-7inch-home-1440x2560.png"
+type = "image"
+title = "7-inch tablet — Home"
+description = "PNG، مقاس 1440 × 2560، نسبة 9:16، حجم 285 KB. لقطة من معاينة التطبيق بتخطيط تابلت، وليست من جهاز أندرويد فعلي."
+logical_id = "697a0f18-d82b-4e62-83de-dbef50b9a13c"
+content_hash = "sha256:5212e5bc93c69519da4a6f4a299adacedba9e2caf8045b96d0fee7949b160fda"
+size = 291379
+mtime_ms = 1789137929004
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/697a0f18-d82b-4e62-83de-dbef50b9a13c/a5e3d37e-62ed-4184-bec6-2960f27ad4f7"
+storage_version_token = "1789137948250190"
+content_type = "image/png"
+
+[[outputs]]
+id = "Kr_iIlDGKSEG93i3oALeH"
+uri = "file://publishing/tablet-7inch-services-1440x2560.png"
+type = "image"
+title = "7-inch tablet — Services"
+description = "PNG، مقاس 1440 × 2560، نسبة 9:16، حجم 264 KB. لقطة من معاينة التطبيق بتخطيط تابلت، وليست من جهاز أندرويد فعلي."
+logical_id = "4f325ce6-4eda-43e7-8314-2f20f16f4501"
+content_hash = "sha256:b02331d66a03770672cf329948162ab7073a320b0f1ebf03c1209f59d797dc07"
+size = 269489
+mtime_ms = 1789137929964
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/4f325ce6-4eda-43e7-8314-2f20f16f4501/9cfd8a99-33eb-4cca-acfa-163673c36314"
+storage_version_token = "1789137949558207"
+content_type = "image/png"
