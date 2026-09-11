@@ -42,3 +42,17 @@ mtime_ms = 1789027819173
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/26687024-682a-4e0d-912c-2d138a037aa3/b951656e-defe-4f8e-86e0-f3e072681690"
 storage_version_token = "1789027840200410"
 content_type = "application/pdf"
+
+[[outputs]]
+id = "Pl3TUdt3-j7QewnDnnVmc"
+uri = "file://publishing/google-play-feature-1024x500.png"
+type = "image"
+title = "Moqawil — Google Play Feature Graphic"
+description = "PNG image, exactly 1024 × 500 pixels, approximately 127 KB—below the 15 MB limit. Download and upload it to the Feature graphic field in Google Play Console."
+logical_id = "03bc4ad7-8db8-41c8-a20c-7fa0b038b3e0"
+content_hash = "sha256:98299538773528ee0ab2244d27c42e5a7bd5d5a2a571bd0809e4467a64c92e8e"
+size = 129476
+mtime_ms = 1789027817172
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/03bc4ad7-8db8-41c8-a20c-7fa0b038b3e0/af791250-d16e-4f94-9f8a-70bc3b057a17"
+storage_version_token = "1789137296652033"
+content_type = "image/png"
