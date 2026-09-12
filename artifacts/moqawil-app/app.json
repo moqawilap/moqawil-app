@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.moqawil.om",
+      "versionCode": 1
+    },
     "web": {
       "favicon": "./assets/images/moqawil-logo.png"
     },
