@@ -1,0 +1,15 @@
+{
+  "short_name": "مقاول عُمان",
+  "name": "مقاول عُمان - Moqawil Oman",
+  "icons": [
+    {
+      "src": "https://moqawil-oman-marketplace.replit.app/google-play-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "display": "standalone"
+}
