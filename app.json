@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "f3104388-5403-4192-8312-f452331a1099"
+      }
+    },
+    "android": {
+      "package": "com.moqawil.ap.workspace"
+    }
+  }
+}
