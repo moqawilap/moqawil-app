@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const STATIC_ROOT = path.resolve(__dirname, '..', 'static-build');
+const PUBLIC_ROOT = path.resolve(__dirname, '..', 'public');
 const TEMPLATE_PATH = path.resolve(__dirname, 'templates', 'landing-page.html');
 const basePath = (process.env.BASE_PATH || '/').replace(/\/+$/, '');
 
@@ -132,6 +133,25 @@ const server = http.createServer((req, res) => {
 
   if (basePath && pathname.startsWith(basePath)) {
     pathname = pathname.slice(basePath.length) || '/';
+  }
+
+  // These public PWA files are separate from Expo's native /manifest route.
+  const pwaFiles = {
+    '/manifest.json': ['manifest.json', 'application/manifest+json'],
+    '/icons/icon-192.png': ['icons/icon-192.png', 'image/png'],
+    '/icons/icon-512.png': ['icons/icon-512.png', 'image/png'],
+  };
+  if (Object.hasOwn(pwaFiles, pathname)) {
+    const [file, contentType] = pwaFiles[pathname];
+    const filePath = path.join(PUBLIC_ROOT, file);
+    if (!fs.existsSync(filePath)) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+    res.writeHead(200, { 'content-type': contentType });
+    res.end(fs.readFileSync(filePath));
+    return;
   }
 
   if (pathname === '/' || pathname === '/manifest') {
