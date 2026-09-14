@@ -1,0 +1,21 @@
+{
+  "extends": "../../eas.json",
+  "build": {
+    "production": {
+      "developmentClient": false,
+      "distribution": "store",
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "preview": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "production",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
