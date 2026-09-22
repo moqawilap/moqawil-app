@@ -140,3 +140,17 @@ mtime_ms = 1789138020872
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/6c2e6b65-8f5d-41f7-b55b-cdc1e27e8af8/6dc9de5a-3ded-49a1-bf5f-2be66459c930"
 storage_version_token = "1789138262208307"
 content_type = "image/png"
+
+[[outputs]]
+id = "K8i2ekIJNMfzBD2Ix0fyn"
+uri = "file://screenshots/appmysite-link-step.png"
+type = "image"
+title = "الصورة الموضحة — اضغط Link"
+description = "اضغط على Link المحدد باللون الأحمر، ثم أدخل رابط الموقع العام. لا تضغط Upload إذا كنت تريد إدخال رابط."
+logical_id = "127678e4-481c-43b6-adbf-bf9a1556ef9e"
+content_hash = "sha256:916ae22d1cdab0c5b47fb6720f0ffe1ab3bbddf9a7ea606107edec217816df46"
+size = 223733
+mtime_ms = 1790099657202
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:67d375df-41df-446a-b52f-a48744a96103/127678e4-481c-43b6-adbf-bf9a1556ef9e/69f45c11-77fb-4ff7-8467-049440785ea9"
+storage_version_token = "1790099666702771"
+content_type = "image/png"
