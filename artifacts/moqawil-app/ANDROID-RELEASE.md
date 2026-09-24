@@ -42,7 +42,9 @@ profile is a release APK, not an Expo Go or Dev Client build.
 1. The existing Google Play Internal Testing release was built with PWABuilder,
    not Expo/EAS. A new Expo project is allowed for this app, but it is not yet
    linked in app.json. Confirm its project ID and linked source repository
-   before requesting a build. Do not create a new Google Play listing.
+   before requesting a build. Do not create a new Google Play listing. If the
+   Expo project belongs to an organization, its GitHub-linked repository must
+   belong to a GitHub organization too; a personal repository cannot be linked.
 2. Import and use the EXISTING PWABuilder upload credential through a secure
    build-service credential flow. No local Android signing files were found
    during inspection. Do not generate or replace the signing key. Compare its
