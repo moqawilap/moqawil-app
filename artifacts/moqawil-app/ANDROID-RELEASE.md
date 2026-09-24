@@ -39,13 +39,14 @@ profile is a release APK, not an Expo Go or Dev Client build.
 
 ## Mandatory checks before building
 
-1. Use the SAME Expo/build-service account and project that produced the current
-   Internal Testing release. No Expo project ID is recorded in app.json here;
-   recover the existing association instead of creating a new project.
-2. Select the EXISTING upload credential. No local Android signing files were
-   found during inspection; this does not mean no remote credentials exist.
-   Do not generate or replace a key. Compare the upload certificate fingerprint
-   with Play Console's App integrity information.
+1. The existing Google Play Internal Testing release was built with PWABuilder,
+   not Expo/EAS. A new Expo project is allowed for this app, but it is not yet
+   linked in app.json. Confirm its project ID and linked source repository
+   before requesting a build. Do not create a new Google Play listing.
+2. Import and use the EXISTING PWABuilder upload credential through a secure
+   build-service credential flow. No local Android signing files were found
+   during inspection. Do not generate or replace the signing key. Compare its
+   upload certificate fingerprint with Play Console's App integrity information.
 3. Confirm the current highest Play versionCode and the existing remote build
    version counter. A new upload must have a higher versionCode. Do not assume
    the local value of 1 represents the published version.
@@ -61,11 +62,10 @@ profile is a release APK, not an Expo Go or Dev Client build.
 
 ## How to request the two artifacts
 
-In the existing managed Android build service, select this app root, Android,
-and the production profile for the AAB, or the preview profile for the APK.
-Use the same linked project and existing credentials described above. If the
-service offers to create a new project or signing key, stop and recover the
-existing association instead.
+In the managed Android build service, select this app root, Android, and the
+preview profile for the APK. A future production-profile AAB is separate work.
+Use the new Expo project linked to this source and the previously used
+PWABuilder upload key. If the service offers to create a new signing key, stop.
 
 A cloud build returns its artifact download URL; it does not automatically
 create a file in this workspace. Download the successful artifacts before
