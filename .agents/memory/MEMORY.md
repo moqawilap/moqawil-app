@@ -14,3 +14,4 @@
 - [Expo web confirmations](expo-web-confirmations.md) — React Native Alert button callbacks cannot be relied on in web previews; critical actions need a web-compatible path.
 - [Android release provenance](android-release-provenance.md) — prior Play release used PWABuilder; a new Expo project is authorized, but a new signing key is not.
 - [GitHub connector versus Git push](github-git-auth.md) — an authorized GitHub data connector does not authenticate this workspace's Git transport.
+- [Expo dashboard versus EAS CLI login](expo-cli-auth.md) — linking GitHub in Expo does not sign in the workspace's EAS command-line tool.
