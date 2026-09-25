@@ -13,3 +13,4 @@
 - [Legacy property ownership](legacy-property-ownership.md) — old published properties have no reliable registration link; never infer notification recipients from copied listing fields.
 - [Expo web confirmations](expo-web-confirmations.md) — React Native Alert button callbacks cannot be relied on in web previews; critical actions need a web-compatible path.
 - [Android release provenance](android-release-provenance.md) — prior Play release used PWABuilder; a new Expo project is authorized, but a new signing key is not.
+- [GitHub connector versus Git push](github-git-auth.md) — an authorized GitHub data connector does not authenticate this workspace's Git transport.
