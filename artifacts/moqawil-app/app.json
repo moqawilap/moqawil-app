@@ -2,6 +2,7 @@
   "expo": {
     "name": "Moqawil Oman Marketplace",
     "slug": "moqawil-app",
+    "owner": "moqawilapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/moqawil-logo.png",
