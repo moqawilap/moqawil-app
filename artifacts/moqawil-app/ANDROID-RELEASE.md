@@ -17,7 +17,7 @@ listing. Stop on a mismatch: do not rename the package to resolve it.
 - The dev script starts Expo's Metro development server.
 - The existing build script produces Expo Go bundles and manifests, not a native
   Android application. Its production web landing page links to Expo Go.
-- The workspace-root eas.json contains a developmentClient-enabled development
+- The app's eas.json contains a developmentClient-enabled development
   profile. This is a build option, not evidence that an installed application is
   a Dev Client. This application does not currently depend on expo-dev-client.
 - Publishing that landing page or exporting JavaScript is not equivalent to
@@ -25,23 +25,27 @@ listing. Stop on a mismatch: do not rename the package to resolve it.
 
 ## Release configuration
 
-Use artifacts/moqawil-app as the app root. Its eas.json extends the existing
-workspace-root eas.json, preserving its CLI, versioning, and other configuration.
+Use artifacts/moqawil-app as the app root. Its eas.json contains the CLI,
+versioning, and build profiles in one place. The workspace root is not an Expo
+application and has no app.json or eas.json: never initiate an Android build
+from the workspace root. The prior accidental root build targeted a different
+Expo project called workspace and did not build Moqawil.
 
 | Profile | Output | Distribution | Development client |
 | --- | --- | --- | --- |
 | production | Android App Bundle (.aab) | Google Play | Disabled |
 | preview | Installable Android package (.apk) | Internal/direct testing | Disabled |
 
-Both profiles select the production build environment. The root production
-profile's remote version source and auto-increment remain inherited. The preview
-profile is a release APK, not an Expo Go or Dev Client build.
+Both release profiles select the production build environment. The production
+profile retains remote versioning and auto-increment. All build profiles pin
+pnpm 10.26.1 so the workspace's lockfile can be read. The preview profile is a
+release APK, not an Expo Go or Dev Client build.
 
 ## Mandatory checks before building
 
 1. The existing Google Play Internal Testing release was built with PWABuilder,
    not Expo/EAS. A new Expo project is allowed for this app, but it is not yet
-   linked in app.json. Confirm its project ID and linked source repository
+   linked in the app's app.json. Confirm its project ID and linked source repository
    before requesting a build. Do not create a new Google Play listing. If the
    Expo project belongs to an organization, its GitHub-linked repository must
    belong to a GitHub organization too; a personal repository cannot be linked.

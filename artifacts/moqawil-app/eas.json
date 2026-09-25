@@ -1,7 +1,16 @@
 {
-  "extends": "../../eas.json",
+  "cli": {
+    "version": ">= 14.7.1",
+    "appVersionSource": "remote"
+  },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "pnpm": "10.26.1"
+    },
     "production": {
+      "autoIncrement": true,
       "developmentClient": false,
       "distribution": "store",
       "environment": "production",
@@ -14,9 +23,13 @@
       "developmentClient": false,
       "distribution": "internal",
       "environment": "production",
+      "pnpm": "10.26.1",
       "android": {
         "buildType": "apk"
       }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }
